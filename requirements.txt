@@ -1,0 +1,20 @@
+# ── Gravs — Requirements ─────────────────────────────────────────────────────
+# Fixamos versões mínimas para garantir compatibilidade, mas permitimos patches.
+# Em produção (PythonAnywhere), use: pip install -r requirements.txt --user
+
+# Framework principal
+Flask>=3.0,<4.0
+
+# Autenticação
+Flask-Login>=0.6,<1.0
+Werkzeug>=3.0,<4.0          # generate_password_hash / check_password_hash
+
+# Feriados brasileiros (CalendarioUtil)
+holidays>=0.46,<1.0
+
+# Testes
+pytest>=8.0,<9.0
+pytest-cov>=5.0,<6.0        # cobertura de código
+
+# Utilitários de desenvolvimento (não instalar em produção)
+# pip install -r requirements-dev.txt
