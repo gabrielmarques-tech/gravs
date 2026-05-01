@@ -4,10 +4,10 @@ import logging
 from datetime import datetime
 
 from flask import (
-    Blueprint, current_user, jsonify,
+    Blueprint, jsonify,
     redirect, render_template, request, url_for
 )
-from flask_login import login_required
+from flask_login import login_required, current_user
 
 from routes.helpers import get_services
 from utils.formatters import parse_valor_monetario

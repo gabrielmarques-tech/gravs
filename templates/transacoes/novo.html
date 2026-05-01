@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}Nova Transação{% endblock %}
+{% block page_title %}Nova Transação{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto">
+  <div class="card fade-up">
+    <form method="POST" action="{{ url_for('transacoes.novo') }}">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="tipo-despesa" value="despesa" checked />
+          <label for="tipo-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="tipo-receita" value="receita" />
+          <label for="tipo-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" class="form-control"
+               value="{{ desc_sugerida }}"
+               placeholder="Ex: Aluguel, Supermercado..." required autofocus />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="text" name="valor" class="form-control"
+                 value="{{ valor_sugerido }}"
+                 placeholder="0,00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data</label>
+          <input type="date" name="data" class="form-control"
+                 value="{{ data_sugerida }}" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="d-flex gap-12 mt-8" style="justify-content:flex-end">
+        <a href="{{ url_for('transacoes.todas') }}" class="btn btn-secondary">Cancelar</a>
+        <button type="submit" class="btn btn-primary">Salvar transação</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Link para parcelado -->
+  <div class="text-center mt-16">
+    <a href="{{ url_for('transacoes.parcelado') }}" class="btn btn-secondary w-100"
+    style="justify-content:center;margin-top:8px">
+    💳 Parcelar uma compra em várias vezes
+    </a>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block title %}Transações{% endblock %}
+{% block page_title %}Transações{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('transacoes.novo') }}" class="btn btn-primary">+ Nova transação</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filtro de período -->
+<div class="card mb-24 fade-up">
+  <form method="GET" action="{{ url_for('transacoes.todas') }}"
+        class="d-flex align-center gap-12" style="flex-wrap:wrap">
+    <div class="d-flex align-center gap-8" style="flex:1;min-width:260px">
+      <label style="font-size:0.82rem;color:var(--text2);white-space:nowrap;margin:0">De</label>
+      <input type="date" name="inicio" value="{{ filtro_inicio }}"
+             class="form-control" style="max-width:160px" />
+      <label style="font-size:0.82rem;color:var(--text2);white-space:nowrap;margin:0">até</label>
+      <input type="date" name="fim" value="{{ filtro_fim }}"
+             class="form-control" style="max-width:160px" />
+    </div>
+    <div class="d-flex gap-8" style="flex-wrap:wrap">
+      <button type="submit" class="btn btn-primary btn-sm">Filtrar</button>
+      <a href="{{ url_for('transacoes.todas', inicio=filtro_fim[:7] + '-01', fim=filtro_fim) }}"
+         class="btn btn-secondary btn-sm">Este mês</a>
+      <a href="{{ url_for('transacoes.todas', inicio=filtro_fim[:4] + '-01-01', fim=filtro_fim) }}"
+         class="btn btn-secondary btn-sm">Este ano</a>
+      <a href="{{ url_for('transacoes.todas') }}"
+         class="btn btn-secondary btn-sm">Tudo</a>
+    </div>
+  </form>
+</div>
+
+<!-- Totais — cards com visual melhorado -->
+<div class="grid grid-3 mb-24 fade-up delay-1">
+
+  <div class="card" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.05)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(16,185,129,0.2);
+                  display:flex;align-items:center;justify-content:center;font-size:1.1rem">💰</div>
+      <div style="font-size:0.75rem;font-weight:700;color:var(--green2);
+                  text-transform:uppercase;letter-spacing:0.1em">Receitas</div>
+    </div>
+    <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:800;
+                color:var(--green2);letter-spacing:-0.5px;line-height:1">
+      {{ total_receitas | real }}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-top:8px">no período selecionado</div>
+  </div>
+
+  <div class="card" style="border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.05)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:36px;height:36px;border-radius:10px;background:rgba(239,68,68,0.2);
+                  display:flex;align-items:center;justify-content:center;font-size:1.1rem">💸</div>
+      <div style="font-size:0.75rem;font-weight:700;color:var(--red2);
+                  text-transform:uppercase;letter-spacing:0.1em">Despesas</div>
+    </div>
+    <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:800;
+                color:var(--red2);letter-spacing:-0.5px;line-height:1">
+      {{ total_despesas | real }}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-top:8px">no período selecionado</div>
+  </div>
+
+  <div class="card"
+       style="border-color:{% if saldo >= 0 %}rgba(16,185,129,0.25){% else %}rgba(239,68,68,0.25){% endif %};
+              background:{% if saldo >= 0 %}rgba(16,185,129,0.05){% else %}rgba(239,68,68,0.05){% endif %}">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+      <div style="width:36px;height:36px;border-radius:10px;
+                  background:{% if saldo >= 0 %}rgba(16,185,129,0.2){% else %}rgba(239,68,68,0.2){% endif %};
+                  display:flex;align-items:center;justify-content:center;font-size:1.1rem">
+        {% if saldo >= 0 %}📈{% else %}📉{% endif %}
+      </div>
+      <div style="font-size:0.75rem;font-weight:700;
+                  color:{% if saldo >= 0 %}var(--green2){% else %}var(--red2){% endif %};
+                  text-transform:uppercase;letter-spacing:0.1em">Saldo</div>
+    </div>
+    <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:800;
+                color:{% if saldo >= 0 %}var(--green2){% else %}var(--red2){% endif %};
+                letter-spacing:-0.5px;line-height:1">
+      {% if saldo < 0 %}-{% endif %}{{ saldo|abs | real }}
+    </div>
+    <div style="font-size:0.75rem;color:var(--text3);margin-top:8px">
+      {% if saldo >= 0 %}positivo ✓{% else %}negativo — atenção!{% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Parcelamentos no período -->
+{% if grupos %}
+<div class="card mb-24 fade-up delay-1">
+  <div class="card-title mb-16">💳 Parcelamentos no período</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    {% for grupo_uuid, info in grupos.items() %}
+      <div class="d-flex justify-between align-center"
+           style="padding:10px 14px;background:var(--bg3);border-radius:8px;
+                  border:1px solid var(--border)">
+        <div>
+          <div style="font-weight:600;color:var(--text);font-size:0.9rem">{{ info.descricao }}</div>
+          <div style="font-size:0.75rem;color:var(--text3);margin-top:2px">
+            {{ info.count }} parcela{% if info.count != 1 %}s{% endif %} no período
+          </div>
+        </div>
+        <button class="btn btn-danger btn-sm"
+                onclick="deletarGrupo('{{ grupo_uuid }}', '{{ info.descricao|e }}', {{ info.count }})">
+          🗑 Excluir todas
+        </button>
+      </div>
+    {% endfor %}
+  </div>
+  <div style="font-size:0.75rem;color:var(--text3);margin-top:10px">
+    ⚠ Excluir todas remove todas as parcelas, inclusive fora do período filtrado.
+  </div>
+</div>
+{% endif %}
+
+<!-- Tabela -->
+<div class="card fade-up delay-2">
+
+  {% if transacoes %}
+    <div style="font-size:0.82rem;color:var(--text3);margin-bottom:16px">
+      {{ transacoes|length }} transaç{% if transacoes|length == 1 %}ão{% else %}ões{% endif %}
+      no período
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Categoria</th>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th class="text-right">Valor</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for t in transacoes %}
+            <tr>
+              <td>
+                <div style="font-weight:500;color:var(--text)">{{ t.descricao }}</div>
+                {% if t.recorrente_uuid %}
+                  <div style="font-size:0.72rem;color:var(--text3);margin-top:2px">🔁 recorrente</div>
+                {% endif %}
+                {% if t.grupo_parcela %}
+                  <div style="font-size:0.72rem;color:var(--purple3);margin-top:2px">💳 parcelado</div>
+                {% endif %}
+              </td>
+              <td>{{ t.categoria_icone }} {{ t.categoria_nome }}</td>
+              <td style="white-space:nowrap">{{ t.data }}</td>
+              <td><span class="badge badge-{{ t.tipo }}">{{ t.tipo }}</span></td>
+              <td class="text-right">
+                <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;
+                            color:{% if t.tipo == 'receita' %}var(--green2){% else %}var(--red2){% endif %}">
+                  {% if t.tipo == 'despesa' %}-{% endif %}{{ t.valor | real }}
+                </div>
+              </td>
+              <td class="text-right">
+                <div class="d-flex gap-8" style="justify-content:flex-end">
+                  <button class="btn btn-secondary btn-sm btn-icon"
+                          onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')"
+                          title="Editar">✏</button>
+                  <button class="btn btn-danger btn-sm btn-icon"
+                          onclick="deletar('{{ t.uuid }}')"
+                          title="Deletar">🗑</button>
+                </div>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">💳</div>
+      <div style="font-size:1rem;font-weight:600">Nenhuma transação no período</div>
+      <p>Tente ampliar o período ou
+        <a href="{{ url_for('transacoes.novo') }}" style="color:var(--purple3)">
+          adicione uma transação
+        </a>
+      </p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal de edição -->
+<div class="modal-backdrop" id="modal-editar" onclick="fecharFora(event)">
+  <div class="modal">
+    <div class="modal-title">✏ Editar Transação</div>
+    <form method="POST" id="form-editar" action="">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="edit-despesa" value="despesa" />
+          <label for="edit-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="edit-receita" value="receita" />
+          <label for="edit-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" id="edit-descricao"
+               class="form-control" required />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="text" name="valor" id="edit-valor" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data</label>
+          <input type="date" name="data" id="edit-data" class="form-control" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" id="edit-categoria" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:flex-end;margin-top:8px">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar alterações</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function abrirEditar(id, descricao, valor, tipo, categoriaId, data) {
+    document.getElementById('form-editar').action = '/editar/' + id;
+    document.getElementById('edit-descricao').value = descricao;
+    document.getElementById('edit-valor').value = valor.toFixed(2).replace('.', ',');
+    document.getElementById('edit-data').value = data;
+    document.getElementById('edit-categoria').value = categoriaId;
+    document.getElementById(tipo === 'receita' ? 'edit-receita' : 'edit-despesa').checked = true;
+    document.getElementById('modal-editar').classList.add('open');
+  }
+
+  function fecharModal() { document.getElementById('modal-editar').classList.remove('open'); }
+  function fecharFora(e) { if (e.target.id === 'modal-editar') fecharModal(); }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
+
+  async function deletar(uuid) {
+    if (!confirm('Deletar esta transação?')) return;
+    const r = await fetch('/api/transacao/' + uuid, { method: 'DELETE' });
+    if (r.ok) location.reload();
+  }
+
+  async function deletarGrupo(grupoUuid, descricao, count) {
+    if (!confirm(`Excluir TODAS as parcelas de "${descricao}"?\n\n${count} parcelas visíveis + as fora do período serão removidas.\n\nEssa ação não pode ser desfeita.`)) return;
+    const r = await fetch('/api/grupo/' + grupoUuid, { method: 'DELETE' });
+    if (r.ok) {
+      const data = await r.json();
+      alert(`✓ ${data.deletadas} parcela(s) removida(s).`);
+      location.reload();
+    } else {
+      alert('Erro ao excluir. Tente novamente.');
+    }
+  }
+</script>
+{% endblock %}

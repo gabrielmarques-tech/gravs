@@ -1,0 +1,279 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block content %}
+
+<!-- Cards de resumo -->
+<div class="grid grid-3 fade-up">
+
+  <div class="card">
+    <div class="card-title">💰 Receitas</div>
+    <div class="card-value text-receita">{{ resumo.receitas | real }}</div>
+    <div class="mt-8" style="font-size:0.8rem;color:var(--text3)">este mês</div>
+  </div>
+
+  <div class="card delay-1 fade-up">
+    <div class="card-title">💸 Despesas</div>
+    <div class="card-value text-despesa">{{ resumo.despesas | real }}</div>
+    <div class="mt-8" style="font-size:0.8rem;color:var(--text3)">este mês</div>
+  </div>
+
+  <div class="card delay-2 fade-up">
+    <div class="card-title">📈 Saldo do mês</div>
+    <div class="card-value {% if resumo.saldo >= 0 %}text-receita{% else %}text-despesa{% endif %}">
+      {{ resumo.saldo | real }}
+    </div>
+    <div class="mt-8" style="font-size:0.8rem;color:var(--text3)">
+      {% if resumo.saldo >= 0 %}no positivo ✓{% else %}no negativo ✗{% endif %}
+    </div>
+  </div>
+
+</div>
+
+<!-- Card de economia — destaque principal -->
+{% set ins = resumo.insight %}
+{% if resumo.receitas > 0 or resumo.despesas > 0 %}
+<div class="mt-24 fade-up delay-2">
+
+  {% if resumo.saldo > 0 %}
+    <!-- Economizou -->
+    <div style="
+      background: linear-gradient(135deg, rgba(16,185,129,0.15), rgba(16,185,129,0.05));
+      border: 1px solid rgba(16,185,129,0.35);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      position: relative;
+      overflow: hidden;
+    ">
+      <!-- Barra de progresso de economia -->
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:rgba(255,255,255,0.05)">
+        {% set pct_economizado = [(resumo.saldo / resumo.receitas * 100)|round(1), 100]|min if resumo.receitas > 0 else 0 %}
+        <div style="height:100%;width:{{ pct_economizado }}%;
+                    background:linear-gradient(90deg,#10b981,#34d399);
+                    border-radius:99px;transition:width 1s ease"></div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <!-- Ícone grande -->
+        <div style="
+          width:64px;height:64px;flex-shrink:0;
+          background:linear-gradient(135deg,rgba(16,185,129,0.3),rgba(16,185,129,0.1));
+          border:1px solid rgba(16,185,129,0.4);
+          border-radius:16px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:2rem;
+        ">🎉</div>
+
+        <!-- Texto -->
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;
+                      color:#34d399;margin-bottom:4px">
+            Você está economizando!
+          </div>
+          <div style="font-size:0.9rem;color:var(--text2);line-height:1.5">
+            Sobrou <strong style="color:#34d399">{{ resumo.saldo | real }}</strong>
+            este mês —
+            <strong style="color:#34d399">
+              {% if resumo.receitas > 0 %}
+                {{ (resumo.saldo / resumo.receitas * 100)|round(1) }}% da sua receita
+              {% endif %}
+            </strong>
+            guardada.
+          </div>
+          {% if resumo.diferenca_despesas < -50 %}
+            <div style="font-size:0.8rem;color:#10b981;margin-top:6px">
+              ↓ Gastou {{ resumo.diferenca_despesas|abs | real }} a menos que o mês passado
+            </div>
+          {% endif %}
+        </div>
+
+        <!-- Valor em destaque -->
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.72rem;color:var(--text3);text-transform:uppercase;
+                      letter-spacing:0.08em;margin-bottom:4px">economizado</div>
+          <div style="font-family:var(--font-display);font-size:2rem;font-weight:800;
+                      color:#34d399;letter-spacing:-1px">
+            {{ resumo.saldo | real }}
+          </div>
+        </div>
+      </div>
+
+      <!-- Barra visual receita vs despesa -->
+      {% if resumo.receitas > 0 %}
+        {% set pct_gasto = [(resumo.despesas / resumo.receitas * 100)|round(1), 100]|min %}
+        <div style="margin-top:20px">
+          <div style="display:flex;justify-content:space-between;
+                      font-size:0.75rem;color:var(--text3);margin-bottom:6px">
+            <span>Despesas: {{ pct_gasto }}% da receita</span>
+            <span>Economizado: {{ (100 - pct_gasto)|round(1) }}%</span>
+          </div>
+          <div style="height:8px;background:rgba(255,255,255,0.06);
+                      border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:{{ pct_gasto }}%;
+                        background:linear-gradient(90deg,#ef4444,#f97316);
+                        border-radius:99px;transition:width 1s ease 0.3s"></div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  {% elif resumo.saldo < 0 %}
+    <!-- Gastou mais que ganhou -->
+    <div style="
+      background: linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.04));
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: var(--radius-lg);
+      padding: 28px 32px;
+      position: relative;
+      overflow: hidden;
+    ">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;
+                  background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+
+      <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap">
+        <div style="
+          width:64px;height:64px;flex-shrink:0;
+          background:rgba(239,68,68,0.15);
+          border:1px solid rgba(239,68,68,0.3);
+          border-radius:16px;
+          display:flex;align-items:center;justify-content:center;
+          font-size:2rem;
+        ">⚠️</div>
+
+        <div style="flex:1;min-width:200px">
+          <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:800;
+                      color:#f87171;margin-bottom:4px">
+            Gastos acima da receita
+          </div>
+          <div style="font-size:0.9rem;color:var(--text2);line-height:1.5">
+            Você gastou <strong style="color:#f87171">{{ resumo.saldo|abs | real }}</strong>
+            a mais do que recebeu este mês.
+          </div>
+          {% if resumo.diferenca_despesas > 50 %}
+            <div style="font-size:0.8rem;color:#ef4444;margin-top:6px">
+              ↑ Gastou {{ resumo.diferenca_despesas | real }} a mais que o mês passado
+            </div>
+          {% endif %}
+        </div>
+
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.72rem;color:var(--text3);text-transform:uppercase;
+                      letter-spacing:0.08em;margin-bottom:4px">déficit</div>
+          <div style="font-family:var(--font-display);font-size:2rem;font-weight:800;
+                      color:#f87171;letter-spacing:-1px">
+            {{ resumo.saldo|abs | real }}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    <!-- Zerado -->
+    <div style="
+      background: rgba(107,95,130,0.1);
+      border: 1px solid rgba(107,95,130,0.2);
+      border-radius: var(--radius-lg);
+      padding: 20px 28px;
+      display:flex;align-items:center;gap:16px;
+    ">
+      <div style="font-size:2rem">⚖️</div>
+      <div>
+        <div style="font-family:var(--font-display);font-weight:700;color:var(--text2)">
+          Receitas e despesas equilibradas
+        </div>
+        <div style="font-size:0.85rem;color:var(--text3);margin-top:2px">
+          Nenhum gasto ou receita registrado ainda este mês.
+        </div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Comparação com mês anterior -->
+{% if resumo.receitas_anterior > 0 or resumo.despesas_anterior > 0 %}
+<div class="card mt-16 fade-up delay-3"
+     style="padding:16px 20px">
+  <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:0.78rem;color:var(--text3);font-weight:600;
+                text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">
+      Mês anterior
+    </div>
+    <div style="display:flex;gap:20px;flex-wrap:wrap">
+      <span style="font-size:0.85rem;color:var(--text2)">
+        Receitas: <strong style="color:var(--green2)">{{ resumo.receitas_anterior | real }}</strong>
+      </span>
+      <span style="font-size:0.85rem;color:var(--text2)">
+        Despesas: <strong style="color:var(--red2)">{{ resumo.despesas_anterior | real }}</strong>
+      </span>
+      {% if resumo.diferenca_despesas != 0 %}
+        <span style="font-size:0.85rem;color:var(--text2)">
+          {% if resumo.diferenca_despesas > 0 %}
+            Gastou <strong style="color:var(--red2)">{{ resumo.diferenca_despesas | real }}</strong> a mais
+          {% else %}
+            Gastou <strong style="color:var(--green2)">{{ resumo.diferenca_despesas|abs | real }}</strong> a menos
+          {% endif %}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Gastos por categoria -->
+{% if resumo.gastos_por_categoria %}
+<div class="card mt-24 fade-up">
+  <div class="card-title mb-16">🗂 Gastos por categoria</div>
+  <div style="display:flex;flex-direction:column;gap:12px">
+    {% for item in resumo.gastos_por_categoria %}
+      <div>
+        <div class="d-flex justify-between align-center" style="margin-bottom:5px">
+          <span style="font-size:0.88rem;color:var(--text2)">{{ item.nome }}</span>
+          <div style="display:flex;align-items:center;gap:10px">
+            {% if resumo.despesas > 0 %}
+              <span style="font-size:0.75rem;color:var(--text3)">
+                {{ (item.total / resumo.despesas * 100)|round(1) }}%
+              </span>
+            {% endif %}
+            <span style="font-size:0.88rem;font-weight:600;color:var(--text)">{{ item.total | real }}</span>
+          </div>
+        </div>
+        <div style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
+          {% if resumo.despesas > 0 %}
+            <div style="height:100%;
+                        width:{{ [(item.total / resumo.despesas * 100)|round(1), 100]|min }}%;
+                        background:{{ item.cor or '#7c3aed' }};
+                        border-radius:99px;transition:width 0.8s ease"></div>
+          {% endif %}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Ações rápidas -->
+<div class="grid grid-2 mt-24 fade-up">
+  <a href="{{ url_for('transacoes.novo') }}" class="card"
+     style="text-decoration:none;text-align:center;cursor:pointer;transition:border-color 0.2s"
+     onmouseover="this.style.borderColor='var(--purple2)'"
+     onmouseout="this.style.borderColor='var(--border)'">
+    <div style="font-size:2rem;margin-bottom:8px">💳</div>
+    <div style="font-family:var(--font-display);font-weight:700">Nova Transação</div>
+    <div style="font-size:0.82rem;color:var(--text3);margin-top:4px">Registrar receita ou despesa</div>
+  </a>
+
+  <a href="{{ url_for('recorrentes.fixas') }}" class="card"
+     style="text-decoration:none;text-align:center;cursor:pointer;transition:border-color 0.2s"
+     onmouseover="this.style.borderColor='var(--cyan)'"
+     onmouseout="this.style.borderColor='var(--border)'">
+    <div style="font-size:2rem;margin-bottom:8px">🔁</div>
+    <div style="font-family:var(--font-display);font-weight:700">Contas Fixas</div>
+    <div style="font-size:0.82rem;color:var(--text3);margin-top:4px">Gerenciar recorrências</div>
+  </a>
+</div>
+
+{% endblock %}

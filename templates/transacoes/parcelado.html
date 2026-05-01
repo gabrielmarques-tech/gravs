@@ -1,0 +1,332 @@
+{% extends "base.html" %}
+
+{% block title %}Parcelar Compra{% endblock %}
+{% block page_title %}Parcelar / Financiamento{% endblock %}
+
+{% block content %}
+<div style="max-width:620px;margin:0 auto">
+
+  <div class="card fade-up">
+
+    <!-- Seletor de modo -->
+    <div style="display:flex;gap:0;margin-bottom:28px;background:var(--bg3);
+                border-radius:var(--radius-sm);padding:3px;border:1px solid var(--border)">
+      <button type="button" id="btn-compra"
+              onclick="setModo('compra')"
+              style="flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;
+                     font-family:var(--font-display);font-size:0.9rem;font-weight:700;
+                     transition:all 0.18s;background:linear-gradient(135deg,var(--purple),var(--purple2));
+                     color:white;box-shadow:0 3px 10px rgba(124,58,237,0.4)">
+        💳 Compra parcelada
+      </button>
+      <button type="button" id="btn-financiamento"
+              onclick="setModo('financiamento')"
+              style="flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;
+                     font-family:var(--font-display);font-size:0.9rem;font-weight:700;
+                     transition:all 0.18s;background:transparent;color:var(--text2)">
+        🏦 Financiamento
+      </button>
+    </div>
+
+    <!-- Descrição do modo -->
+    <div id="desc-compra"
+         style="font-size:0.83rem;color:var(--text3);margin-bottom:20px;
+                padding:10px 14px;background:var(--bg3);border-radius:8px;
+                border-left:3px solid var(--purple)">
+      Compras sem juros no cartão, boleto parcelado. O valor total é dividido igualmente.
+    </div>
+    <div id="desc-financiamento"
+         style="font-size:0.83rem;color:var(--text3);margin-bottom:20px;
+                padding:10px 14px;background:var(--bg3);border-radius:8px;
+                border-left:3px solid var(--cyan);display:none">
+      Financiamentos, empréstimos, crédito com juros. Calcula a parcela fixa correta com base na taxa.
+    </div>
+
+    <form method="POST" action="{{ url_for('transacoes.parcelado') }}" id="form-parcelado">
+      <input type="hidden" name="tipo_juros" id="input-tipo-juros" value="sem" />
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="tipo-despesa" value="despesa" checked />
+          <label for="tipo-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="tipo-receita" value="receita" />
+          <label for="tipo-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" class="form-control"
+               placeholder="Ex: Geladeira, Financiamento AP, Carro..." required autofocus />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <!-- Label muda conforme o modo -->
+          <label class="form-label" id="label-valor">Valor total (R$)</label>
+          <input type="text" name="valor" id="valor-input" class="form-control"
+                 placeholder="0,00" required />
+          <div id="hint-valor" style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+            Valor total da compra
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data da 1ª parcela</label>
+          <input type="date" name="data" class="form-control"
+                 value="{{ data_hoje }}" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Número de parcelas</label>
+        <input type="number" name="parcelas" id="num-parcelas"
+               class="form-control" min="2" max="420" value="12" required />
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">Máximo: 420x (35 anos)</div>
+      </div>
+
+      <!-- Taxas — só aparece no modo financiamento -->
+      <div id="bloco-taxa" style="display:none">
+        <div style="background:var(--bg3);border:1px solid var(--border);
+                    border-radius:var(--radius);padding:18px;margin-bottom:18px">
+          <div style="font-size:0.8rem;font-weight:700;color:var(--text2);
+                      margin-bottom:14px;text-transform:uppercase;letter-spacing:0.06em">
+            📐 Taxa de juros
+          </div>
+
+          <div class="grid grid-2">
+            <div class="form-group">
+              <label class="form-label">Taxa anual (%)</label>
+              <input type="text" id="taxa-anual" class="form-control"
+                     placeholder="Ex: 7.66" />
+              <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+                Converte para mensal automaticamente
+              </div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Taxa mensal (%)</label>
+              <input type="text" name="taxa_juros" id="taxa-mensal"
+                     class="form-control" placeholder="Ex: 0.6170" />
+              <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+                Ou informe direto a mensal
+              </div>
+            </div>
+          </div>
+
+          <div id="info-taxa"
+               style="display:none;font-size:0.8rem;color:var(--cyan2);
+                      background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);
+                      border-radius:6px;padding:8px 12px"></div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div id="preview-box"
+           style="display:none;background:var(--bg3);border:1px solid var(--border);
+                  border-radius:var(--radius);padding:18px;margin-bottom:20px">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text2);
+                    margin-bottom:14px;text-transform:uppercase;letter-spacing:0.06em">
+          📋 Projeção
+        </div>
+
+        <!-- Resumo destacado -->
+        <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
+          <div style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
+                      padding:12px;border:1px solid var(--border);text-align:center">
+            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">PARCELA</div>
+            <div id="preview-parcela"
+                 style="font-family:var(--font-display);font-size:1.3rem;
+                        font-weight:800;color:var(--purple2)">-</div>
+          </div>
+          <div style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
+                      padding:12px;border:1px solid var(--border);text-align:center">
+            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">TOTAL PAGO</div>
+            <div id="preview-total"
+                 style="font-family:var(--font-display);font-size:1.3rem;
+                        font-weight:800;color:var(--text)">-</div>
+          </div>
+          <div id="bloco-juros-preview"
+               style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
+                      padding:12px;border:1px solid var(--border);text-align:center;display:none">
+            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">TOTAL JUROS</div>
+            <div id="preview-juros"
+                 style="font-family:var(--font-display);font-size:1.3rem;
+                        font-weight:800;color:var(--red2)">-</div>
+          </div>
+        </div>
+
+        <!-- Primeiras parcelas -->
+        <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">
+          Primeiras parcelas:
+        </div>
+        <div id="lista-parcelas"
+             style="display:flex;flex-wrap:wrap;gap:5px;max-height:100px;overflow-y:auto"></div>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:space-between;align-items:center">
+        <a href="{{ url_for('transacoes.novo') }}"
+           style="font-size:0.85rem;color:var(--text3);text-decoration:none">
+          ← Transação simples
+        </a>
+        <button type="submit" class="btn btn-primary" style="padding:12px 32px">
+          Salvar parcelas
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let modoAtual = 'compra';
+
+  function setModo(modo) {
+    modoAtual = modo;
+
+    const btnCompra       = document.getElementById('btn-compra');
+    const btnFinanc       = document.getElementById('btn-financiamento');
+    const descCompra      = document.getElementById('desc-compra');
+    const descFinanc      = document.getElementById('desc-financiamento');
+    const blocoTaxa       = document.getElementById('bloco-taxa');
+    const labelValor      = document.getElementById('label-valor');
+    const hintValor       = document.getElementById('hint-valor');
+    const inputTipoJuros  = document.getElementById('input-tipo-juros');
+
+    const ativo   = 'background:linear-gradient(135deg,var(--purple),var(--purple2));color:white;box-shadow:0 3px 10px rgba(124,58,237,0.4)';
+    const inativo = 'background:transparent;color:var(--text2)';
+
+    if (modo === 'compra') {
+      btnCompra.style.cssText      += ';' + ativo;
+      btnFinanc.style.cssText       = btnFinanc.style.cssText.replace(/background[^;]+;?/g,'').replace(/color[^;]+;?/g,'').replace(/box-shadow[^;]+;?/g,'') + ';background:transparent;color:var(--text2)';
+      descCompra.style.display      = 'block';
+      descFinanc.style.display      = 'none';
+      blocoTaxa.style.display       = 'none';
+      labelValor.textContent        = 'Valor total (R$)';
+      hintValor.textContent         = 'Valor total da compra';
+      inputTipoJuros.value          = 'sem';
+    } else {
+      btnFinanc.style.cssText      += ';' + ativo;
+      btnCompra.style.cssText       = btnCompra.style.cssText.replace(/background[^;]+;?/g,'').replace(/color[^;]+;?/g,'').replace(/box-shadow[^;]+;?/g,'') + ';background:transparent;color:var(--text2)';
+      descCompra.style.display      = 'none';
+      descFinanc.style.display      = 'block';
+      blocoTaxa.style.display       = 'block';
+      labelValor.textContent        = 'Valor financiado (R$)';
+      hintValor.textContent         = 'Valor total do financiamento';
+      inputTipoJuros.value          = 'price';
+    }
+
+    calcularPreview();
+  }
+
+  // Taxa anual → mensal (juros compostos)
+  document.getElementById('taxa-anual').addEventListener('input', function() {
+    const anual = parseFloat(this.value.replace(',', '.'));
+    const info  = document.getElementById('info-taxa');
+    if (!isNaN(anual) && anual > 0) {
+      const mensal = (Math.pow(1 + anual / 100, 1 / 12) - 1) * 100;
+      document.getElementById('taxa-mensal').value = mensal.toFixed(6);
+      info.style.display   = 'block';
+      info.textContent     = `${anual.toFixed(2)}% ao ano = ${mensal.toFixed(6)}% ao mês (juros compostos)`;
+    } else {
+      info.style.display = 'none';
+      document.getElementById('taxa-mensal').value = '';
+    }
+    calcularPreview();
+  });
+
+  document.getElementById('taxa-mensal').addEventListener('input', function() {
+    document.getElementById('taxa-anual').value = '';
+    document.getElementById('info-taxa').style.display = 'none';
+    calcularPreview();
+  });
+
+  document.getElementById('valor-input').addEventListener('input', calcularPreview);
+  document.getElementById('num-parcelas').addEventListener('input', calcularPreview);
+
+  function fmt(v) {
+    return 'R$ ' + v.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  async function calcularPreview() {
+    const valorRaw = document.getElementById('valor-input').value.replace(/\./g,'').replace(',','.');
+    const valor    = parseFloat(valorRaw);
+    const parc     = parseInt(document.getElementById('num-parcelas').value);
+    const taxa     = parseFloat(document.getElementById('taxa-mensal').value || '0');
+    const tipo     = modoAtual === 'financiamento' ? 'price' : 'sem';
+
+    const box = document.getElementById('preview-box');
+
+    if (isNaN(valor) || valor <= 0 || isNaN(parc) || parc < 2) {
+      box.style.display = 'none';
+      return;
+    }
+
+    try {
+      const r = await fetch('/api/preview_parcelas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          valor: valor.toString(),
+          parcelas: parc,
+          tipo_juros: tipo,
+          taxa_juros: isNaN(taxa) ? 0 : taxa
+        })
+      });
+
+      if (!r.ok) { box.style.display = 'none'; return; }
+
+      const data   = await r.json();
+      const total  = data.total;
+      const juros  = total - valor;
+      const pmtEx  = data.parcelas[0];
+
+      box.style.display = 'block';
+      document.getElementById('preview-parcela').textContent = fmt(pmtEx);
+      document.getElementById('preview-total').textContent   = fmt(total);
+
+      const blocoJuros = document.getElementById('bloco-juros-preview');
+      if (modoAtual === 'financiamento' && taxa > 0) {
+        blocoJuros.style.display = 'block';
+        document.getElementById('preview-juros').textContent = fmt(juros);
+      } else {
+        blocoJuros.style.display = 'none';
+      }
+
+      // Mostra primeiras parcelas (máx 12)
+      const MAX   = 12;
+      const lista = document.getElementById('lista-parcelas');
+      let html    = data.parcelas.slice(0, MAX).map((v, i) =>
+        `<span style="background:var(--surface2);border:1px solid var(--border);
+                      border-radius:5px;padding:3px 9px;font-size:0.76rem;
+                      color:var(--text2);white-space:nowrap">
+          ${i+1}x ${fmt(v)}
+        </span>`
+      ).join('');
+
+      if (data.parcelas.length > MAX)
+        html += `<span style="font-size:0.76rem;color:var(--text3);align-self:center;padding:3px 6px">
+          ... +${data.parcelas.length - MAX} parcelas
+        </span>`;
+
+      lista.innerHTML = html;
+
+    } catch(e) {
+      box.style.display = 'none';
+    }
+  }
+
+  // Inicia no modo compra
+  setModo('compra');
+</script>
+{% endblock %}

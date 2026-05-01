@@ -43,7 +43,7 @@ class Config:
     LOGIN_MESSAGE: str = "Faça login para acessar"
 
     # ── Limites de negócio ────────────────────────────────────────────────────
-    MAX_PARCELAS: int = 60
+    MAX_PARCELAS: int = 420
     MIN_PARCELAS: int = 2
     MIN_SENHA_LEN: int = 6
 

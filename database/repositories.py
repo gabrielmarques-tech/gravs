@@ -357,6 +357,15 @@ class TransacaoRepository:
                 (recorrente_uuid, f"{ano}-{mes:02d}"),
             ).fetchone()[0]
         return count > 0
+    def deletar_grupo(self, grupo_parcela: str, usuario_id: int) -> int:
+        """Soft-delete de todas as parcelas de um parcelamento."""
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                """UPDATE transacoes SET deletado = 1
+                   WHERE grupo_parcela = ? AND usuario_id = ? AND deletado = 0""",
+                (grupo_parcela, usuario_id),
+            )
+        return cur.rowcount
 
 
 # ── Repositório de Recorrentes ─────────────────────────────────────────────────
@@ -457,7 +466,6 @@ class RecorrenteRepository:
                 (uuid, usuario_id),
             )
         return cur.rowcount > 0
-
 
 # ── Repositório de Metas ───────────────────────────────────────────────────────
 
