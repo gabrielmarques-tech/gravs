@@ -67,6 +67,9 @@ class DatabaseManager:
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA synchronous = NORMAL")
         conn.execute("PRAGMA busy_timeout = 5000")
+        conn.execute("PRAGMA cache_size = -8000")   # 8MB de cache em memória
+        conn.execute("PRAGMA temp_store = MEMORY")  # tabelas temporárias em RAM
+        conn.execute("PRAGMA mmap_size = 268435456") # 256MB memory-mapped I/O
         conn.row_factory = sqlite3.Row
 
         try:
@@ -318,6 +321,9 @@ class DatabaseManager:
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
             )
         """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_tokens_usuario ON tokens_recuperacao(usuario_id, usado)"
+        )
 
     def _criar_tabela_contas_bancarias(self, conn) -> None:
         """Cria tabela de contas bancarias e cartoes se nao existir."""
@@ -336,6 +342,14 @@ class DatabaseManager:
         """)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_contas_usuario ON contas_bancarias(usuario_id)"
+        )
+        # Índice para busca por recorrente_uuid (lançamentos automáticos)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_recorrente ON transacoes(recorrente_uuid) WHERE recorrente_uuid IS NOT NULL"
+        )
+        # Índice para contas bancárias ativas
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_contas_ativo ON contas_bancarias(usuario_id, ativo)"
         )
 
     @staticmethod

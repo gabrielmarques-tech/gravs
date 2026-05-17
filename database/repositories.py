@@ -66,22 +66,15 @@ class UsuarioRepository:
             return None
 
     def buscar_por_email(self, email: str) -> dict | None:
-        """Retorna usuário ativo pelo email (case-insensitive)."""
+        """
+        Retorna usuário ativo pelo email (case-insensitive).
+        Usado tanto no login quanto na recuperação de senha.
+        """
         with self._db.get_conn() as conn:
             row = conn.execute(
                 "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
                 "WHERE email = ? AND ativo = 1",
                 (email.lower().strip(),),
-            ).fetchone()
-        return _row_to_dict(row)
-
-    def buscar_por_email(self, email: str) -> dict | None:
-        """Busca usuário por email — usado na recuperação de senha."""
-        with self._db.get_conn() as conn:
-            row = conn.execute(
-                "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
-                "WHERE email = ? AND ativo = 1",
-                (email.lower(),),
             ).fetchone()
         return _row_to_dict(row)
 
@@ -316,12 +309,14 @@ class TransacaoRepository:
         define explicitamente quais colunas podem ser alteradas.
         Qualquer campo não mapeado é simplesmente ignorado.
         """
+        # Campos permitidos para atualização — lista explícita evita SQL injection
         _CAMPOS_PERMITIDOS = {
-            "descricao": lambda v: str(v).strip(),
-            "valor": lambda v: round(float(v), 2),
-            "tipo": lambda v: str(v),
+            "descricao":   lambda v: str(v).strip(),
+            "valor":       lambda v: round(float(v), 2),
+            "tipo":        lambda v: str(v),
             "categoria_id": int,
-            "data": lambda v: str(v),
+            "data":        lambda v: str(v),
+            "conta_id":    lambda v: int(v) if v else None,
         }
 
         sets, params = [], []
@@ -639,23 +634,7 @@ class SaldoContaRepository:
         return _rows_to_list(rows)
 
 
-    def __str__(self) -> str:
-        return "SaldoContaRepository"
 
-
-class MetaRepository:
-    """Repositório de metas financeiras."""
-
-    def __init__(self, db) -> None:
-        self._db = db
-
-    def atualizar_valor(self, uuid: str, usuario_id: int, valor_atual: float) -> bool:
-        with self._db.get_write_conn() as conn:
-            cur = conn.execute(
-                "UPDATE metas SET valor_atual = ? WHERE uuid = ? AND usuario_id = ?",
-                (round(valor_atual, 2), uuid, usuario_id),
-            )
-        return cur.rowcount > 0
 
 class ContaBancariaRepository:
     """Repositório de contas bancárias e cartões do usuário."""

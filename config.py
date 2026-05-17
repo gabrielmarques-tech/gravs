@@ -82,6 +82,14 @@ class ProductionConfig(Config):
     """
     DEBUG = False
 
+    # ── Segurança de cookies ──────────────────────────────────────────────────
+    # SESSION_COOKIE_SECURE: cookie só enviado em HTTPS — evita interceptação
+    SESSION_COOKIE_SECURE   = True
+    # SESSION_COOKIE_HTTPONLY: JavaScript não consegue ler o cookie — evita XSS
+    SESSION_COOKIE_HTTPONLY = True
+    # SESSION_COOKIE_SAMESITE: cookie só enviado em requests do mesmo site — evita CSRF
+    SESSION_COOKIE_SAMESITE = "Lax"
+
     @classmethod
     def validate(cls) -> None:
         """Levanta erro se variáveis críticas estiverem ausentes."""

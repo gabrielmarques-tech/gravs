@@ -53,6 +53,18 @@ def novo():
             conta_id_raw = request.form.get("conta_id", "").strip()
             conta_id = int(conta_id_raw) if conta_id_raw else None
 
+            # Validações básicas
+            descricao_raw = request.form.get("descricao", "").strip()
+            if not descricao_raw:
+                flash("Descrição é obrigatória.", "erro")
+                return redirect(request.referrer or url_for("transacoes.novo"))
+            if valor <= 0:
+                flash("O valor deve ser maior que zero.", "erro")
+                return redirect(request.referrer or url_for("transacoes.novo"))
+            if len(descricao_raw) > 200:
+                flash("Descrição muito longa. Máximo 200 caracteres.", "erro")
+                return redirect(request.referrer or url_for("transacoes.novo"))
+
             if parcelas and int(parcelas) >= 2:
                 taxa = float(request.form.get("taxa_juros", "0") or "0")
                 ids, erros = svc.transacoes.adicionar_parcelado(
