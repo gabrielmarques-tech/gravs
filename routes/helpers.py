@@ -37,10 +37,11 @@ class UserPrincipal(UserMixin):
     Usar um objeto tipado (vs dict) previne KeyError em templates.
     """
 
-    def __init__(self, id: int, email: str, nome: str) -> None:
+    def __init__(self, id: int, email: str, nome: str, modo_contabil: int = 0) -> None:
         self.id = id
         self.email = email
         self.nome = nome
+        self.modo_contabil = modo_contabil  # 1 = ativo, 0 = inativo
 
     def __repr__(self) -> str:
         return f"<UserPrincipal id={self.id} email={self.email}>"
@@ -52,4 +53,5 @@ def make_user_principal(dados: dict) -> UserPrincipal:
         id=dados["id"],
         email=dados["email"],
         nome=dados["nome"],
+        modo_contabil=dados.get("modo_contabil", 0),
     )

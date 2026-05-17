@@ -69,9 +69,19 @@ class UsuarioRepository:
         """Retorna usuário ativo pelo email (case-insensitive)."""
         with self._db.get_conn() as conn:
             row = conn.execute(
-                "SELECT id, email, senha_hash, nome FROM usuarios "
+                "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
                 "WHERE email = ? AND ativo = 1",
                 (email.lower().strip(),),
+            ).fetchone()
+        return _row_to_dict(row)
+
+    def buscar_por_email(self, email: str) -> dict | None:
+        """Busca usuário por email — usado na recuperação de senha."""
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
+                "WHERE email = ? AND ativo = 1",
+                (email.lower(),),
             ).fetchone()
         return _row_to_dict(row)
 
@@ -79,7 +89,7 @@ class UsuarioRepository:
         """Retorna usuário ativo pelo ID."""
         with self._db.get_conn() as conn:
             row = conn.execute(
-                "SELECT id, email, senha_hash, nome FROM usuarios "
+                "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
                 "WHERE id = ? AND ativo = 1",
                 (int(user_id),),
             ).fetchone()
@@ -176,16 +186,17 @@ class TransacaoRepository:
         usuario_id: int,
         recorrente_uuid: str | None = None,
         grupo_parcela: str | None = None,
+        conta_id: int | None = None,
     ) -> int:
         """Insere transação e retorna ID gerado."""
         with self._db.get_write_conn() as conn:
             cur = conn.execute(
                 """INSERT INTO transacoes
                    (uuid, descricao, valor, tipo, categoria_id, data,
-                    usuario_id, recorrente_uuid, grupo_parcela)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    usuario_id, recorrente_uuid, grupo_parcela, conta_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (uuid, descricao, round(valor, 2), tipo, categoria_id,
-                 data, usuario_id, recorrente_uuid, grupo_parcela),
+                 data, usuario_id, recorrente_uuid, grupo_parcela, conta_id),
             )
             return cur.lastrowid
 
@@ -213,9 +224,14 @@ class TransacaoRepository:
                           t.data, t.recorrente_uuid, t.grupo_parcela,
                           COALESCE(c.nome, 'Sem categoria') AS categoria_nome,
                           COALESCE(c.icone, '💰') AS categoria_icone,
-                          COALESCE(t.categoria_id, 0) AS categoria_id
+                          COALESCE(t.categoria_id, 0) AS categoria_id,
+                          t.conta_debito, t.conta_credito,
+                          t.conta_id,
+                          COALESCE(cb.nome, '') AS conta_nome,
+                          COALESCE(cb.icone, '') AS conta_icone
                    FROM transacoes t
                    LEFT JOIN categorias c ON t.categoria_id = c.id
+                   LEFT JOIN contas_bancarias cb ON t.conta_id = cb.id AND cb.ativo = 1
                    WHERE t.usuario_id = ?
                      AND t.data BETWEEN ? AND ?
                      AND t.deletado = 0
@@ -511,6 +527,128 @@ class MetaRepository:
             ).fetchall()
         return _rows_to_list(rows)
 
+class BuscaRepository:
+    """
+    Repositório dedicado para busca full-text nas transações.
+
+    Separado do TransacaoRepository para manter SRP —
+    busca tem lógica diferente de CRUD simples.
+    """
+
+    def __init__(self, db) -> None:
+        self._db = db
+
+    def buscar(
+        self,
+        usuario_id: int,
+        termo: str = "",
+        conta_id: int | None = None,
+        tipo: str | None = None,
+        data_inicio: str | None = None,
+        data_fim: str | None = None,
+        limit: int = 100,
+    ) -> list[dict]:
+        """
+        Busca transações com filtros combinados.
+
+        Args:
+            termo: texto livre para buscar na descrição
+            conta_id: filtra por conta bancária específica
+            tipo: 'receita' ou 'despesa'
+            data_inicio / data_fim: intervalo de datas
+        """
+        conditions = ["t.usuario_id = ?", "t.deletado = 0"]
+        params: list = [usuario_id]
+
+        if termo:
+            conditions.append("t.descricao LIKE ?")
+            params.append(f"%{termo}%")
+
+        if conta_id:
+            conditions.append("t.conta_id = ?")
+            params.append(conta_id)
+
+        if tipo in ("receita", "despesa"):
+            conditions.append("t.tipo = ?")
+            params.append(tipo)
+
+        if data_inicio:
+            conditions.append("t.data >= ?")
+            params.append(data_inicio)
+
+        if data_fim:
+            conditions.append("t.data <= ?")
+            params.append(data_fim)
+
+        where = " AND ".join(conditions)
+        params.append(limit)
+
+        with self._db.get_conn() as conn:
+            rows = conn.execute(f"""
+                SELECT t.id, t.uuid, t.descricao, t.valor, t.tipo,
+                       t.data, t.recorrente_uuid, t.grupo_parcela,
+                       COALESCE(c.nome, 'Sem categoria') AS categoria_nome,
+                       COALESCE(c.icone, '💰') AS categoria_icone,
+                       COALESCE(t.categoria_id, 0) AS categoria_id,
+                       t.conta_debito, t.conta_credito, t.conta_id,
+                       COALESCE(cb.nome, '') AS conta_nome,
+                       COALESCE(cb.icone, '') AS conta_icone
+                FROM transacoes t
+                LEFT JOIN categorias c ON t.categoria_id = c.id
+                LEFT JOIN contas_bancarias cb ON t.conta_id = cb.id AND cb.ativo = 1
+                WHERE {where}
+                ORDER BY t.data DESC, t.criado_em DESC
+                LIMIT ?
+            """, params).fetchall()
+
+        return _rows_to_list(rows)
+
+
+class SaldoContaRepository:
+    """
+    Calcula saldo atual por conta bancária.
+
+    Saldo = soma de receitas - soma de despesas lançadas nessa conta.
+    """
+
+    def __init__(self, db) -> None:
+        self._db = db
+
+    def saldos_por_conta(self, usuario_id: int) -> list[dict]:
+        """Retorna lista de contas com saldo calculado."""
+        with self._db.get_conn() as conn:
+            rows = conn.execute("""
+                SELECT
+                    cb.id,
+                    cb.nome,
+                    cb.tipo,
+                    cb.icone,
+                    COALESCE(SUM(
+                        CASE WHEN t.tipo = 'receita' THEN t.valor
+                             WHEN t.tipo = 'despesa' THEN -t.valor
+                             ELSE 0 END
+                    ), 0) AS saldo
+                FROM contas_bancarias cb
+                LEFT JOIN transacoes t
+                    ON t.conta_id = cb.id AND t.deletado = 0 AND t.usuario_id = ?
+                WHERE cb.usuario_id = ? AND cb.ativo = 1
+                GROUP BY cb.id, cb.nome, cb.tipo, cb.icone
+                ORDER BY cb.nome
+            """, (usuario_id, usuario_id)).fetchall()
+
+        return _rows_to_list(rows)
+
+
+    def __str__(self) -> str:
+        return "SaldoContaRepository"
+
+
+class MetaRepository:
+    """Repositório de metas financeiras."""
+
+    def __init__(self, db) -> None:
+        self._db = db
+
     def atualizar_valor(self, uuid: str, usuario_id: int, valor_atual: float) -> bool:
         with self._db.get_write_conn() as conn:
             cur = conn.execute(
@@ -518,3 +656,70 @@ class MetaRepository:
                 (round(valor_atual, 2), uuid, usuario_id),
             )
         return cur.rowcount > 0
+
+class ContaBancariaRepository:
+    """Repositório de contas bancárias e cartões do usuário."""
+
+    ICONES = {
+        "conta":   "🏦",
+        "cartao":  "💳",
+        "carteira": "👛",
+        "poupanca": "🐷",
+        "investimento": "📈",
+    }
+
+    SUGESTOES_PADRAO = [
+        ("Conta Corrente", "conta"),
+        ("Poupança",       "poupanca"),
+        ("Carteira",       "carteira"),
+    ]
+
+    def __init__(self, db) -> None:
+        self._db = db
+
+    def listar(self, usuario_id: int) -> list:
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT id, nome, tipo, icone FROM contas_bancarias
+                   WHERE usuario_id = ? AND ativo = 1
+                   ORDER BY nome""",
+                (usuario_id,)
+            ).fetchall()
+        return _rows_to_list(rows)
+
+    def adicionar(self, nome: str, tipo: str, usuario_id: int) -> tuple:
+        """Adiciona conta. Retorna (id, erro). Impede duplicidade de nome."""
+        nome = nome.strip()
+        if not nome:
+            return None, "Nome é obrigatório"
+
+        icone = self.ICONES.get(tipo, "🏦")
+
+        try:
+            with self._db.get_write_conn() as conn:
+                cur = conn.execute(
+                    """INSERT INTO contas_bancarias (usuario_id, nome, tipo, icone)
+                       VALUES (?, ?, ?, ?)""",
+                    (usuario_id, nome, tipo, icone)
+                )
+            return cur.lastrowid, None
+        except Exception as e:
+            if "UNIQUE" in str(e):
+                return None, f'Você já tem uma conta chamada "{nome}"'
+            return None, "Erro ao salvar conta"
+
+    def deletar(self, conta_id: int, usuario_id: int) -> bool:
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "UPDATE contas_bancarias SET ativo=0 WHERE id=? AND usuario_id=?",
+                (conta_id, usuario_id)
+            )
+        return cur.rowcount > 0
+
+    def criar_sugestoes_padrao(self, usuario_id: int) -> None:
+        """Cria contas padrão para novos usuários."""
+        for nome, tipo in self.SUGESTOES_PADRAO:
+            try:
+                self.adicionar(nome, tipo, usuario_id)
+            except Exception:
+                pass

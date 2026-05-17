@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Recuperar senha · Gravs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0d0618; --bg2:#130a24; --bg3:#1c1035; --purple:#7c3aed; --purple2:#9f5fff; --purple3:#c084fc; --cyan:#06b6d4; --text:#f1eeff; --text2:#a89bc2; --text3:#6b5f82; --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14); --green2:#34d399; --red2:#f87171; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; -webkit-font-smoothing:antialiased; padding:16px; }
+    .bg-orbs { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+    .orb { position:absolute; border-radius:50%; filter:blur(80px); opacity:0.15; }
+    .orb-1 { width:500px; height:500px; background:var(--purple); top:-150px; right:-150px; }
+    .orb-2 { width:350px; height:350px; background:var(--cyan); bottom:-100px; left:-100px; }
+    .auth-card { position:relative; background:rgba(19,10,36,0.85); border:1px solid var(--border2); border-radius:24px; padding:44px; width:100%; max-width:420px; backdrop-filter:blur(20px); box-shadow:0 24px 80px rgba(0,0,0,0.5); }
+    .auth-card::before { content:''; position:absolute; top:0; left:10%; right:10%; height:1px; background:linear-gradient(90deg,transparent,rgba(159,95,255,0.6),transparent); }
+    .auth-logo { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+    .logo-mark { width:42px; height:42px; background:linear-gradient(135deg,var(--purple),var(--cyan)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; box-shadow:0 6px 20px rgba(124,58,237,0.45); }
+    .logo-text { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; background:linear-gradient(135deg,var(--purple2),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    h1 { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+    .subtitle { color:var(--text2); font-size:0.88rem; margin-bottom:28px; line-height:1.5; }
+    .form-group { margin-bottom:16px; }
+    label { display:block; font-size:0.82rem; font-weight:500; color:var(--text2); margin-bottom:5px; }
+    input { width:100%; padding:11px 14px; background:var(--bg3); border:1px solid var(--border2); border-radius:9px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.92rem; transition:all 0.18s; outline:none; }
+    input:focus { border-color:var(--purple2); box-shadow:0 0 0 3px rgba(124,58,237,0.2); }
+    input::placeholder { color:var(--text3); }
+    .btn-submit { width:100%; padding:12px; margin-top:8px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:9px; color:white; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 16px rgba(124,58,237,0.4); }
+    .btn-submit:hover { transform:translateY(-1px); box-shadow:0 8px 24px rgba(124,58,237,0.55); }
+    .auth-footer { text-align:center; margin-top:20px; font-size:0.87rem; color:var(--text2); }
+    .auth-footer a { color:var(--purple3); text-decoration:none; font-weight:500; }
+    .flash-list { margin-bottom:18px; display:flex; flex-direction:column; gap:8px; }
+    .flash { padding:10px 14px; border-radius:8px; font-size:0.85rem; display:flex; align-items:center; gap:8px; border:1px solid; }
+    .flash-erro    { background:rgba(239,68,68,0.12);   border-color:rgba(239,68,68,0.25);   color:var(--red2); }
+    .flash-sucesso { background:rgba(16,185,129,0.12);  border-color:rgba(16,185,129,0.25);  color:var(--green2); }
+  </style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+</div>
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-mark">🌀</div>
+    <div class="logo-text">Gravs</div>
+  </div>
+
+  <h1>Recuperar senha</h1>
+  <p class="subtitle">Informe seu email e enviaremos as instruções para criar uma nova senha.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-list">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">
+            {% if category == 'erro' %}⚠{% else %}✓{% endif %} {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="email">Seu email</label>
+      <input type="email" id="email" name="email"
+             placeholder="seu@email.com" required autofocus />
+    </div>
+    <button type="submit" class="btn-submit">Enviar instruções →</button>
+  </form>
+
+  <div class="auth-footer">
+    Lembrou a senha? <a href="{{ url_for('auth.login') }}">Fazer login</a>
+  </div>
+</div>
+</body>
+</html>

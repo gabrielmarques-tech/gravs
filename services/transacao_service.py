@@ -47,6 +47,7 @@ class TransacaoService:
         data: str | None = None,
         recorrente_uuid: str | None = None,
         grupo_parcela: str | None = None,
+        conta_id: int | None = None,
     ) -> tuple[int | None, dict[str, str]]:
         """
         Adiciona uma transação simples.
@@ -77,6 +78,7 @@ class TransacaoService:
                 usuario_id=usuario_id,
                 recorrente_uuid=recorrente_uuid,
                 grupo_parcela=grupo_parcela,
+                conta_id=conta_id,
             )
             return id_transacao, {}
         except Exception as exc:
@@ -94,6 +96,7 @@ class TransacaoService:
         data_inicial: str | None = None,
         tipo_juros: str = "sem",
         taxa_juros_mensal: float = 0.0,
+        conta_id: int | None = None,
     ) -> tuple[list[int], dict[str, str]]:
         """
         Cria múltiplas transações para compra parcelada.
@@ -144,6 +147,7 @@ class TransacaoService:
                 usuario_id=usuario_id,
                 data=data_parcela.strftime("%Y-%m-%d"),
                 grupo_parcela=grupo,
+                conta_id=conta_id,  # mesma conta para todas as parcelas
             )
             if id_t:
                 ids_gerados.append(id_t)

@@ -1,11 +1,11 @@
 """routes/recorrentes.py — Rotas de lançamentos recorrentes/fixos."""
 
 import logging
-from datetime import datetime
+from datetime import datetime, date
 
 from flask import (
     Blueprint, jsonify,
-    redirect, render_template, request, url_for
+    redirect, render_template, request, url_for, flash
 )
 from flask_login import login_required, current_user
 
@@ -35,8 +35,11 @@ def fixas():
             )
             if erros:
                 logger.warning("Erros ao criar recorrente: %s", erros)
+            else:
+                flash("✓ Conta fixa cadastrada!", "sucesso")
         except (ValueError, TypeError) as exc:
             logger.error("Erro em /fixas POST: %s", exc, exc_info=True)
+            flash("Erro ao cadastrar. Verifique os dados.", "erro")
 
         return redirect(url_for("recorrentes.fixas"))
 
@@ -85,3 +88,110 @@ def api_deletar_fixo(uuid_rec: str):
     svc = get_services()
     ok = svc.recorrentes.desativar(uuid_rec, current_user.id)
     return jsonify({"success": ok})
+
+
+@recorrentes_bp.route("/api/fixo/<uuid_rec>/confirmar", methods=["POST"])
+@login_required
+def api_confirmar_pagamento(uuid_rec: str):
+    """
+    Confirma pagamento de uma conta fixa — lança a transação do mês atual.
+
+    Chamado quando o usuário clica em 'Sim, já paguei' no banner do dashboard.
+    É idempotente: se já foi lançado no mês, não duplica.
+    """
+    svc = get_services()
+    hoje = date.today()
+
+    try:
+        # Busca dados da recorrência
+        rec = svc.recorrentes._repo.buscar_por_uuid(uuid_rec, current_user.id)
+        if not rec:
+            return jsonify({"success": False, "error": "Não encontrada"}), 404
+
+        # Verifica se já foi lançada no mês
+        ja_existe = svc.transacoes._repo.existe_recorrente_no_mes(
+            uuid_rec, hoje.year, hoje.month
+        )
+        if ja_existe:
+            return jsonify({"success": True, "msg": "Já lançada neste mês"})
+
+        # Lança a transação
+        id_t, erros = svc.transacoes.adicionar(
+            descricao=rec["descricao"],
+            valor=rec["valor"],
+            tipo=rec["tipo"],
+            categoria_id=rec["categoria_id"],
+            usuario_id=current_user.id,
+            data=hoje.strftime("%Y-%m-%d"),
+            recorrente_uuid=uuid_rec,
+        )
+
+        if erros:
+            return jsonify({"success": False, "error": str(erros)}), 422
+
+        return jsonify({
+            "success": True,
+            "msg": f"✓ {rec['descricao']} marcada como paga!"
+        })
+
+    except Exception as exc:
+        logger.error("Erro ao confirmar pagamento %s: %s", uuid_rec, exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@recorrentes_bp.route("/api/fixas_sidebar")
+@login_required
+def api_fixas_sidebar():
+    """Retorna todas as fixas do mês com status para o widget da sidebar."""
+    svc = get_services()
+    hoje = date.today()
+
+    proximos = svc.recorrentes.listar_proximos_do_mes(
+        hoje.year, hoje.month, current_user.id
+    )
+
+    return jsonify({
+        "fixas": [
+            {
+                "uuid":      r["uuid"],
+                "descricao": r["descricao"],
+                "valor":     r["valor"],
+                "tipo":      r["tipo"],
+                "data":      r["data"],
+                "status":    r["status"],
+                "atrasada":  r["status"] == "passado",
+            }
+            for r in proximos
+        ]
+    })
+
+
+@recorrentes_bp.route("/api/lembretes")
+@login_required
+def api_lembretes():
+    """
+    Retorna contas fixas que vencem hoje ou já venceram sem ser pagas.
+    Usado pelo dashboard para montar o banner de lembretes.
+    """
+    svc = get_services()
+    hoje = date.today()
+
+    proximos = svc.recorrentes.listar_proximos_do_mes(
+        hoje.year, hoje.month, current_user.id
+    )
+
+    # Filtra só as que vencem hoje ou já venceram e não foram pagas
+    lembretes = []
+    for r in proximos:
+        if r["status"] in ("passado", "agendado") and r["tipo"] == "despesa":
+            lembretes.append({
+                "uuid":      r["uuid"],
+                "descricao": r["descricao"],
+                "valor":     r["valor"],
+                "tipo":      r["tipo"],
+                "data":      r["data"],
+                "status":    r["status"],
+                "atrasada":  r["status"] == "passado",
+            })
+
+    return jsonify({"lembretes": lembretes})

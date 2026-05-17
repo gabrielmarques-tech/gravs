@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+
+{% block title %}Parcelados{% endblock %}
+{% block page_title %}Compras Parceladas{% endblock %}
+
+{% block topbar_actions %}
+  <a href="{{ url_for('transacoes.parcelado') }}" class="btn btn-primary btn-sm">+ Novo parcelado</a>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .parcela-card {
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .parcela-card:last-child { border-bottom: none; }
+
+  .parcela-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .parcela-icone {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+  }
+
+  .parcela-info { flex: 1; min-width: 0; }
+
+  .parcela-nome {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.9rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .parcela-meta {
+    font-size: 0.73rem;
+    color: var(--text3);
+    margin-top: 2px;
+  }
+
+  .parcela-progresso {
+    margin-bottom: 8px;
+  }
+
+  .parcela-barra-container {
+    height: 6px;
+    background: var(--bg3);
+    border-radius: 99px;
+    overflow: hidden;
+    margin-top: 5px;
+  }
+
+  .parcela-barra {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 0.8s ease;
+  }
+
+  .parcela-numeros {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.72rem;
+    color: var(--text3);
+    margin-top: 4px;
+  }
+
+  .parcela-valores {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .parcela-valor-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .parcela-valor-label {
+    font-size: 0.68rem;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .parcela-valor-num {
+    font-family: var(--font-display);
+    font-size: 0.95rem;
+    font-weight: 700;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if grupos %}
+
+  <!-- Resumo geral -->
+  <div class="grid grid-2 mb-16 fade-up">
+    <div class="card" style="text-align:center">
+      <div class="card-title">Total de parcelamentos</div>
+      <div style="font-family:var(--font-display);font-size:2rem;font-weight:800;color:var(--purple2)">
+        {{ grupos|length }}
+      </div>
+    </div>
+    <div class="card" style="text-align:center">
+      <div class="card-title">Total comprometido</div>
+      <div style="font-family:var(--font-display);font-size:1.4rem;font-weight:800;color:var(--red2)">
+        {{ grupos|sum(attribute='valor_total') | real }}
+      </div>
+    </div>
+  </div>
+
+  <!-- Lista de parcelamentos -->
+  <div class="card fade-up delay-1">
+    <div style="display:flex;flex-direction:column">
+      {% for g in grupos %}
+        {# ── Calcula progresso real por data ── #}
+        {% set pct = ((g.pagas / g.total) * 100)|round(1) if g.total > 0 else 0 %}
+        {% set faltam = g.futuras %}
+
+        <div class="parcela-card">
+
+          <!-- Header com nome, categoria e botão excluir -->
+          <div class="parcela-header">
+            <div class="parcela-icone">{{ g.icone }}</div>
+            <div class="parcela-info">
+              <div class="parcela-nome">{{ g.nome }}</div>
+              <div class="parcela-meta">
+                {{ g.categoria }} ·
+                <span class="badge badge-{{ g.tipo }}" style="padding:1px 6px;font-size:0.68rem">{{ g.tipo }}</span>
+                {% if g.conta_nome %}
+                  · {{ g.conta_icone }} {{ g.conta_nome }}
+                {% endif %}
+              </div>
+            </div>
+            <div class="d-flex gap-8">
+              <button class="btn btn-danger btn-sm btn-icon"
+                      onclick="deletarParcelamento('{{ g.grupo_parcela }}', '{{ g.nome|e }}', {{ g.total }})"
+                      title="Excluir todas as parcelas">🗑</button>
+            </div>
+          </div>
+
+          <!-- Barra de progresso — baseada em parcelas vencidas vs total -->
+          <div class="parcela-progresso">
+            <div class="parcela-barra-container">
+              <div class="parcela-barra"
+                   style="width:{{ pct }}%;
+                          background:{% if pct == 100 %}var(--green2){% elif pct >= 50 %}var(--purple2){% else %}var(--cyan){% endif %}">
+              </div>
+            </div>
+            <div class="parcela-numeros">
+              <span>{{ g.pagas }}/{{ g.total }} parcelas vencidas</span>
+              <span>{{ pct }}%</span>
+            </div>
+          </div>
+
+          <!-- Valores e status -->
+          <div class="parcela-valores">
+            <div class="parcela-valor-item">
+              <div class="parcela-valor-label">Parcela</div>
+              <div class="parcela-valor-num {% if g.tipo == 'receita' %}text-receita{% else %}text-despesa{% endif %}">
+                {{ g.valor_parcela | real }}
+              </div>
+            </div>
+            <div class="parcela-valor-item">
+              <div class="parcela-valor-label">Total</div>
+              <div class="parcela-valor-num text-muted">
+                {{ g.valor_total | real }}
+              </div>
+            </div>
+            {% if faltam > 0 %}
+              <!-- Ainda tem parcelas futuras -->
+              <div class="parcela-valor-item">
+                <div class="parcela-valor-label">Restante</div>
+                <div class="parcela-valor-num text-despesa">
+                  {{ (faltam * g.valor_parcela) | real }}
+                </div>
+              </div>
+              <div class="parcela-valor-item">
+                <div class="parcela-valor-label">Parcelas futuras</div>
+                <div class="parcela-valor-num" style="color:var(--text2)">
+                  {{ faltam }}x
+                </div>
+              </div>
+            {% else %}
+              <!-- Todas as parcelas já venceram -->
+              <div class="parcela-valor-item">
+                <div class="parcela-valor-label">Status</div>
+                <div class="parcela-valor-num text-receita">✓ Quitado</div>
+              </div>
+            {% endif %}
+          </div>
+
+          <!-- Período do parcelamento -->
+          <div style="font-size:0.72rem;color:var(--text3);margin-top:8px">
+            {{ g.primeira_data }} → {{ g.ultima_data }}
+          </div>
+
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+
+{% else %}
+  <div class="card fade-up">
+    <div class="empty-state">
+      <div class="empty-icon">💳</div>
+      <div style="font-size:1rem;font-weight:600">Nenhuma compra parcelada</div>
+      <p>
+        <a href="{{ url_for('transacoes.parcelado') }}"
+           class="btn btn-primary" style="margin-top:12px">
+          💳 Adicionar compra parcelada
+        </a>
+      </p>
+    </div>
+  </div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  async function deletarParcelamento(grupoUuid, nome, total) {
+    if (!confirm(`Excluir todas as ${total} parcelas de "${nome}"?\n\nEssa ação não pode ser desfeita.`)) return;
+
+    const r = await fetch('/api/grupo/' + grupoUuid, { method: 'DELETE' });
+    if (r.ok) {
+      const data = await r.json();
+      alert(`✓ ${data.deletadas} parcela(s) removida(s).`);
+      location.reload();
+    } else {
+      alert('Erro ao excluir. Tente novamente.');
+    }
+  }
+</script>
+{% endblock %}

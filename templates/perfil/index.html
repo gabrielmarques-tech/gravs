@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+
+{% block title %}Meu Perfil{% endblock %}
+{% block page_title %}Meu Perfil{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+
+  <!-- Avatar e info -->
+  <div class="card fade-up" style="text-align:center;padding:32px 20px">
+    <div style="width:72px;height:72px;border-radius:50%;
+                background:linear-gradient(135deg,var(--purple),var(--cyan));
+                display:flex;align-items:center;justify-content:center;
+                font-family:var(--font-display);font-size:2rem;font-weight:800;
+                margin:0 auto 16px;box-shadow:0 8px 28px rgba(124,58,237,0.4)">
+      {{ current_user.nome[0].upper() }}
+    </div>
+    <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:var(--text)">
+      {{ current_user.nome }}
+    </div>
+    <div style="font-size:0.85rem;color:var(--text3);margin-top:4px">
+      {{ current_user.email }}
+    </div>
+    {% if current_user.modo_contabil %}
+      <div style="display:inline-flex;align-items:center;gap:6px;
+                  background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.25);
+                  border-radius:99px;padding:4px 14px;margin-top:12px;
+                  font-size:0.78rem;color:var(--purple3);font-weight:600">
+        🏦 Modo Contábil Ativo
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Alterar nome -->
+  <div class="card fade-up delay-1">
+    <div class="card-title mb-16">✏ Alterar Nome</div>
+    <form method="POST" action="{{ url_for('perfil.atualizar_nome') }}">
+      <div class="form-group">
+        <label class="form-label">Novo nome</label>
+        <input type="text" name="nome" class="form-control"
+               value="{{ current_user.nome }}"
+               placeholder="Seu nome" required minlength="2" maxlength="80" />
+      </div>
+      <button type="submit" class="btn btn-primary">Salvar nome</button>
+    </form>
+  </div>
+
+  <!-- Alterar senha -->
+  <div class="card fade-up delay-2">
+    <div class="card-title mb-16">🔒 Alterar Senha</div>
+    <form method="POST" action="{{ url_for('perfil.atualizar_senha') }}">
+      <div class="form-group">
+        <label class="form-label">Senha atual</label>
+        <input type="password" name="senha_atual" class="form-control"
+               placeholder="Digite sua senha atual" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nova senha</label>
+        <input type="password" name="nova_senha" class="form-control"
+               placeholder="Mínimo 6 caracteres" required minlength="6" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Confirmar nova senha</label>
+        <input type="password" name="confirmacao" class="form-control"
+               placeholder="Repita a nova senha" required minlength="6" />
+      </div>
+      <button type="submit" class="btn btn-primary">Alterar senha</button>
+    </form>
+  </div>
+
+  <!-- Modo contábil -->
+  <div class="card fade-up delay-3"
+       style="border-color:rgba(124,58,237,0.2);background:rgba(124,58,237,0.05)">
+    <div class="card-title mb-12">🏦 Modo Contábil</div>
+    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:16px;line-height:1.6">
+      Habilita lançamentos em partida dobrada (débito/crédito).
+      Para contadores e usuários com conhecimento contábil.
+    </div>
+
+    {% if current_user.modo_contabil %}
+      <!-- Já ativo — opção para desativar -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;
+                    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);
+                    border-radius:99px;padding:6px 14px">
+          <span style="color:var(--green2);font-size:0.85rem;font-weight:600">✓ Ativo</span>
+        </div>
+        <form method="POST" action="{{ url_for('perfil.toggle_contabil') }}">
+          <button type="submit" class="btn btn-secondary btn-sm"
+                  onclick="return confirm('Desativar modo contábil?')">
+            Desativar
+          </button>
+        </form>
+      </div>
+    {% else %}
+      <!-- Inativo — opção para ativar -->
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;
+                    background:var(--surface2);border:1px solid var(--border);
+                    border-radius:99px;padding:6px 14px">
+          <span style="color:var(--text3);font-size:0.85rem">Inativo</span>
+        </div>
+        <form method="POST" action="{{ url_for('perfil.toggle_contabil') }}">
+          <button type="submit" class="btn btn-primary btn-sm">
+            🏦 Ativar modo contábil
+          </button>
+        </form>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Info da conta -->
+  <div class="card fade-up"
+       style="background:rgba(107,95,130,0.06);border-color:rgba(107,95,130,0.15)">
+    <div class="card-title mb-12">ℹ Informações da conta</div>
+    <div style="display:flex;flex-direction:column;gap:8px;font-size:0.85rem;color:var(--text2)">
+      <div style="display:flex;justify-content:space-between">
+        <span>E-mail</span>
+        <span style="color:var(--text)">{{ current_user.email }}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between">
+        <span>Modo contábil</span>
+        <span style="color:{% if current_user.modo_contabil %}var(--green2){% else %}var(--text3){% endif %}">
+          {{ "✓ Ativo" if current_user.modo_contabil else "Inativo" }}
+        </span>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

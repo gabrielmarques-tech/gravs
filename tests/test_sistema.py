@@ -267,17 +267,23 @@ class TestRecorrentes:
         uid = usuario_criado["id"]
         container.recorrentes.adicionar("Conta Água", 80, "despesa", categoria_despesa["id"], 1, uid)
 
+        # Usa mês anterior — garantidamente já vencido
         hoje = date.today()
-        geradas = container.recorrentes.gerar_lancamentos_pendentes(hoje.year, hoje.month, uid)
+        mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+        ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+        geradas = container.recorrentes.gerar_lancamentos_pendentes(ano_ant, mes_ant, uid)
         assert geradas >= 1
 
     def test_geracao_e_idempotente(self, container, usuario_criado, categoria_despesa):
         uid = usuario_criado["id"]
         container.recorrentes.adicionar("Internet", 120, "despesa", categoria_despesa["id"], 1, uid)
 
+        # Usa mês anterior — garantidamente já vencido
         hoje = date.today()
-        g1 = container.recorrentes.gerar_lancamentos_pendentes(hoje.year, hoje.month, uid)
-        g2 = container.recorrentes.gerar_lancamentos_pendentes(hoje.year, hoje.month, uid)
+        mes_ant = hoje.month - 1 if hoje.month > 1 else 12
+        ano_ant = hoje.year if hoje.month > 1 else hoje.year - 1
+        g1 = container.recorrentes.gerar_lancamentos_pendentes(ano_ant, mes_ant, uid)
+        g2 = container.recorrentes.gerar_lancamentos_pendentes(ano_ant, mes_ant, uid)
         assert g1 >= 1
         assert g2 == 0
 

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nova senha · Gravs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root { --bg:#0d0618; --bg2:#130a24; --bg3:#1c1035; --purple:#7c3aed; --purple2:#9f5fff; --purple3:#c084fc; --cyan:#06b6d4; --text:#f1eeff; --text2:#a89bc2; --text3:#6b5f82; --border:rgba(255,255,255,0.08); --border2:rgba(255,255,255,0.14); --green2:#34d399; --red2:#f87171; }
+    *, *::before, *::after { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'DM Sans',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; display:flex; align-items:center; justify-content:center; -webkit-font-smoothing:antialiased; padding:16px; }
+    .bg-orbs { position:fixed; inset:0; pointer-events:none; overflow:hidden; }
+    .orb { position:absolute; border-radius:50%; filter:blur(80px); opacity:0.15; }
+    .orb-1 { width:500px; height:500px; background:var(--purple); top:-150px; right:-150px; }
+    .orb-2 { width:350px; height:350px; background:var(--cyan); bottom:-100px; left:-100px; }
+    .auth-card { position:relative; background:rgba(19,10,36,0.85); border:1px solid var(--border2); border-radius:24px; padding:44px; width:100%; max-width:420px; backdrop-filter:blur(20px); box-shadow:0 24px 80px rgba(0,0,0,0.5); }
+    .auth-card::before { content:''; position:absolute; top:0; left:10%; right:10%; height:1px; background:linear-gradient(90deg,transparent,rgba(159,95,255,0.6),transparent); }
+    .auth-logo { display:flex; align-items:center; gap:12px; margin-bottom:28px; }
+    .logo-mark { width:42px; height:42px; background:linear-gradient(135deg,var(--purple),var(--cyan)); border-radius:12px; display:flex; align-items:center; justify-content:center; font-size:1.2rem; }
+    .logo-text { font-family:'Syne',sans-serif; font-size:1.8rem; font-weight:800; background:linear-gradient(135deg,var(--purple2),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
+    h1 { font-family:'Syne',sans-serif; font-size:1.4rem; font-weight:700; margin-bottom:4px; }
+    .subtitle { color:var(--text2); font-size:0.88rem; margin-bottom:28px; }
+    .form-group { margin-bottom:16px; }
+    label { display:block; font-size:0.82rem; font-weight:500; color:var(--text2); margin-bottom:5px; }
+    input { width:100%; padding:11px 14px; background:var(--bg3); border:1px solid var(--border2); border-radius:9px; color:var(--text); font-family:'DM Sans',sans-serif; font-size:0.92rem; transition:all 0.18s; outline:none; }
+    input:focus { border-color:var(--purple2); box-shadow:0 0 0 3px rgba(124,58,237,0.2); }
+    input::placeholder { color:var(--text3); }
+    .btn-submit { width:100%; padding:12px; margin-top:8px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:9px; color:white; font-family:'Syne',sans-serif; font-size:1rem; font-weight:700; cursor:pointer; transition:all 0.2s; box-shadow:0 4px 16px rgba(124,58,237,0.4); }
+    .btn-submit:hover { transform:translateY(-1px); }
+    .flash-list { margin-bottom:18px; }
+    .flash { padding:10px 14px; border-radius:8px; font-size:0.85rem; border:1px solid; margin-bottom:8px; }
+    .flash-erro { background:rgba(239,68,68,0.12); border-color:rgba(239,68,68,0.25); color:var(--red2); }
+    .hint { font-size:0.75rem; color:var(--text3); margin-top:4px; }
+  </style>
+</head>
+<body>
+<div class="bg-orbs">
+  <div class="orb orb-1"></div>
+  <div class="orb orb-2"></div>
+</div>
+
+<div class="auth-card">
+  <div class="auth-logo">
+    <div class="logo-mark">🌀</div>
+    <div class="logo-text">Gravs</div>
+  </div>
+
+  <h1>Nova senha</h1>
+  <p class="subtitle">Olá, <strong>{{ nome }}</strong>! Defina sua nova senha abaixo.</p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-list">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">⚠ {{ message }}</div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST">
+    <div class="form-group">
+      <label for="nova_senha">Nova senha</label>
+      <input type="password" id="nova_senha" name="nova_senha"
+             placeholder="Mínimo 6 caracteres" required minlength="6" autofocus />
+      <p class="hint">Use pelo menos 6 caracteres</p>
+    </div>
+    <div class="form-group">
+      <label for="confirmacao">Confirmar senha</label>
+      <input type="password" id="confirmacao" name="confirmacao"
+             placeholder="Repita a nova senha" required minlength="6" />
+    </div>
+    <button type="submit" class="btn-submit">Salvar nova senha →</button>
+  </form>
+</div>
+</body>
+</html>

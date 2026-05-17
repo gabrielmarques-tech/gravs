@@ -281,6 +281,62 @@ class DatabaseManager:
         # Exemplo: adicionar coluna grupo_parcela se a tabela for antiga
         self._add_column_if_missing(conn, "transacoes", "grupo_parcela", "TEXT")
         self._add_column_if_missing(conn, "usuarios", "ativo", "INTEGER DEFAULT 1")
+        self._add_column_if_missing(conn, "usuarios", "modo_contabil", "INTEGER DEFAULT 0")
+        self._add_column_if_missing(conn, "transacoes", "conta_debito", "TEXT")
+        self._add_column_if_missing(conn, "transacoes", "conta_credito", "TEXT")
+        self._add_column_if_missing(conn, "transacoes", "conta_id", "INTEGER")
+        self._add_column_if_missing(conn, "recorrentes", "conta_id", "INTEGER")
+        self._criar_tabela_contas_bancarias(conn)
+        self._criar_tabela_tokens_recuperacao(conn)
+
+
+    def limpar_tokens_expirados(self) -> int:
+        """
+        Remove tokens de recuperação expirados ou já usados.
+        Chamar periodicamente para não acumular lixo no banco.
+        Retorna quantos tokens foram removidos.
+        """
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self.get_write_conn() as conn:
+            cur = conn.execute(
+                "DELETE FROM tokens_recuperacao WHERE expira_em < ? OR usado = 1",
+                (agora,)
+            )
+        return cur.rowcount
+
+    def _criar_tabela_tokens_recuperacao(self, conn) -> None:
+        """Cria tabela de tokens para recuperação de senha."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS tokens_recuperacao (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id INTEGER NOT NULL,
+                token      TEXT    NOT NULL UNIQUE,
+                expira_em  TEXT    NOT NULL,
+                usado      INTEGER DEFAULT 0,
+                criado_em  TEXT    DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+        """)
+
+    def _criar_tabela_contas_bancarias(self, conn) -> None:
+        """Cria tabela de contas bancarias e cartoes se nao existir."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS contas_bancarias (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id  INTEGER NOT NULL,
+                nome        TEXT    NOT NULL,
+                tipo        TEXT    NOT NULL DEFAULT 'conta',
+                icone       TEXT    NOT NULL DEFAULT '🏦',
+                ativo       INTEGER DEFAULT 1,
+                criado_em   TEXT    DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE,
+                UNIQUE(usuario_id, nome)
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_contas_usuario ON contas_bancarias(usuario_id)"
+        )
 
     @staticmethod
     def _add_column_if_missing(
@@ -319,4 +375,4 @@ class DatabaseManager:
                     conn.execute(f"DROP TABLE IF EXISTS {table}")
                 conn.execute("PRAGMA foreign_keys = ON")
         self._initialized = False
-        logger.warning("Todas as tabelas foram removidas.")
+        logger.warning("Todas as tabelas foram removidas.")# Método adicionado para migração — adiciona colunas novas sem quebrar banco existente

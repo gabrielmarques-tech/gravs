@@ -27,6 +27,9 @@ Como usar:
 import logging
 import os
 
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
 from flask import Flask, jsonify
 from flask_login import LoginManager
 
@@ -36,6 +39,10 @@ from routes.dashboard import dashboard_bp
 from routes.helpers import UserPrincipal, get_services, make_user_principal
 from routes.transacoes import transacoes_bp
 from routes.recorrentes import recorrentes_bp
+from routes.contabil import contabil_bp
+from routes.contas import contas_bp
+from routes.perfil import perfil_bp
+from routes.recuperacao import recuperacao_bp
 from services.container import ServiceContainer
 from utils.formatters import formatar_real
 
@@ -70,10 +77,23 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     app.secret_key = cfg.SECRET_KEY
     app.permanent_session_lifetime = cfg.SESSION_LIFETIME
 
+    # ── Limites de segurança ──────────────────────────────────────────────────
+    # Limita tamanho máximo de upload para 2MB — evita ataques de payload gigante
+    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2MB
+
     # ── Container de dependências ─────────────────────────────────────────────
     banco = db_path or _db_path_from_config(cfg)
     container = ServiceContainer(db_path=banco)
     app.extensions["services"] = container
+
+    # ── Rate Limiting ─────────────────────────────────────────────────────────
+    limiter = Limiter(
+        get_remote_address,
+        app=app,
+        default_limits=[],
+        storage_uri="memory://"
+    )
+    app.extensions["limiter"] = limiter
 
     # ── Flask-Login ───────────────────────────────────────────────────────────
     _configurar_login(app, container)
@@ -86,6 +106,13 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(transacoes_bp)
     app.register_blueprint(recorrentes_bp)
+    app.register_blueprint(contabil_bp)
+    app.register_blueprint(contas_bp)
+    app.register_blueprint(perfil_bp)
+    app.register_blueprint(recuperacao_bp)
+
+    # ── Headers de segurança HTTP ────────────────────────────────────────────
+    _registrar_security_headers(app)
 
     # ── Handlers de erro ──────────────────────────────────────────────────────
     _registrar_error_handlers(app)
@@ -128,6 +155,30 @@ def _configurar_login(app: Flask, container: ServiceContainer) -> None:
         return None
 
 
+def _registrar_security_headers(app: Flask) -> None:
+    """
+    Adiciona headers HTTP de segurança em toda resposta.
+
+    Por que isso importa:
+    - X-Frame-Options: impede clickjacking (site dentro de iframe malicioso)
+    - X-Content-Type-Options: impede MIME sniffing
+    - Referrer-Policy: não vaza URL para outros sites
+    - Permissions-Policy: desativa APIs do browser que não usamos
+    - Content-Security-Policy: restringe de onde JS/CSS podem ser carregados
+    """
+    @app.after_request
+    def adicionar_headers(response):
+        # Impede que o app seja embutido em iframes de outros sites
+        response.headers["X-Frame-Options"] = "SAMEORIGIN"
+        # Impede que o browser "adivinhe" o tipo do conteúdo
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Não envia URL de referência para outros domínios
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        # Desativa APIs sensíveis que não usamos
+        response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+        return response
+
+
 def _registrar_error_handlers(app: Flask) -> None:
     """
     Handlers centralizados de erro HTTP.
@@ -143,20 +194,38 @@ def _registrar_error_handlers(app: Flask) -> None:
     def nao_encontrado(e):
         if _is_api_request():
             return jsonify({"error": "Recurso não encontrado"}), 404
-        return "Página não encontrada", 404
+        from flask import render_template as rt
+        return rt("erros/base_erro.html",
+            codigo=404, emoji="🔍",
+            titulo="Página não encontrada",
+            mensagem="A página que você procura não existe ou foi movida.",
+            voltar_url="/", voltar_texto="← Voltar ao início"
+        ), 404
 
     @app.errorhandler(403)
     def proibido(e):
         if _is_api_request():
             return jsonify({"error": "Acesso negado"}), 403
-        return "Acesso negado", 403
+        from flask import render_template as rt
+        return rt("erros/base_erro.html",
+            codigo=403, emoji="🔒",
+            titulo="Acesso negado",
+            mensagem="Você não tem permissão para acessar esta página.",
+            voltar_url="/", voltar_texto="← Voltar ao início"
+        ), 403
 
     @app.errorhandler(500)
     def erro_interno(e):
         logger.error("Erro interno: %s", e, exc_info=True)
         if _is_api_request():
             return jsonify({"error": "Erro interno do servidor"}), 500
-        return "Erro interno do servidor", 500
+        from flask import render_template as rt
+        return rt("erros/base_erro.html",
+            codigo=500, emoji="⚡",
+            titulo="Algo deu errado",
+            mensagem="Ocorreu um erro interno. Já estamos verificando o problema.",
+            voltar_url="/", voltar_texto="← Voltar ao início"
+        ), 500
 
 
 def _is_api_request() -> bool:

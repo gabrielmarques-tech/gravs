@@ -87,6 +87,17 @@
         </select>
       </div>
 
+      <!-- Campo de conta/cartão usado na compra -->
+      <div class="form-group">
+        <label class="form-label" id="label-conta-parc">💸 Cartão / Conta utilizado</label>
+        <select name="conta_id" id="select-conta-parc" class="form-control">
+          <option value="">— Selecione (opcional) —</option>
+        </select>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+          <a href="/contas/" style="color:var(--purple3)">+ Cadastrar nova conta</a>
+        </div>
+      </div>
+
       <div class="form-group">
         <label class="form-label">Número de parcelas</label>
         <input type="number" name="parcelas" id="num-parcelas"
@@ -325,6 +336,31 @@
       box.style.display = 'none';
     }
   }
+
+  // Atualiza label da conta conforme tipo selecionado
+  document.querySelectorAll('input[name="tipo"]').forEach(el => {
+    el.addEventListener('change', () => {
+      const label = document.getElementById('label-conta-parc');
+      if (label) {
+        const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
+        label.textContent = tipo === 'receita' ? '💰 Recebido em' : '💸 Cartão / Conta utilizado';
+      }
+    });
+  });
+
+  // Carrega contas no select de parcelado
+  fetch('/contas/api/listar')
+    .then(r => r.ok ? r.json() : {contas:[]})
+    .then(data => {
+      const sel = document.getElementById('select-conta-parc');
+      if (!sel) return;
+      (data.contas || []).forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.id;
+        opt.textContent = c.icone + ' ' + c.nome;
+        sel.appendChild(opt);
+      });
+    }).catch(() => {});
 
   // Inicia no modo compra
   setModo('compra');

@@ -24,9 +24,12 @@ from __future__ import annotations
 
 from database.manager import DatabaseManager
 from database.repositories import (
+    BuscaRepository,
     CategoriaRepository,
+    ContaBancariaRepository,
     MetaRepository,
     RecorrenteRepository,
+    SaldoContaRepository,
     TransacaoRepository,
     UsuarioRepository,
 )
@@ -56,6 +59,9 @@ class ServiceContainer:
         self.transacoes_repo = TransacaoRepository(self.db)
         self.recorrentes_repo = RecorrenteRepository(self.db)
         self.metas_repo = MetaRepository(self.db)
+        self.contas_repo = ContaBancariaRepository(self.db)
+        self.busca_repo = BuscaRepository(self.db)
+        self.saldo_conta_repo = SaldoContaRepository(self.db)
 
         # ── Utilitários ───────────────────────────────────────────────────────
         self.calendario = CalendarioUtil()

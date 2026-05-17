@@ -234,7 +234,7 @@
 
 <div class="auth-card">
   <div class="auth-logo">
-    <div class="logo-mark">📊</div>
+    <div class="logo-mark">🌀</div>
     <div class="logo-text">Gravs</div>
   </div>
 
@@ -271,6 +271,9 @@
   </form>
 
   <div class="auth-footer">
+    <a href="{{ url_for('recuperacao.solicitar') }}"
+       style="color:var(--text3);font-size:0.82rem">Esqueceu a senha?</a>
+    &nbsp;·&nbsp;
     Não tem conta?
     <a href="{{ url_for('auth.cadastro') }}">Criar conta grátis</a>
   </div>

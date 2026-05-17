@@ -112,7 +112,7 @@
 
 <div class="auth-card">
   <div class="auth-logo">
-    <div class="logo-mark">💜</div>
+    <div class="logo-mark">🌀</div>
     <div class="logo-text">Gravs</div>
   </div>
 
@@ -149,6 +149,20 @@
       <input type="password" id="senha" name="senha"
              placeholder="Mínimo 6 caracteres" required />
       <p class="hint">Use pelo menos 6 caracteres</p>
+    </div>
+
+        <!-- Modo contábil -->
+    <div class="form-group" style="margin-top:18px">
+      <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.2);border-radius:10px;padding:14px 16px">
+        <label style="display:flex;align-items:flex-start;gap:12px;cursor:pointer;margin:0">
+          <input type="checkbox" name="modo_contabil" id="modo_contabil" value="1"
+                 style="width:18px;height:18px;margin-top:2px;cursor:pointer;accent-color:#7c3aed;flex-shrink:0" />
+          <div>
+            <div style="font-size:0.88rem;font-weight:600;color:#c084fc;margin-bottom:3px">🏦 Ativar modo contábil</div>
+            <div style="font-size:0.78rem;color:var(--text3);line-height:1.4">Habilita lançamentos em partida dobrada. Para contadores e usuários avançados.</div>
+          </div>
+        </label>
+      </div>
     </div>
 
     <button type="submit" class="btn-submit">Criar conta →</button>
