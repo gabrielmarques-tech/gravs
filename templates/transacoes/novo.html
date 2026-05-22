@@ -2,6 +2,82 @@
 
 {% block title %}Nova Transação{% endblock %}
 
+{% block extra_head %}
+<style>
+  .ocr-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text2);
+    font-size: 0.88rem;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .ocr-btn:hover {
+    border-color: var(--purple2);
+    color: var(--text);
+    background: var(--surface2);
+  }
+  .ocr-status {
+    display: none;
+    font-size: 0.8rem;
+    padding: 10px 14px;
+    border-radius: var(--radius-sm);
+    margin-bottom: 16px;
+    align-items: center;
+    gap: 8px;
+  }
+  .ocr-status.loading {
+    display: flex;
+    background: rgba(124,58,237,0.1);
+    border: 1px solid rgba(124,58,237,0.2);
+    color: var(--purple3);
+  }
+  .ocr-status.sucesso {
+    display: flex;
+    background: rgba(52,211,153,0.1);
+    border: 1px solid rgba(52,211,153,0.2);
+    color: var(--green2);
+  }
+  .ocr-status.erro {
+    display: flex;
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: var(--red2);
+  }
+  .ocr-spinner {
+    width: 14px; height: 14px;
+    border: 2px solid rgba(124,58,237,0.3);
+    border-top-color: var(--purple2);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ocr-preview {
+    display: none;
+    margin-bottom: 16px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    border: 1px solid var(--border2);
+  }
+  .ocr-preview img {
+    width: 100%;
+    max-height: 180px;
+    object-fit: contain;
+    background: var(--bg3);
+  }
+</style>
+{% endblock %}
+
 {% block scripts %}
 <script>
 async function carregarContas() {
@@ -11,14 +87,13 @@ async function carregarContas() {
     const data = await r.json();
     const select = document.getElementById('select-conta');
     if (!select) return;
-
     data.contas.forEach(c => {
       const opt = document.createElement('option');
       opt.value = c.id;
       opt.textContent = c.icone + ' ' + c.nome;
       select.appendChild(opt);
     });
-  } catch(e) { /* silencioso */ }
+  } catch(e) {}
 }
 
 function atualizarLabelConta() {
@@ -28,20 +103,262 @@ function atualizarLabelConta() {
   label.textContent = tipo === 'receita' ? '💰 Recebido em' : '💸 Pago com';
 }
 
-// Atualiza label quando tipo muda
 document.querySelectorAll('input[name="tipo"]').forEach(el => {
   el.addEventListener('change', atualizarLabelConta);
 });
 
 carregarContas();
 atualizarLabelConta();
+
+// ── OCR com Tesseract.js ──────────────────────────────────────────────────────
+
+let tesseractCarregado = false;
+
+function setStatus(tipo, msg) {
+  const el = document.getElementById('ocr-status');
+  el.className = 'ocr-status ' + tipo;
+  el.innerHTML = tipo === 'loading'
+    ? '<div class="ocr-spinner"></div><span>' + msg + '</span>'
+    : '<span>' + msg + '</span>';
+}
+
+function extrairValor(texto) {
+  // Padrões comuns em comprovantes de Pix: R$ 50,00 / R$50.00 / 50,00
+  const padroes = [
+    /R\$\s*([\d.,]+)/gi,
+    /Valor[\s:]+R?\$?\s*([\d.,]+)/gi,
+    /Total[\s:]+R?\$?\s*([\d.,]+)/gi,
+    /Quantia[\s:]+R?\$?\s*([\d.,]+)/gi,
+  ];
+
+  for (const re of padroes) {
+    const matches = [...texto.matchAll(re)];
+    if (matches.length > 0) {
+      // Pega o maior valor encontrado (geralmente é o valor total)
+      let maior = 0;
+      let melhor = '';
+      matches.forEach(m => {
+        const raw = m[1].replace(/\./g, '').replace(',', '.');
+        const num = parseFloat(raw);
+        if (!isNaN(num) && num > maior) {
+          maior = num;
+          melhor = m[1];
+        }
+      });
+      if (melhor) return melhor;
+    }
+  }
+  return '';
+}
+
+function extrairDescricao(texto) {
+  const linhas = texto.split('\n').map(l => l.trim()).filter(l => l.length > 3);
+
+  // Procura por padrões de destinatário/estabelecimento
+  const palavrasChave = ['para', 'destinatário', 'destinatario', 'recebedor', 'estabelecimento', 'nome'];
+  for (const linha of linhas) {
+    const lower = linha.toLowerCase();
+    for (const kw of palavrasChave) {
+      if (lower.includes(kw)) {
+        // Pega o texto após a palavra chave
+        const idx = lower.indexOf(kw);
+        const resto = linha.substring(idx + kw.length).replace(/[:]/g, '').trim();
+        if (resto.length > 2 && resto.length < 60) return resto;
+      }
+    }
+  }
+
+  // Fallback: primeira linha com mais de 4 chars que não seja número
+  for (const linha of linhas) {
+    if (!/^\d/.test(linha) && linha.length > 4 && linha.length < 50) {
+      return linha;
+    }
+  }
+  return '';
+}
+
+function extrairData(texto) {
+  // Padrões: 21/05/2026, 2026-05-21, 21 de maio de 2026
+  const mesesPt = {
+    'janeiro':1,'fevereiro':2,'março':3,'abril':4,'maio':5,'junho':6,
+    'julho':7,'agosto':8,'setembro':9,'outubro':10,'novembro':11,'dezembro':12
+  };
+
+  let m;
+
+  // DD/MM/YYYY
+  m = texto.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+
+  // YYYY-MM-DD
+  m = texto.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+
+  // DD de mês de YYYY
+  m = texto.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+  if (m) {
+    const mes = mesesPt[m[2].toLowerCase()];
+    if (mes) return `${m[3]}-${String(mes).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  }
+
+  return '';
+}
+
+async function lerComprovante() {
+  const input = document.getElementById('ocr-input');
+  input.click();
+}
+
+async function processarArquivo(file) {
+  if (!file) return;
+
+  // Preview
+  const preview = document.getElementById('ocr-preview');
+  const previewImg = document.getElementById('ocr-preview-img');
+
+  if (file.type.startsWith('image/')) {
+    previewImg.src = URL.createObjectURL(file);
+    preview.style.display = 'block';
+  } else {
+    preview.style.display = 'none';
+  }
+
+  setStatus('loading', 'Carregando Tesseract...');
+
+  try {
+    // Carrega Tesseract.js via CDN
+    if (!window.Tesseract) {
+      await new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js';
+        s.onload = resolve;
+        s.onerror = reject;
+        document.head.appendChild(s);
+      });
+    }
+
+    setStatus('loading', 'Lendo comprovante... aguarde');
+
+    // Para PDF, converte primeira página para imagem via canvas
+    let imagemParaOCR = file;
+    if (file.type === 'application/pdf') {
+      setStatus('loading', 'Convertendo PDF...');
+      imagemParaOCR = await converterPdfParaImagem(file);
+    }
+
+    const resultado = await Tesseract.recognize(imagemParaOCR, 'por', {
+      logger: m => {
+        if (m.status === 'recognizing text') {
+          const pct = Math.round(m.progress * 100);
+          setStatus('loading', `Processando... ${pct}%`);
+        }
+      }
+    });
+
+    const texto = resultado.data.text;
+
+    const valor = extrairValor(texto);
+    const descricao = extrairDescricao(texto);
+    const data = extrairData(texto);
+
+    // Preenche o formulário
+    let preencheu = false;
+
+    if (valor) {
+      document.querySelector('input[name="valor"]').value = valor;
+      preencheu = true;
+    }
+    if (descricao) {
+      document.querySelector('input[name="descricao"]').value = descricao;
+      preencheu = true;
+    }
+    if (data) {
+      document.querySelector('input[name="data"]').value = data;
+      preencheu = true;
+    }
+
+    // Marca como despesa por padrão (comprovante de pagamento)
+    document.getElementById('tipo-despesa').checked = true;
+
+    if (preencheu) {
+      setStatus('sucesso', '✓ Dados extraídos — confira e ajuste se necessário');
+    } else {
+      setStatus('erro', '⚠ Não consegui extrair dados. Preencha manualmente.');
+    }
+
+  } catch(e) {
+    console.error('OCR erro:', e);
+    setStatus('erro', '⚠ Erro ao processar. Tente outro arquivo.');
+  }
+}
+
+async function converterPdfParaImagem(file) {
+  // Usa PDF.js para renderizar primeira página
+  if (!window.pdfjsLib) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+      s.onload = resolve;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  const page = await pdf.getPage(1);
+  const viewport = page.getViewport({ scale: 2.0 }); // escala 2x para melhor OCR
+
+  const canvas = document.createElement('canvas');
+  canvas.width = viewport.width;
+  canvas.height = viewport.height;
+
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+  // Atualiza preview com a imagem renderizada
+  const previewImg = document.getElementById('ocr-preview-img');
+  previewImg.src = canvas.toDataURL();
+  document.getElementById('ocr-preview').style.display = 'block';
+
+  return canvas.toDataURL('image/png');
+}
+
+// Listener no input de arquivo
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('ocr-input');
+  if (input) {
+    input.addEventListener('change', e => {
+      if (e.target.files[0]) processarArquivo(e.target.files[0]);
+    });
+  }
+});
 </script>
 {% endblock %}
+
 {% block page_title %}Nova Transação{% endblock %}
 
 {% block content %}
 <div style="max-width:560px;margin:0 auto">
   <div class="card fade-up">
+
+    <!-- Botão de leitura de comprovante -->
+    <input type="file" id="ocr-input" accept="image/*,.pdf"
+           style="display:none" />
+
+    <button type="button" class="ocr-btn" onclick="lerComprovante()">
+      📄 Ler comprovante (PNG ou PDF)
+    </button>
+
+    <!-- Preview da imagem -->
+    <div class="ocr-preview" id="ocr-preview">
+      <img id="ocr-preview-img" src="" alt="Preview do comprovante" />
+    </div>
+
+    <!-- Status do OCR -->
+    <div class="ocr-status" id="ocr-status"></div>
+
     <form method="POST" action="{{ url_for('transacoes.novo') }}">
 
       <div class="form-group">
@@ -84,7 +401,6 @@ atualizarLabelConta();
         </select>
       </div>
 
-      <!-- Conta/Cartão -->
       <div class="form-group">
         <label class="form-label" id="label-conta">💸 Pago com</label>
         <select name="conta_id" id="select-conta" class="form-control">
@@ -102,11 +418,10 @@ atualizarLabelConta();
     </form>
   </div>
 
-  <!-- Link para parcelado -->
   <div class="text-center mt-16">
     <a href="{{ url_for('transacoes.parcelado') }}" class="btn btn-secondary w-100"
-    style="justify-content:center;margin-top:8px">
-    💳 Parcelar uma compra em várias vezes
+       style="justify-content:center;margin-top:8px">
+      💳 Parcelar uma compra em várias vezes
     </a>
   </div>
 </div>

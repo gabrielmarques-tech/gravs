@@ -121,7 +121,7 @@
       <div class="economia-desktop" style="align-items:center;gap:20px;flex-wrap:wrap">
         <div style="width:52px;height:52px;border-radius:14px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">🎉</div>
         <div style="flex:1;min-width:160px">
-          <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:800;color:#34d399;margin-bottom:4px">Você está economizando!</div>
+          <div style="font-size:1.1rem;font-weight:600;color:#34d399;margin-bottom:4px">Você está economizando!</div>
           <div style="font-size:0.88rem;color:var(--text2)">
             Sobrou <strong style="color:#34d399">{{ resumo.saldo | real }}</strong> este mês
             {% if resumo.receitas > 0 %}
@@ -134,7 +134,7 @@
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Economizado</div>
-          <div style="font-family:var(--font-display);font-size:1.8rem;font-weight:800;color:#34d399;letter-spacing:-1px">{{ resumo.saldo | real }}</div>
+          <div style="font-family:'Inter',system-ui,sans-serif;font-size:1.8rem;font-weight:600;color:#34d399;letter-spacing:-0.04em;font-variant-numeric:tabular-nums">{{ resumo.saldo | real }}</div>
         </div>
       </div>
 
@@ -143,7 +143,7 @@
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
           <div style="font-size:1.8rem">🎉</div>
           <div>
-            <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:#34d399">Você está economizando!</div>
+            <div style="font-size:1rem;font-weight:600;color:#34d399">Você está economizando!</div>
             <div style="font-size:0.82rem;color:var(--text2);margin-top:2px">
               Sobrou <strong style="color:#34d399">{{ resumo.saldo | real }}</strong> este mês
             </div>
@@ -182,14 +182,14 @@
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="font-size:1.8rem;flex-shrink:0">⚠️</div>
         <div style="flex:1;min-width:140px">
-          <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:#f87171;margin-bottom:3px">Gastos acima da receita</div>
+          <div style="font-size:1rem;font-weight:600;color:#f87171;margin-bottom:3px">Gastos acima da receita</div>
           <div style="font-size:0.85rem;color:var(--text2)">
             Você gastou <strong style="color:#f87171">{{ resumo.saldo|abs | real }}</strong> a mais do que recebeu.
           </div>
         </div>
         <div style="text-align:right;flex-shrink:0">
           <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Déficit</div>
-          <div style="font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:#f87171;letter-spacing:-0.5px">{{ resumo.saldo|abs | real }}</div>
+          <div style="font-family:'Inter',system-ui,sans-serif;font-size:1.5rem;font-weight:600;color:#f87171;letter-spacing:-0.04em;font-variant-numeric:tabular-nums">{{ resumo.saldo|abs | real }}</div>
         </div>
       </div>
     </div>
@@ -276,7 +276,7 @@
      onmouseover="this.style.borderColor='var(--purple2)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 32px rgba(124,58,237,0.22)'"
      onmouseout="this.style.borderColor='rgba(124,58,237,0.22)';this.style.transform='';this.style.boxShadow=''">
     <div style="font-size:2.2rem;margin-bottom:12px">💳</div>
-    <div style="font-family:var(--font-display);font-weight:800;font-size:1rem;color:var(--text)">Nova Transação</div>
+    <div style="font-weight:600;font-size:1rem;color:var(--text)">Nova Transação</div>
     <div style="font-size:0.8rem;color:var(--text2);margin-top:6px">Registrar receita ou despesa</div>
   </a>
 
@@ -453,6 +453,75 @@ carregarLembretes();
 carregarSaldoContas();
 carregarGraficoMeses();
 
+// Tooltip do gráfico — abordagem direta sem variável global
+function mostrarTooltipGrafico(e, rec, des, ano, label) {
+  var tt = document.getElementById('grafico-tooltip');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'grafico-tooltip';
+    tt.style.cssText = 'position:fixed;pointer-events:none;' +
+      'background:var(--bg2);border:1px solid var(--border2);' +
+      'border-radius:8px;padding:12px 16px;font-size:0.82rem;' +
+      'box-shadow:0 4px 24px rgba(0,0,0,0.6);z-index:99999;' +
+      'transition:opacity 0.12s;min-width:180px;opacity:0;';
+    document.body.appendChild(tt);
+  }
+
+  var fmt = function(v) {
+    return 'R$ ' + Math.abs(v).toFixed(2).replace('.', ',');
+  };
+  var saldo = rec - des;
+  var mes = label.charAt(0).toUpperCase() + label.slice(1) + ' ' + ano;
+
+  tt.innerHTML =
+    '<div style="font-weight:600;color:var(--text);font-size:0.85rem;' +
+    'border-bottom:1px solid var(--border2);padding-bottom:6px;margin-bottom:8px">' + mes + '</div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'color:var(--green2);margin-bottom:5px;font-size:0.8rem">' +
+    '<span>Receitas</span><span style="font-weight:600">' + fmt(rec) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'color:var(--red2);margin-bottom:5px;font-size:0.8rem">' +
+    '<span>Despesas</span><span style="font-weight:600">' + fmt(des) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'border-top:1px solid var(--border2);padding-top:6px;margin-top:2px;font-size:0.8rem;' +
+    'color:' + (saldo >= 0 ? 'var(--green2)' : 'var(--red2)') + '">' +
+    '<span>Saldo</span><span style="font-weight:600">' + fmt(saldo) + '</span></div>';
+
+  var bar = e.currentTarget.getBoundingClientRect();
+  var vw  = window.innerWidth;
+  var vh  = window.innerHeight;
+
+  tt.style.left    = '-9999px';
+  tt.style.top     = '-9999px';
+  tt.style.opacity = '0';
+
+  requestAnimationFrame(function() {
+    var tw = tt.offsetWidth || 190;
+    var th = tt.offsetHeight || 110;
+    var cx = bar.left + bar.width / 2;
+
+    // Centraliza horizontalmente
+    var left = cx - tw / 2;
+    if (left < 8)           left = 8;
+    if (left + tw > vw - 8) left = vw - tw - 8;
+
+    // Tenta acima — se não couber, coloca abaixo
+    var top = bar.top - th - 12;
+    if (top < 60) top = bar.bottom + 12;
+    // Se ainda não couber abaixo, força no centro da tela
+    if (top + th > vh - 8) top = Math.max(8, vh / 2 - th / 2);
+
+    tt.style.left    = left + 'px';
+    tt.style.top     = top  + 'px';
+    tt.style.opacity = '1';
+  });
+}
+
+function esconderTooltipGrafico() {
+  var tt = document.getElementById('grafico-tooltip');
+  if (tt) tt.style.opacity = '0';
+}
+
 // ── Saldo por conta ──────────────────────────────────────────────────────────
 async function carregarSaldoContas() {
   try {
@@ -512,21 +581,44 @@ async function carregarGraficoMeses() {
     const labels  = document.getElementById('grafico-labels');
     if (!grafico || !labels) return;
 
-    grafico.innerHTML = dados.map(d => {
+    // Guarda dados para o tooltip
+    window.graficoData = dados;
+
+    // Monta as barras via innerHTML
+    grafico.innerHTML = dados.map((d, i) => {
       const altR = Math.round((d.receitas / maxVal) * 100);
       const altD = Math.round((d.despesas / maxVal) * 100);
       return `
-        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%">
+        <div data-rec="${d.receitas}" data-des="${d.despesas}" data-ano="${d.ano}" data-label="${d.label}"
+             style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;cursor:pointer"
+             onmouseenter="mostrarTooltipGrafico(event,${d.receitas},${d.despesas},${d.ano},'${d.label}')"
+             onmouseleave="esconderTooltipGrafico()">
           <div style="width:100%;display:flex;align-items:flex-end;gap:2px;height:100%">
             <div style="flex:1;background:rgba(52,211,153,1);border-radius:4px 4px 0 0;
                         height:${altR}%;min-height:${d.receitas > 0 ? 3 : 0}px;
-                        transition:height 0.6s ease" title="Receitas: R$ ${d.receitas.toFixed(2)}"></div>
+                        transition:height 0.6s ease,opacity 0.15s"></div>
             <div style="flex:1;background:rgba(248,113,113,1);border-radius:4px 4px 0 0;
                         height:${altD}%;min-height:${d.despesas > 0 ? 3 : 0}px;
-                        transition:height 0.6s ease" title="Despesas: R$ ${d.despesas.toFixed(2)}"></div>
+                        transition:height 0.6s ease,opacity 0.15s"></div>
           </div>
         </div>`;
     }).join('');
+
+    // Suporte a toque no mobile — toca na barra para ver o tooltip
+    grafico.querySelectorAll('[data-rec]').forEach(function(el) {
+      el.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        var rec   = parseFloat(el.dataset.rec);
+        var des   = parseFloat(el.dataset.des);
+        var ano   = parseInt(el.dataset.ano);
+        var label = el.dataset.label;
+        // Cria evento sintético com currentTarget para reutilizar a função
+        mostrarTooltipGrafico({ currentTarget: el }, rec, des, ano, label);
+        clearTimeout(window._ttTimer);
+        window._ttTimer = setTimeout(esconderTooltipGrafico, 3000);
+      }, { passive: false });
+    });
+
 
     labels.style.cssText = 'display:flex;gap:8px;margin-top:6px;padding:0 4px';
     labels.innerHTML = dados.map(d =>
@@ -537,8 +629,8 @@ async function carregarGraficoMeses() {
     const legenda = document.createElement('div');
     legenda.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:0.72rem;color:var(--text3)';
     legenda.innerHTML = `
-      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(52,211,153,1);border-radius:2px;margin-right:4px"></span>Receitas</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,1);border-radius:2px;margin-right:4px"></span>Despesas</span>`;
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(52,211,153,0.7);border-radius:2px;margin-right:4px"></span>Receitas</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Despesas</span>`;
     labels.after(legenda);
 
   } catch(e) { console.error('Gráfico:', e); }

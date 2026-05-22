@@ -1,0 +1,1 @@
+"""database/ — Camada de infraestrutura de persistência."""

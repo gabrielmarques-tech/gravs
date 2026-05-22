@@ -1,6 +1,6 @@
 <div align="center">
 
-  <img src="docs/tela_login.png" alt="Gravs" width="280" />
+  <img src="docs/tela_login.png" alt="Gravs" width="220" />
 
   # 🌀 Gravs — Controle Financeiro Pessoal
 
@@ -9,7 +9,7 @@
   ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
   ![Flask](https://img.shields.io/badge/Flask-3.x-black?style=flat-square&logo=flask)
   ![SQLite](https://img.shields.io/badge/SQLite-WAL-blue?style=flat-square&logo=sqlite)
-  ![Tests](https://img.shields.io/badge/Testes-56%20passing-green?style=flat-square)
+  ![Tests](https://img.shields.io/badge/Testes-76%20passing-green?style=flat-square)
   ![License](https://img.shields.io/badge/Licença-Privada-red?style=flat-square)
 
 </div>
@@ -24,36 +24,23 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 
 ## 📸 Preview
 
+### Login
+<img src="docs/tela_login.png" alt="Login" width="100%" />
+
 ### Dashboard
 <img src="docs/dashboard.png" alt="Dashboard" width="100%" />
-
-### Tema Claro
-<img src="docs/modo_claro.png" alt="Tema Claro" width="100%" />
-
-### Transações e Busca
-<img src="docs/transacoes.png" alt="Transações" width="100%" />
 
 <details>
 <summary>Ver mais screenshots</summary>
 
-### Dashboard — Visões alternativas
-<img src="docs/dashboard_2.png" alt="Dashboard 2" width="48%" />
-<img src="docs/dashboard_3.png" alt="Dashboard 3" width="48%" />
+### Menu e Navegação
+<img src="docs/menu.png" alt="Menu" width="100%" />
 
-### Parcelados
-<img src="docs/parcelados.png" alt="Parcelados" width="100%" />
-
-### Contas e Cartões
-<img src="docs/contas.png" alt="Contas" width="100%" />
-
-### Widget de Informações
-<img src="docs/widgets_info.png" alt="Widget" width="100%" />
+### Transações
+<img src="docs/transacoes.png" alt="Transações" width="100%" />
 
 ### Exportar para Excel
-<img src="docs/exporta.png" alt="Exportar" width="100%" />
-
-### Modo Contábil
-<img src="docs/modo_contabil.png" alt="Modo Contábil" width="100%" />
+<img src="docs/exel.png" alt="Exportar Excel" width="100%" />
 
 </details>
 
@@ -63,6 +50,7 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 
 ### Controle completo
 - **Transações avulsas** — registre receitas e despesas com categoria, data e conta bancária
+- **Leitura de comprovante** — envie um PNG ou PDF e o app extrai valor, descrição e data automaticamente
 - **Contas fixas** — cadastre salário, aluguel, assinaturas e receba lembretes automáticos de vencimento
 - **Compras parceladas** — acompanhe o progresso de cada parcelamento com barra visual
 - **Contas bancárias e cartões** — saiba de qual conta saiu cada gasto
@@ -70,7 +58,7 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 ### Dashboard inteligente
 - Resumo do mês: receitas, despesas e saldo
 - Card de economia com percentual guardado
-- Gráfico de evolução dos últimos 6 meses
+- Gráfico de evolução dos últimos 6 meses (com tooltip interativo no PC e celular)
 - Saldo atual por conta bancária
 - Gastos por categoria com barras de progresso
 - Lembretes de contas que vencem hoje
@@ -78,12 +66,11 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 ### Busca e filtros
 - Busca em tempo real por descrição
 - Filtro por tipo (receita/despesa) e por conta bancária
-- Filtro por período com atalhos (este mês, este ano, tudo)
+- Filtro por período com atalhos
 
 ### Exportação e contabilidade
 - Exportar transações para Excel com totais e cores
 - Modo contábil com lançamentos em partida dobrada (débito/crédito)
-- Exportação de lançamentos contábeis para Excel
 
 ### Experiência
 - Tema claro e escuro com um clique
@@ -93,12 +80,13 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 - Recuperação de senha por email
 
 ### Segurança
-- Cada usuário vê só os próprios dados (isolamento total)
+- Cada usuário vê só os próprios dados (isolamento total por usuario_id)
 - Hash bcrypt nas senhas
 - Rate limiting no login (5 tentativas por minuto por IP)
 - Recuperação de senha com tokens de expiração de 1 hora
 - Headers de segurança HTTP em todas as respostas
 - Cookies seguros (HttpOnly, SameSite, Secure em produção)
+- SQL 100% parametrizado — sem SQL injection
 
 ---
 
@@ -110,10 +98,10 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 | Autenticação | Flask-Login + Werkzeug (bcrypt) |
 | Banco de dados | SQLite com WAL mode + índices otimizados |
 | Frontend | HTML5 + CSS3 + JavaScript puro |
-| Tipografia | Syne + DM Sans (Google Fonts) |
+| OCR | Tesseract.js (roda no browser, sem servidor) |
+| Tipografia | Inter + Syne (Google Fonts) |
 | Excel | openpyxl |
-| Feriados BR | holidays |
-| Testes | pytest — 56 testes automatizados |
+| Testes | pytest — 76 testes automatizados |
 | Deploy | PythonAnywhere |
 
 ---
@@ -137,54 +125,26 @@ gravs/
 │   ├── recorrente_service.py # Lógica de contas fixas e lembretes
 │   └── dashboard_service.py  # Agregação de dados para o dashboard
 │
-├── routes/
-│   ├── auth.py               # Login, cadastro, logout
-│   ├── dashboard.py          # Página inicial
-│   ├── transacoes.py         # CRUD de transações + APIs
-│   ├── recorrentes.py        # Contas fixas + lembretes
-│   ├── contas.py             # Contas bancárias e cartões
-│   ├── contabil.py           # Exportação Excel + partida dobrada
-│   ├── perfil.py             # Perfil e troca de senha
-│   └── recuperacao.py        # Recuperação de senha por email
-│
+├── routes/                   # Blueprints Flask por domínio
 ├── templates/                # Jinja2 — mobile-first
 ├── static/                   # Ícones PWA + manifest.json
 ├── utils/                    # Formatadores, validadores, calendário BR
 ├── docs/                     # Screenshots do projeto
-└── tests/                    # 56 testes automatizados
+└── tests/                    # 76 testes automatizados
 ```
 
-**Padrões adotados:**
-- Application Factory Pattern
-- Repository Pattern
-- Service Container (DI manual)
-- Blueprints modulares
-- Deleção lógica (soft delete)
-- Migrations automáticas
+**Padrões adotados:** Application Factory · Repository Pattern · Service Container · Blueprints · Soft Delete · Migrations automáticas
 
 ---
 
 ## 🚀 Rodando localmente
 
-**1. Clone o repositório**
 ```bash
 git clone https://github.com/gabrielmarques-tech/gravs.git
 cd gravs
-```
-
-**2. Instale as dependências**
-```bash
 pip install -r requirements.txt
-```
-
-**3. Configure as variáveis de ambiente**
-```bash
 cp .env.secret.example .env.secret
 # Edite o .env.secret com seus valores
-```
-
-**4. Rode o app**
-```bash
 flask --app app:create_app run --debug
 ```
 
@@ -198,26 +158,20 @@ Acesse `http://127.0.0.1:5000`
 python -m pytest tests/test_sistema.py -v
 ```
 
-56 testes cobrindo: autenticação, transações, parcelamentos, recorrentes, isolamento entre usuários, formatadores e validadores.
+76 testes cobrindo autenticação, transações, parcelamentos, recorrentes, isolamento entre usuários, contas bancárias, busca e soft delete.
 
 ---
 
 ## ⚙️ Variáveis de ambiente
 
-| Variável | Descrição | Obrigatória |
-|----------|-----------|-------------|
-| `SECRET_KEY` | Chave secreta do Flask | ✅ Sim |
-| `DATABASE_URL` | URL do banco SQLite | ✅ Sim |
-| `EMAIL_REMETENTE` | Gmail para envio de recuperação | Para recuperação de senha |
-| `EMAIL_SENHA_APP` | Senha de app do Google | Para recuperação de senha |
+| Variável | Descrição |
+|----------|-----------|
+| `SECRET_KEY` | Chave secreta do Flask |
+| `DATABASE_URL` | Caminho do banco SQLite |
+| `EMAIL_REMETENTE` | Gmail para recuperação de senha |
+| `EMAIL_SENHA_APP` | Senha de app do Google |
 
 Consulte `.env.secret.example` para o modelo completo.
-
----
-
-## 📄 Licença
-
-Projeto de uso privado — todos os direitos reservados.
 
 ---
 

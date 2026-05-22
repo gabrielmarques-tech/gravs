@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}Novo Lançamento Contábil{% endblock %}
+
+{% block scripts %}
+<script>
+// Carrega contas cadastradas nos selects de débito e crédito
+async function carregarContasContabil() {
+  try {
+    const r = await fetch('/contas/api/listar');
+    if (!r.ok) return;
+    const data = await r.json();
+    const contas = data.contas || [];
+
+    ['select-debito', 'select-credito'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      contas.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.nome; // salva o nome pois a coluna é TEXT
+        opt.textContent = c.icone + ' ' + c.nome;
+        sel.appendChild(opt);
+      });
+    });
+
+    // Adiciona opção de digitar manualmente ao final
+    ['select-debito', 'select-credito'].forEach(id => {
+      const sel = document.getElementById(id);
+      if (!sel) return;
+      const sep = document.createElement('option');
+      sep.disabled = true;
+      sep.textContent = '──────────';
+      sel.appendChild(sep);
+      const manual = document.createElement('option');
+      manual.value = '__manual__';
+      manual.textContent = '✏ Digitar manualmente...';
+      sel.appendChild(manual);
+    });
+
+  } catch(e) { /* silencioso */ }
+}
+
+// Se o usuário escolher "digitar manualmente", troca select por input
+function verificarManual(selectId, inputId) {
+  const sel = document.getElementById(selectId);
+  if (!sel) return;
+  sel.addEventListener('change', () => {
+    if (sel.value === '__manual__') {
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.name = sel.name;
+      input.className = 'form-control';
+      input.placeholder = 'Digite o nome da conta...';
+      input.style.marginTop = '6px';
+      sel.parentNode.insertBefore(input, sel.nextSibling);
+      sel.name = ''; // remove do form para não conflitar
+      sel.style.display = 'none';
+      input.focus();
+    }
+  });
+}
+
+carregarContasContabil();
+verificarManual('select-debito');
+verificarManual('select-credito');
+</script>
+{% endblock %}
+{% block page_title %}Novo Lançamento Contábil{% endblock %}
+
+{% block content %}
+<div style="max-width:580px;margin:0 auto">
+  <div class="card fade-up">
+    <div class="modal-title" style="margin-bottom:24px">📒 Lançamento em Partida Dobrada</div>
+
+    <form method="POST" action="{{ url_for('contabil.novo_lancamento_contabil') }}">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="tipo-despesa" value="despesa" checked />
+          <label for="tipo-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="tipo-receita" value="receita" />
+          <label for="tipo-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" class="form-control"
+               placeholder="Ex: Pagamento energia elétrica" required autofocus />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="text" name="valor" class="form-control" placeholder="0,00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Data</label>
+          <input type="date" name="data" class="form-control" value="{{ data_hoje }}" required />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Partida dobrada -->
+      <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
+                  padding:18px;margin-bottom:18px">
+        <div style="font-size:0.8rem;font-weight:700;color:var(--text2);margin-bottom:14px;
+                    text-transform:uppercase;letter-spacing:0.06em">
+          📒 Partida Dobrada
+        </div>
+
+        <div class="grid grid-2">
+          <!-- Débito: select com contas cadastradas -->
+          <div class="form-group">
+            <label class="form-label" style="color:var(--red2)">Conta de Débito</label>
+            <select name="conta_debito" id="select-debito" class="form-control">
+              <option value="">— Selecione —</option>
+            </select>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+              De onde saiu o dinheiro
+            </div>
+          </div>
+          <!-- Crédito: select com contas cadastradas -->
+          <div class="form-group">
+            <label class="form-label" style="color:var(--green2)">Conta de Crédito</label>
+            <select name="conta_credito" id="select-credito" class="form-control">
+              <option value="">— Selecione —</option>
+            </select>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+              Para onde foi registrado
+            </div>
+          </div>
+        </div>
+
+        <div style="font-size:0.78rem;color:var(--text3);padding:10px 12px;
+                    background:rgba(124,58,237,0.08);border-radius:6px;
+                    border:1px solid rgba(124,58,237,0.15)">
+          💡 Exemplo: Pagar energia → Débito: <em>Despesa Energia</em> / Crédito: <em>Conta Bancária</em>
+        </div>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:space-between;align-items:center">
+        <a href="{{ url_for('contabil.partida_dobrada') }}"
+           style="font-size:0.85rem;color:var(--text3);text-decoration:none">← Voltar</a>
+        <button type="submit" class="btn btn-primary" style="padding:12px 28px">
+          Registrar lançamento
+        </button>
+      </div>
+
+    </form>
+  </div>
+</div>
+{% endblock %}
