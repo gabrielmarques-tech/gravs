@@ -18,3 +18,5 @@ pytest-cov>=5.0,<6.0        # cobertura de código
 
 # Utilitários de desenvolvimento (não instalar em produção)
 # pip install -r requirements-dev.txt
+
+APScheduler>=3.10

@@ -706,3 +706,56 @@ class TestExcluirFixaRemoveLancamentos:
             uid
         )
         assert len(trans_apos) == 0
+
+
+class TestOnboarding:
+    """
+    Testa o fluxo de onboarding — aparece só para usuários novos
+    e é marcado como completo ao fechar.
+    """
+
+    def test_novo_usuario_onboarding_incompleto(self, container):
+        """Usuário recém cadastrado tem onboarding_completo = 0."""
+        uid, _ = container.auth.registrar("ob1@test.com", "senha123", "OB1")
+        usuario = container.usuarios_repo.buscar_por_id(uid)
+        assert usuario["onboarding_completo"] == 0
+
+    def test_marcar_onboarding_completo(self, container):
+        """Após fechar o onboarding, deve salvar no banco."""
+        uid, _ = container.auth.registrar("ob2@test.com", "senha123", "OB2")
+        container.usuarios_repo.marcar_onboarding_completo(uid)
+        usuario = container.usuarios_repo.buscar_por_id(uid)
+        assert usuario["onboarding_completo"] == 1
+
+    def test_onboarding_nao_afeta_outro_usuario(self, container):
+        """Marcar onboarding de um usuário não afeta outro."""
+        uid_a, _ = container.auth.registrar("ob3@test.com", "senha123", "OB3")
+        uid_b, _ = container.auth.registrar("ob4@test.com", "senha123", "OB4")
+        container.usuarios_repo.marcar_onboarding_completo(uid_a)
+        usuario_b = container.usuarios_repo.buscar_por_id(uid_b)
+        assert usuario_b["onboarding_completo"] == 0
+
+    def test_api_onboarding_requer_login(self, client):
+        """Rota de onboarding exige autenticação."""
+        r = client.post("/api/onboarding/completo")
+        assert r.status_code in (302, 401)
+
+    def test_api_onboarding_completo(self, client, container):
+        """API marca onboarding como completo via POST."""
+        uid, _ = container.auth.registrar("ob5@test.com", "senha123", "OB5")
+
+        # Faz login
+        client.post("/auth/login", data={
+            "email": "ob5@test.com",
+            "senha": "senha123"
+        })
+
+        # Chama a API
+        r = client.post("/api/onboarding/completo")
+        assert r.status_code == 200
+        data = r.get_json()
+        assert data["success"] is True
+
+        # Verifica no banco
+        usuario = container.usuarios_repo.buscar_por_id(uid)
+        assert usuario["onboarding_completo"] == 1

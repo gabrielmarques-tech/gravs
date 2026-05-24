@@ -118,6 +118,12 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     _registrar_error_handlers(app)
 
     logger.info("App criado. Ambiente: %s | Banco: %s", os.environ.get("FLASK_ENV", "development"), banco)
+    # Scheduler — tarefas agendadas (resumo mensal dia 28)
+    # Não inicia em modo de teste para não interferir nos testes
+    if not app.config.get("TESTING", False):
+        from services.scheduler import iniciar_scheduler
+        iniciar_scheduler(app)
+
     return app
 
 

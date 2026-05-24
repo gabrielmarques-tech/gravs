@@ -82,11 +82,20 @@ class UsuarioRepository:
         """Retorna usuário ativo pelo ID."""
         with self._db.get_conn() as conn:
             row = conn.execute(
-                "SELECT id, email, senha_hash, nome, modo_contabil FROM usuarios "
+                "SELECT id, email, senha_hash, nome, modo_contabil, "
+                "COALESCE(onboarding_completo, 0) as onboarding_completo FROM usuarios "
                 "WHERE id = ? AND ativo = 1",
                 (int(user_id),),
             ).fetchone()
         return _row_to_dict(row)
+
+    def marcar_onboarding_completo(self, usuario_id: int) -> None:
+        """Marca que o usuário completou ou pulou o onboarding."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET onboarding_completo = 1 WHERE id = ?",
+                (usuario_id,)
+            )
 
 
 # ── Repositório de Categorias ──────────────────────────────────────────────────

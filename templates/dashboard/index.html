@@ -62,10 +62,96 @@
     .resumo-card .resumo-icon { display: none; }
     .acoes-rapidas { display: grid; }
   }
+
+  /* ── Onboarding Modal ── */
+  .onboarding-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .onboarding-backdrop.open { display: flex; }
+  .onboarding-modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 18px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 440px;
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(20px) scale(0.97); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+  }
+  .ob-bars { display:flex; gap:6px; margin-bottom:28px; }
+  .ob-bar { flex:1; height:3px; background:var(--border2); border-radius:99px; transition:background 0.3s; }
+  .ob-bar.ativo { background:var(--purple2); }
+  .ob-icone { font-size:2.8rem; margin-bottom:16px; text-align:center; }
+  .ob-titulo { font-size:1.2rem; font-weight:600; color:var(--text); letter-spacing:-0.02em; margin-bottom:8px; text-align:center; }
+  .ob-desc { font-size:0.88rem; color:var(--text2); line-height:1.6; text-align:center; margin-bottom:28px; }
+  .ob-acoes { display:flex; gap:10px; }
+  .ob-btn-pular { flex:1; padding:10px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:0.85rem; cursor:pointer; font-family:var(--font-body); transition:all 0.15s; }
+  .ob-btn-pular:hover { color:var(--text2); }
+  .ob-btn-acao { flex:2; padding:10px 16px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:8px; color:white; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:opacity 0.15s; }
+  .ob-btn-acao:hover { opacity:0.88; }
+  .ob-contador { text-align:center; font-size:0.75rem; color:var(--text3); margin-top:16px; }
 </style>
 {% endblock %}
 
 {% block content %}
+
+<!-- ── Onboarding ── -->
+<div class="onboarding-backdrop" id="ob-backdrop">
+  <div class="onboarding-modal">
+    <div class="ob-bars">
+      <div class="ob-bar ativo" id="ob-b1"></div>
+      <div class="ob-bar" id="ob-b2"></div>
+      <div class="ob-bar" id="ob-b3"></div>
+    </div>
+
+    <div id="ob-p1">
+      <div class="ob-icone"><svg width="40" height="40" viewBox="0 0 28 28" fill="none">
+        <path d="M14 4C14 4 22 8.5 22 14C22 18.4183 18.4183 22 14 22C9.58172 22 6 18.4183 6 14C6 11.2 7.4 9.2 9.5 7.8" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        <path d="M14 10C14 10 17.5 11.8 17.5 14C17.5 15.933 15.933 17.5 14 17.5C12.067 17.5 10.5 15.933 10.5 14C10.5 12.8 11.1 11.9 12 11.3" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        <circle cx="14" cy="14" r="1.8" fill="var(--text)"/>
+      </svg></div>
+      <div class="ob-titulo">Bem-vindo ao Gravs!</div>
+      <div class="ob-desc">O Gravs ajuda você a saber exatamente para onde vai cada centavo.<br><br>Em 3 passos rápidos você aprende o essencial.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obFechar()">Pular</button>
+        <button class="ob-btn-acao" onclick="obIr(2)">Vamos lá →</button>
+      </div>
+    </div>
+
+    <div id="ob-p2" style="display:none">
+      <div class="ob-icone">🏦</div>
+      <div class="ob-titulo">Cadastre sua conta bancária</div>
+      <div class="ob-desc">Registre sua conta corrente, poupança ou cartão.<br><br>Assim você saberá de qual conta saiu cada gasto e o saldo de cada uma.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obIr(3)">Pular</button>
+        <button class="ob-btn-acao" onclick="obConta()">Cadastrar conta →</button>
+      </div>
+    </div>
+
+    <div id="ob-p3" style="display:none">
+      <div class="ob-icone">💸</div>
+      <div class="ob-titulo">Registre sua primeira transação</div>
+      <div class="ob-desc">Anote uma receita ou despesa recente.<br><br>Você pode digitar manualmente ou enviar um comprovante PNG/PDF — o app extrai as informações automaticamente.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obFechar()">Agora não</button>
+        <button class="ob-btn-acao" onclick="obTransacao()">Registrar →</button>
+      </div>
+    </div>
+
+    <div class="ob-contador" id="ob-cnt">Passo 1 de 3</div>
+  </div>
+</div>
 
 <!-- Banner de lembretes — preenchido via JS -->
 <div id="banner-lembretes" style="display:none"></div>
@@ -447,6 +533,47 @@ function mostrarToast(msg, cor) {
     t.style.transform = 'translateX(-50%) translateY(10px)';
     setTimeout(() => t.remove(), 300);
   }, 3500);
+}
+
+// ── Onboarding — controlado pelo servidor ─────────────────────────────────
+(function() {
+  {% if not onboarding_completo %}
+  var el = document.getElementById('ob-backdrop');
+  if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  {% endif %}
+})();
+
+function obIr(n) {
+  [1,2,3].forEach(function(i) {
+    document.getElementById('ob-p'+i).style.display = 'none';
+    var b = document.getElementById('ob-b'+i);
+    if (b) b.classList.remove('ativo');
+  });
+  document.getElementById('ob-p'+n).style.display = 'block';
+  for (var i=1; i<=n; i++) {
+    var b = document.getElementById('ob-b'+i);
+    if (b) b.classList.add('ativo');
+  }
+  document.getElementById('ob-cnt').textContent = 'Passo ' + n + ' de 3';
+}
+
+function obFechar() {
+  // Salva no servidor — não depende do browser
+  fetch('/api/onboarding/completo', { method: 'POST' });
+  var el = document.getElementById('ob-backdrop');
+  el.style.transition = 'opacity 0.2s';
+  el.style.opacity = '0';
+  setTimeout(function() { el.classList.remove('open'); document.body.style.overflow = ''; }, 220);
+}
+
+function obConta() {
+  obFechar();
+  setTimeout(function() { window.location.href = '{{ url_for("contas.lista") }}'; }, 220);
+}
+
+function obTransacao() {
+  obFechar();
+  setTimeout(function() { window.location.href = '{{ url_for("transacoes.novo") }}'; }, 220);
 }
 
 carregarLembretes();

@@ -289,6 +289,7 @@ class DatabaseManager:
         self._add_column_if_missing(conn, "transacoes", "conta_credito", "TEXT")
         self._add_column_if_missing(conn, "transacoes", "conta_id", "INTEGER")
         self._add_column_if_missing(conn, "recorrentes", "conta_id", "INTEGER")
+        self._add_column_if_missing(conn, "usuarios", "onboarding_completo", "INTEGER DEFAULT 0")
         self._criar_tabela_contas_bancarias(conn)
         self._criar_tabela_tokens_recuperacao(conn)
 
