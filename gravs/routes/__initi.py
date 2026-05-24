@@ -1,1 +1,0 @@
-"""routes/ — Blueprints Flask. Apenas HTTP: parsing de request e render de response."""

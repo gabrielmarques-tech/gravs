@@ -1,1 +1,0 @@
-"""utils/ — Utilitários puros sem dependência de Flask ou banco."""

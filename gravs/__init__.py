@@ -1,1 +1,0 @@
-# tests/__init__.py — necessário para pytest descobrir os módulos corretamente
