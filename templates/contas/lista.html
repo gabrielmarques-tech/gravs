@@ -1,0 +1,199 @@
+{% extends "base.html" %}
+
+{% block title %}Contas e Cartões{% endblock %}
+{% block page_title %}Contas e Cartões{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" onclick="abrirModal()">+ Nova conta</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .conta-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .conta-item:last-child { border-bottom: none; }
+
+  .conta-icone {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+  }
+
+  .conta-info { flex: 1; min-width: 0; }
+  .conta-nome { font-weight: 600; color: var(--text); font-size: 0.9rem; }
+  .conta-tipo { font-size: 0.75rem; color: var(--text3); margin-top: 2px; }
+
+  .sugestao {
+    padding: 5px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    font-size: 0.78rem;
+    color: var(--text2);
+    cursor: pointer;
+    transition: all 0.18s;
+    display: inline-block;
+  }
+  .sugestao:hover {
+    background: rgba(124,58,237,0.15);
+    border-color: rgba(124,58,237,0.4);
+    color: var(--purple3);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Info -->
+<div class="card mb-16 fade-up"
+     style="background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.2)">
+  <div style="font-size:0.88rem;color:var(--text2);line-height:1.6">
+    🏦 Cadastre aqui seus bancos e cartões. Eles vão aparecer como opção em todas as
+    transações — para registrar de onde saiu ou onde entrou o dinheiro.
+  </div>
+</div>
+
+<!-- Lista de contas -->
+<div class="card fade-up delay-1">
+  <div class="card-title mb-12">Suas contas e cartões</div>
+
+  {% if contas %}
+    <div style="max-height:420px;overflow-y:auto;scrollbar-width:thin">
+      {% for c in contas %}
+        <div class="conta-item">
+          <div class="conta-icone">{{ c.icone }}</div>
+          <div class="conta-info">
+            <div class="conta-nome">{{ c.nome }}</div>
+            <div class="conta-tipo">
+              {% for tipo_val, icone, label in tipos %}
+                {% if tipo_val == c.tipo %}{{ label }}{% endif %}
+              {% endfor %}
+            </div>
+          </div>
+          <form method="POST" action="{{ url_for('contas.deletar', conta_id=c.id) }}"
+                onsubmit="return confirm('Remover {{ c.nome|e }}?')">
+            <button type="submit" class="btn btn-danger btn-sm btn-icon"
+                    title="Remover">🗑</button>
+          </form>
+        </div>
+      {% endfor %}
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🏦</div>
+      <div style="font-size:1rem;font-weight:600">Nenhuma conta cadastrada</div>
+      <p>Adicione seus bancos e cartões para registrar de onde vem e para onde vai seu dinheiro</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal nova conta -->
+<div class="modal-backdrop" id="modal-conta" onclick="if(event.target.id==='modal-conta') fecharModal()">
+  <div class="modal">
+    <div class="modal-title">🏦 Nova Conta ou Cartão</div>
+
+    <form method="POST" action="{{ url_for('contas.adicionar') }}">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:4px">
+          {% for tipo_val, icone, label in tipos %}
+            <label style="display:flex;flex-direction:column;align-items:center;gap:4px;
+                          padding:10px 6px;border-radius:8px;cursor:pointer;
+                          border:2px solid var(--border);transition:all 0.18s;
+                          font-size:0.78rem;color:var(--text2);text-align:center"
+                   id="label-tipo-{{ tipo_val }}"
+                   onclick="selecionarTipo('{{ tipo_val }}')">
+              <input type="radio" name="tipo" value="{{ tipo_val }}"
+                     id="tipo-{{ tipo_val }}"
+                     {% if tipo_val == 'conta' %}checked{% endif %}
+                     style="display:none" />
+              <span style="font-size:1.4rem">{{ icone }}</span>
+              <span>{{ label }}</span>
+            </label>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input type="text" name="nome" id="input-nome" class="form-control"
+               placeholder="Ex: Nubank, Bradesco, Visa Gold..." required autofocus />
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+          Use o nome como aparece no seu app do banco
+        </div>
+      </div>
+
+      <!-- Sugestões rápidas -->
+      <div style="margin-bottom:16px">
+        <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">Sugestões:</div>
+        <div style="display:flex;flex-wrap:wrap;gap:6px">
+          <span onclick="usarSugestao('Nubank', 'cartao')" class="sugestao">💳 Nubank</span>
+          <span onclick="usarSugestao('Itaú', 'conta')" class="sugestao">🏦 Itaú</span>
+          <span onclick="usarSugestao('Bradesco', 'conta')" class="sugestao">🏦 Bradesco</span>
+          <span onclick="usarSugestao('Caixa Econômica', 'conta')" class="sugestao">🏦 Caixa</span>
+          <span onclick="usarSugestao('Santander', 'conta')" class="sugestao">🏦 Santander</span>
+          <span onclick="usarSugestao('Inter', 'conta')" class="sugestao">🏦 Inter</span>
+          <span onclick="usarSugestao('C6 Bank', 'conta')" class="sugestao">🏦 C6 Bank</span>
+          <span onclick="usarSugestao('Carteira', 'carteira')" class="sugestao">👛 Carteira</span>
+        </div>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function abrirModal() {
+    document.getElementById('modal-conta').classList.add('open');
+    selecionarTipo('conta');
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-conta').classList.remove('open');
+  }
+
+  function selecionarTipo(tipo) {
+    document.getElementById('tipo-' + tipo).checked = true;
+    document.querySelectorAll('[id^="label-tipo-"]').forEach(el => {
+      el.style.borderColor = 'var(--border)';
+      el.style.background  = 'transparent';
+      el.style.color       = 'var(--text2)';
+    });
+    const label = document.getElementById('label-tipo-' + tipo);
+    if (label) {
+      label.style.borderColor = 'var(--purple2)';
+      label.style.background  = 'rgba(124,58,237,0.12)';
+      label.style.color       = 'var(--purple3)';
+    }
+  }
+
+  function usarSugestao(nome, tipo) {
+    document.getElementById('input-nome').value = nome;
+    selecionarTipo(tipo);
+    document.getElementById('modal-conta').classList.add('open');
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') fecharModal();
+  });
+
+  selecionarTipo('conta');
+</script>
+{% endblock %}

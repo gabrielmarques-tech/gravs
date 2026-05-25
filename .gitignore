@@ -1,0 +1,38 @@
+# ── Banco de dados — NUNCA sobe para o GitHub ────────────────────────────────
+*.db
+*.db-shm
+*.db-wal
+
+# ── Segredos — NUNCA sobem para o GitHub ─────────────────────────────────────
+.env.secret
+.env
+*.env
+
+# ── Python ────────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Ambiente virtual ──────────────────────────────────────────────────────────
+venv/
+env/
+.venv/
+
+# ── Backups e ZIPs ────────────────────────────────────────────────────────────
+*.zip
+backups/
+
+# ── Sistema operacional ───────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ── IDEs ─────────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo

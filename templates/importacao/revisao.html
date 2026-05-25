@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+{% block title %}Revisar Importação{% endblock %}
+{% block page_title %}Revisar Importação{% endblock %}
+
+{% block content %}
+<div style="max-width:900px;margin:0 auto">
+
+  <!-- Resumo do que foi detectado -->
+  <div class="card fade-up" style="margin-bottom:16px">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
+      <div>
+        <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--text)">
+          📋 {{ total }} lançamento(s) detectado(s)
+        </div>
+        <div style="font-size:0.82rem;color:var(--text2);margin-top:4px">
+          Revise, ajuste as categorias e desmarque o que não quiser importar.
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:0.85rem">
+        <div style="color:var(--green2);font-weight:600">
+          ↑ R$ {{ "%.2f"|format(total_receitas) }} receitas
+        </div>
+        <div style="color:var(--red2);font-weight:600">
+          ↓ R$ {{ "%.2f"|format(total_despesas) }} despesas
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Controles rápidos -->
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(true)">✓ Marcar todos</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(false)">✗ Desmarcar todos</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('receita')">Só receitas</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('despesa')">Só despesas</button>
+  </div>
+
+  <form method="POST" action="{{ url_for('importacao.confirmar') }}" id="form-revisao">
+
+    <!-- Tabela de transações -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse;font-size:0.84rem">
+          <thead>
+            <tr style="background:var(--bg3);border-bottom:1px solid var(--border2)">
+              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text2);width:40px">✓</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2)">Data</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2)">Descrição</th>
+              <th style="padding:10px 12px;text-align:center;font-weight:600;color:var(--text2)">Tipo</th>
+              <th style="padding:10px 12px;text-align:left;font-weight:600;color:var(--text2)">Categoria</th>
+              <th style="padding:10px 12px;text-align:right;font-weight:600;color:var(--text2)">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for t in transacoes %}
+            <tr class="linha-transacao" data-tipo="{{ t.tipo }}"
+                style="border-bottom:1px solid var(--border);transition:background .15s">
+
+              <!-- Checkbox incluir -->
+              <td style="padding:8px 12px;text-align:center">
+                <input type="hidden" name="idx" value="{{ loop.index0 }}">
+                <input type="checkbox" name="incluir" value="{{ loop.index0 }}"
+                       checked class="check-item"
+                       style="width:16px;height:16px;accent-color:var(--purple2);cursor:pointer">
+              </td>
+
+              <!-- Data (editável) -->
+              <td style="padding:8px 12px">
+                <input type="date" name="data" value="{{ t.data }}"
+                       style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                              color:var(--text);padding:4px 8px;font-size:0.82rem;width:120px">
+              </td>
+
+              <!-- Descrição (editável) -->
+              <td style="padding:8px 12px">
+                <input type="text" name="descricao" value="{{ t.descricao }}"
+                       style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                              color:var(--text);padding:4px 8px;font-size:0.82rem;width:100%;min-width:180px">
+              </td>
+
+              <!-- Tipo (select) -->
+              <td style="padding:8px 12px;text-align:center">
+                <select name="tipo" class="tipo-select"
+                        style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                               color:var(--text);padding:4px 8px;font-size:0.82rem">
+                  <option value="receita" {% if t.tipo == 'receita' %}selected{% endif %}
+                          style="color:var(--green2)">↑ Receita</option>
+                  <option value="despesa" {% if t.tipo == 'despesa' %}selected{% endif %}
+                          style="color:var(--red2)">↓ Despesa</option>
+                </select>
+              </td>
+
+              <!-- Categoria (select) -->
+              <td style="padding:8px 12px">
+                <select name="categoria_id"
+                        style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                               color:var(--text);padding:4px 8px;font-size:0.82rem;min-width:140px">
+                  {% for cat in categorias %}
+                  <option value="{{ cat.id }}"
+                    {% if cat.id == t.categoria_id %}selected{% endif %}>
+                    {{ cat.icone }} {{ cat.nome }}
+                  </option>
+                  {% endfor %}
+                </select>
+              </td>
+
+              <!-- Valor (editável) -->
+              <td style="padding:8px 12px;text-align:right">
+                <input type="text" name="valor" value="{{ "%.2f"|format(t.valor) }}"
+                       style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                              color:{% if t.tipo == 'receita' %}var(--green2){% else %}var(--red2){% endif %};
+                              padding:4px 8px;font-size:0.85rem;font-weight:600;
+                              text-align:right;width:90px">
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Botões de ação -->
+    <div style="display:flex;gap:12px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
+      <a href="{{ url_for('importacao.index') }}" class="btn btn-secondary">
+        ← Cancelar
+      </a>
+      <button type="submit" class="btn btn-primary" id="btn-confirmar">
+        ✓ Confirmar importação
+      </button>
+    </div>
+
+    <!-- Contador dinâmico -->
+    <div style="text-align:right;margin-top:8px;font-size:0.8rem;color:var(--text3)" id="contador">
+      {{ total }} selecionado(s)
+    </div>
+
+  </form>
+</div>
+
+<script>
+  function atualizarContador() {
+    const marcados = document.querySelectorAll('.check-item:checked').length;
+    document.getElementById('contador').textContent = marcados + ' selecionado(s)';
+  }
+
+  function marcarTodos(estado) {
+    document.querySelectorAll('.check-item').forEach(cb => cb.checked = estado);
+    atualizarContador();
+  }
+
+  function marcarPorTipo(tipo) {
+    document.querySelectorAll('.linha-transacao').forEach(tr => {
+      const cb = tr.querySelector('.check-item');
+      cb.checked = tr.dataset.tipo === tipo;
+    });
+    atualizarContador();
+  }
+
+  // Atualiza contador ao mudar checkboxes
+  document.querySelectorAll('.check-item').forEach(cb => {
+    cb.addEventListener('change', atualizarContador);
+  });
+
+  // Highlight da linha ao marcar/desmarcar
+  document.querySelectorAll('.check-item').forEach(cb => {
+    cb.addEventListener('change', function() {
+      const tr = this.closest('tr');
+      tr.style.opacity = this.checked ? '1' : '0.4';
+    });
+  });
+
+  // Confirma antes de submeter
+  document.getElementById('form-revisao').addEventListener('submit', function(e) {
+    const marcados = document.querySelectorAll('.check-item:checked').length;
+    if (marcados === 0) {
+      e.preventDefault();
+      alert('Selecione pelo menos uma transação para importar.');
+      return;
+    }
+    document.getElementById('btn-confirmar').disabled = true;
+    document.getElementById('btn-confirmar').textContent = 'Importando...';
+  });
+</script>
+{% endblock %}

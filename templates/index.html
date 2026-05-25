@@ -1,0 +1,920 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Cards de resumo — 3 colunas desktop, 1 coluna mobile */
+  .resumo-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 14px;
+  }
+
+  @media (max-width: 768px) {
+    .resumo-grid {
+      grid-template-columns: 1fr;
+      gap: 10px;
+    }
+
+    /* No mobile, card de resumo fica horizontal */
+    .resumo-card {
+      display: flex !important;
+      align-items: center !important;
+      gap: 14px !important;
+      padding: 14px 16px !important;
+    }
+
+    .resumo-card .resumo-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem;
+      flex-shrink: 0;
+    }
+
+    .resumo-card .resumo-body { flex: 1; }
+
+    .resumo-card .card-title { margin-bottom: 2px !important; font-size: 0.7rem !important; }
+
+    .resumo-card .card-value { font-size: 1.35rem !important; }
+
+    .resumo-card .resumo-sub { font-size: 0.72rem; color: var(--text3); margin-top: 1px; }
+
+    /* Card de economia compacto no mobile */
+    .economia-card { padding: 16px !important; }
+
+    .economia-card .economia-desktop { display: none; }
+    .economia-card .economia-mobile  { display: block; }
+
+    /* Gastos por categoria — mais compacto */
+    .cat-item { gap: 8px !important; }
+    .cat-barra { height: 5px !important; }
+
+    /* Ações rápidas — ocultas no mobile (tem bottom nav) */
+    .acoes-rapidas { display: none; }
+  }
+
+  @media (min-width: 769px) {
+    .economia-card .economia-desktop { display: flex; }
+    .economia-card .economia-mobile  { display: none; }
+    .resumo-card .resumo-icon { display: none; }
+    .acoes-rapidas { display: grid; }
+  }
+
+  /* ── Onboarding Modal ── */
+  .onboarding-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(6px);
+    z-index: 10000;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+  }
+  .onboarding-backdrop.open { display: flex; }
+  .onboarding-modal {
+    background: var(--bg2);
+    border: 1px solid var(--border2);
+    border-radius: 18px;
+    padding: 32px 28px;
+    width: 100%;
+    max-width: 440px;
+    animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
+  }
+  @keyframes slideUp {
+    from { opacity:0; transform:translateY(20px) scale(0.97); }
+    to   { opacity:1; transform:translateY(0) scale(1); }
+  }
+  .ob-bars { display:flex; gap:6px; margin-bottom:28px; }
+  .ob-bar { flex:1; height:3px; background:var(--border2); border-radius:99px; transition:background 0.3s; }
+  .ob-bar.ativo { background:var(--purple2); }
+  .ob-icone { font-size:2.8rem; margin-bottom:16px; text-align:center; }
+  .ob-titulo { font-size:1.2rem; font-weight:600; color:var(--text); letter-spacing:-0.02em; margin-bottom:8px; text-align:center; }
+  .ob-desc { font-size:0.88rem; color:var(--text2); line-height:1.6; text-align:center; margin-bottom:28px; }
+  .ob-acoes { display:flex; gap:10px; }
+  .ob-btn-pular { flex:1; padding:10px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:0.85rem; cursor:pointer; font-family:var(--font-body); transition:all 0.15s; }
+  .ob-btn-pular:hover { color:var(--text2); }
+  .ob-btn-acao { flex:2; padding:10px 16px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:8px; color:white; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:opacity 0.15s; }
+  .ob-btn-acao:hover { opacity:0.88; }
+  .ob-contador { text-align:center; font-size:0.75rem; color:var(--text3); margin-top:16px; }
+
+  /* ── Metas / Limites ── */
+  .meta-barra-wrap { height:6px; background:var(--bg3); border-radius:99px; overflow:hidden; margin-top:5px; }
+  .meta-barra-fill { height:100%; border-radius:99px; transition:width 0.8s ease; }
+  .meta-barra-ok   { background:var(--green2); }
+  .meta-barra-warn { background:var(--gold2); }
+  .meta-barra-over { background:var(--red2); }
+  .meta-badge { font-size:0.68rem; padding:1px 7px; border-radius:99px; font-weight:600; }
+  .meta-badge-ok   { background:rgba(52,211,153,0.12); color:var(--green2); }
+  .meta-badge-warn { background:rgba(251,191,36,0.12); color:var(--gold2); }
+  .meta-badge-over { background:rgba(248,113,113,0.15); color:var(--red2); }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── Onboarding ── -->
+<div class="onboarding-backdrop" id="ob-backdrop">
+  <div class="onboarding-modal">
+    <div class="ob-bars">
+      <div class="ob-bar ativo" id="ob-b1"></div>
+      <div class="ob-bar" id="ob-b2"></div>
+      <div class="ob-bar" id="ob-b3"></div>
+    </div>
+
+    <div id="ob-p1">
+      <div class="ob-icone"><svg width="40" height="40" viewBox="0 0 28 28" fill="none">
+        <path d="M14 4C14 4 22 8.5 22 14C22 18.4183 18.4183 22 14 22C9.58172 22 6 18.4183 6 14C6 11.2 7.4 9.2 9.5 7.8" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+        <path d="M14 10C14 10 17.5 11.8 17.5 14C17.5 15.933 15.933 17.5 14 17.5C12.067 17.5 10.5 15.933 10.5 14C10.5 12.8 11.1 11.9 12 11.3" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        <circle cx="14" cy="14" r="1.8" fill="var(--text)"/>
+      </svg></div>
+      <div class="ob-titulo">Bem-vindo ao Gravs!</div>
+      <div class="ob-desc">O Gravs ajuda você a saber exatamente para onde vai cada centavo.<br><br>Em 3 passos rápidos você aprende o essencial.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obFechar()">Pular</button>
+        <button class="ob-btn-acao" onclick="obIr(2)">Vamos lá →</button>
+      </div>
+    </div>
+
+    <div id="ob-p2" style="display:none">
+      <div class="ob-icone">🏦</div>
+      <div class="ob-titulo">Cadastre sua conta bancária</div>
+      <div class="ob-desc">Registre sua conta corrente, poupança ou cartão.<br><br>Assim você saberá de qual conta saiu cada gasto e o saldo de cada uma.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obIr(3)">Pular</button>
+        <button class="ob-btn-acao" onclick="obConta()">Cadastrar conta →</button>
+      </div>
+    </div>
+
+    <div id="ob-p3" style="display:none">
+      <div class="ob-icone">💸</div>
+      <div class="ob-titulo">Registre sua primeira transação</div>
+      <div class="ob-desc">Anote uma receita ou despesa recente.<br><br>Você pode digitar manualmente ou enviar um comprovante PNG/PDF — o app extrai as informações automaticamente.</div>
+      <div class="ob-acoes">
+        <button class="ob-btn-pular" onclick="obFechar()">Agora não</button>
+        <button class="ob-btn-acao" onclick="obTransacao()">Registrar →</button>
+      </div>
+    </div>
+
+    <div class="ob-contador" id="ob-cnt">Passo 1 de 3</div>
+  </div>
+</div>
+
+<!-- Banner de lembretes — preenchido via JS -->
+<div id="banner-lembretes" style="display:none"></div>
+
+<!-- Hero — saldo destaque -->
+<div class="card fade-up" style="padding:24px;background:var(--surface2);position:relative;overflow:hidden;margin-bottom:14px">
+  <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,0.12) 0%,transparent 70%);pointer-events:none"></div>
+  <p style="font-size:0.7rem;color:var(--text3);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500">Saldo deste mês</p>
+  <p style="font-size:2.2rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1">
+    {{ resumo.saldo | real }}
+  </p>
+  {% if resumo.diferenca_despesas != 0 and resumo.despesas_anterior > 0 %}
+    {% set pct_dif = ((resumo.diferenca_despesas / resumo.despesas_anterior) * 100) | round(1) %}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+      {% if resumo.diferenca_despesas < 0 %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        <span style="color:var(--green2);font-size:0.78rem;font-variant-numeric:tabular-nums">{{ pct_dif|abs }}%</span>
+      {% else %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        <span style="color:var(--red2);font-size:0.78rem;font-variant-numeric:tabular-nums">{{ pct_dif }}%</span>
+      {% endif %}
+      <span style="color:var(--text3);font-size:0.78rem">em despesas comparado ao mês passado</span>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Cards Receitas + Despesas -->
+<div class="grid grid-2 fade-up delay-1" style="gap:12px;margin-bottom:14px">
+
+  <div class="card" style="padding:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:28px;height:28px;background:var(--green-bg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--green2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="17 17 17 7 7 7"/></svg>
+      </div>
+      <span style="font-size:0.78rem;color:var(--text2);font-weight:500">Receitas</span>
+    </div>
+    <p style="font-size:1.15rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">{{ resumo.receitas | real }}</p>
+    <p style="font-size:0.7rem;color:var(--text3);margin:4px 0 0">recebido este mês</p>
+  </div>
+
+  <div class="card" style="padding:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:28px;height:28px;background:var(--red-bg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--red2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </div>
+      <span style="font-size:0.78rem;color:var(--text2);font-weight:500">Despesas</span>
+    </div>
+    <p style="font-size:1.15rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">{{ resumo.despesas | real }}</p>
+    <p style="font-size:0.7rem;color:var(--text3);margin:4px 0 0">gasto este mês</p>
+  </div>
+
+</div>
+
+<!-- Card de economia -->
+{% if resumo.receitas > 0 or resumo.despesas > 0 %}
+<div class="mt-16 fade-up delay-2">
+
+  {% if resumo.saldo > 0 %}
+    <div class="card economia-card"
+         style="border-color:rgba(16,185,129,0.3);background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(16,185,129,0.04));position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+
+      <!-- Desktop -->
+      <div class="economia-desktop" style="align-items:center;gap:20px;flex-wrap:wrap">
+        <div style="width:52px;height:52px;border-radius:14px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;color:var(--green2);flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+        <div style="flex:1;min-width:160px">
+          <div style="font-size:1.1rem;font-weight:600;color:#34d399;margin-bottom:4px">Você está economizando!</div>
+          <div style="font-size:0.88rem;color:var(--text2)">
+            Sobrou <strong style="color:#34d399">{{ resumo.saldo | real }}</strong> este mês
+            {% if resumo.receitas > 0 %}
+              — <strong style="color:#34d399">{{ (resumo.saldo / resumo.receitas * 100)|round(1) }}% da sua receita</strong> guardada.
+            {% endif %}
+          </div>
+          {% if resumo.diferenca_despesas < -50 %}
+            <div style="font-size:0.78rem;color:#10b981;margin-top:4px">↓ Gastou {{ resumo.diferenca_despesas|abs | real }} a menos que o mês passado</div>
+          {% endif %}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Economizado</div>
+          <div style="font-family:'Inter',system-ui,sans-serif;font-size:1.8rem;font-weight:600;color:#34d399;letter-spacing:-0.04em;font-variant-numeric:tabular-nums">{{ resumo.saldo | real }}</div>
+        </div>
+      </div>
+
+      <!-- Mobile -->
+      <div class="economia-mobile">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+          <div style="color:var(--green2)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <div>
+            <div style="font-size:1rem;font-weight:600;color:#34d399">Você está economizando!</div>
+            <div style="font-size:0.82rem;color:var(--text2);margin-top:2px">
+              Sobrou <strong style="color:#34d399">{{ resumo.saldo | real }}</strong> este mês
+            </div>
+          </div>
+        </div>
+        {% if resumo.receitas > 0 %}
+          {% set pct = (resumo.saldo / resumo.receitas * 100)|round(1) %}
+          <div style="display:flex;justify-content:space-between;font-size:0.72rem;color:var(--text3);margin-bottom:5px">
+            <span>{{ pct }}% guardado</span>
+            <span>{{ (100 - pct)|round(1) }}% gasto</span>
+          </div>
+          <div style="height:6px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:{{ [(resumo.despesas / resumo.receitas * 100)|round(1), 100]|min }}%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:99px"></div>
+          </div>
+        {% endif %}
+      </div>
+
+      {% if resumo.receitas > 0 %}
+        {% set pct_gasto = [(resumo.despesas / resumo.receitas * 100)|round(1), 100]|min %}
+        <div class="economia-desktop" style="display:block;margin-top:14px">
+          <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text3);margin-bottom:5px">
+            <span>Despesas: {{ pct_gasto }}% da receita</span>
+            <span>Economizado: {{ (100 - pct_gasto)|round(1) }}%</span>
+          </div>
+          <div style="height:7px;background:rgba(255,255,255,0.06);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:{{ pct_gasto }}%;background:linear-gradient(90deg,#ef4444,#f97316);border-radius:99px"></div>
+          </div>
+        </div>
+      {% endif %}
+    </div>
+
+  {% elif resumo.saldo < 0 %}
+    <div class="card"
+         style="border-color:rgba(239,68,68,0.3);background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.03));position:relative;overflow:hidden">
+      <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex-shrink:0;color:var(--red2)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
+        <div style="flex:1;min-width:140px">
+          <div style="font-size:1rem;font-weight:600;color:#f87171;margin-bottom:3px">Gastos acima da receita</div>
+          <div style="font-size:0.85rem;color:var(--text2)">
+            Você gastou <strong style="color:#f87171">{{ resumo.saldo|abs | real }}</strong> a mais do que recebeu.
+          </div>
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:0.68rem;color:var(--text3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:2px">Déficit</div>
+          <div style="font-family:'Inter',system-ui,sans-serif;font-size:1.5rem;font-weight:600;color:#f87171;letter-spacing:-0.04em;font-variant-numeric:tabular-nums">{{ resumo.saldo|abs | real }}</div>
+        </div>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="card" style="background:rgba(107,95,130,0.08);border-color:rgba(107,95,130,0.2)">
+      <div style="display:flex;align-items:center;gap:12px">
+        <div style="color:var(--text3)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>
+        <div style="font-size:0.88rem;color:var(--text2)">Nenhum lançamento ainda este mês.</div>
+      </div>
+    </div>
+  {% endif %}
+
+</div>
+{% endif %}
+
+<!-- Comparação mês anterior -->
+{% if resumo.receitas_anterior > 0 or resumo.despesas_anterior > 0 %}
+<div class="card mt-16 fade-up delay-3" style="padding:12px 16px">
+  <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
+    <div style="font-size:0.68rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap">Mês anterior</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.82rem;color:var(--text2)">
+      <span>Receitas: <strong style="color:var(--green2)">{{ resumo.receitas_anterior | real }}</strong></span>
+      <span>Despesas: <strong style="color:var(--red2)">{{ resumo.despesas_anterior | real }}</strong></span>
+      {% if resumo.diferenca_despesas > 50 %}
+        <span style="color:var(--red2)">↑ {{ resumo.diferenca_despesas | real }} a mais</span>
+      {% elif resumo.diferenca_despesas < -50 %}
+        <span style="color:var(--green2)">↓ {{ resumo.diferenca_despesas|abs | real }} a menos</span>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Gastos por categoria -->
+{% if resumo.gastos_por_categoria %}
+<div class="card mt-16 fade-up">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:0">Gastos por categoria</div>
+    <button onclick="abrirModalLimites()"
+            style="font-size:0.75rem;color:var(--purple3);background:none;border:none;
+                   cursor:pointer;font-family:var(--font-body);padding:4px 8px;
+                   border-radius:6px;border:1px solid var(--border2)">
+      + Definir limites
+    </button>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px">
+    {% set total = resumo.despesas if resumo.despesas > 0 else 1 %}
+    {% for item in resumo.gastos_por_categoria %}
+      {% set limite = limites.get(item.id, 0) %}
+      {% set pct_total = (item.total / total * 100)|round(1) %}
+      {% set pct_limite = [(item.total / limite * 100)|round(1), 100]|min if limite > 0 else 0 %}
+      <div class="cat-item" style="display:flex;flex-direction:column;gap:5px">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+          <span style="font-size:0.85rem;color:var(--text2);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.nome }}</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            {% if limite > 0 %}
+              {% if item.total >= limite %}
+                <span class="meta-badge meta-badge-over">Limite atingido</span>
+              {% elif (item.total / limite * 100) >= 80 %}
+                <span class="meta-badge meta-badge-warn">{{ (item.total / limite * 100)|round(0)|int }}%</span>
+              {% else %}
+                <span class="meta-badge meta-badge-ok">{{ (item.total / limite * 100)|round(0)|int }}%</span>
+              {% endif %}
+            {% else %}
+              <span style="font-size:0.72rem;color:var(--text3)">{{ pct_total }}%</span>
+            {% endif %}
+            <span style="font-size:0.85rem;font-weight:600;color:var(--text)">{{ item.total | real }}</span>
+            {% if limite > 0 %}
+              <span style="font-size:0.72rem;color:var(--text3)">/ {{ limite | real }}</span>
+            {% endif %}
+          </div>
+        </div>
+        {% if limite > 0 %}
+          <div class="meta-barra-wrap">
+            <div class="meta-barra-fill {% if item.total >= limite %}meta-barra-over{% elif (item.total / limite * 100) >= 80 %}meta-barra-warn{% else %}meta-barra-ok{% endif %}"
+                 style="width:{{ pct_limite }}%"></div>
+          </div>
+        {% else %}
+          <div class="cat-barra" style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:{{ [pct_total, 100]|min }}%;background:{{ item.cor or '#7c3aed' }};border-radius:99px;transition:width 0.8s ease"></div>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
+
+<!-- Modal de limites por categoria -->
+<div class="modal-backdrop" id="modal-limites">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">Limites por categoria</div>
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:20px">
+      Defina um limite de gastos mensais para cada categoria. A barra muda de cor quando você se aproxima do limite.
+    </p>
+    <div id="lista-limites" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:20px">
+      <button onclick="fecharModalLimites()" class="btn btn-secondary">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Ações rápidas (desktop) -->
+<!-- Saldo por conta bancária -->
+<div id="card-saldo-contas" class="mt-16 fade-up" style="display:none">
+  <div class="card">
+    <div class="card-title mb-12">Saldo por conta</div>
+    <div id="lista-saldo-contas" style="display:flex;flex-direction:column;gap:8px"></div>
+  </div>
+</div>
+
+<!-- Gráfico de evolução dos últimos 6 meses -->
+<div class="card mt-16 fade-up">
+  <div class="card-title mb-16">Evolução dos últimos 6 meses</div>
+  <div id="grafico-meses" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 4px">
+    <div style="color:var(--text3);font-size:0.8rem;margin:auto">Carregando...</div>
+  </div>
+  <div id="grafico-labels" style="display:flex;gap:8px;margin-top:6px;padding:0 4px"></div>
+</div>
+
+<!-- Ações rápidas — só aparecem no desktop (mobile tem bottom nav) -->
+<div class="acoes-rapidas grid-2 mt-24 fade-up" style="gap:14px">
+
+  <a href="{{ url_for('transacoes.novo') }}" class="card"
+     style="text-decoration:none;text-align:center;cursor:pointer;
+            background:linear-gradient(135deg,rgba(124,58,237,0.09),rgba(124,58,237,0.02));
+            border-color:rgba(124,58,237,0.22);transition:all 0.25s ease"
+     onmouseover="this.style.borderColor='var(--purple2)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 32px rgba(124,58,237,0.22)'"
+     onmouseout="this.style.borderColor='rgba(124,58,237,0.22)';this.style.transform='';this.style.boxShadow=''">
+    <div style="margin-bottom:12px;color:var(--purple2);display:flex;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+    <div style="font-weight:600;font-size:1rem;color:var(--text)">Nova Transação</div>
+    <div style="font-size:0.8rem;color:var(--text2);margin-top:6px">Registrar receita ou despesa</div>
+  </a>
+
+  <a href="{{ url_for('recorrentes.fixas') }}" class="card"
+     style="text-decoration:none;text-align:center;cursor:pointer;
+            background:linear-gradient(135deg,rgba(6,182,212,0.09),rgba(6,182,212,0.02));
+            border-color:rgba(6,182,212,0.22);transition:all 0.25s ease"
+     onmouseover="this.style.borderColor='var(--cyan)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 32px rgba(6,182,212,0.18)'"
+     onmouseout="this.style.borderColor='rgba(6,182,212,0.22)';this.style.transform='';this.style.boxShadow=''">
+    <div style="margin-bottom:12px;color:var(--cyan);display:flex;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg></div>
+    <div style="font-family:var(--font-display);font-weight:800;font-size:1rem;color:var(--text)">Contas Fixas</div>
+    <div style="font-size:0.8rem;color:var(--text2);margin-top:6px">Gerenciar recorrências</div>
+  </a>
+
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Banner de lembretes — carregado via API para não atrasar a página
+async function carregarLembretes() {
+  try {
+    const r = await fetch('/api/lembretes');
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.lembretes || data.lembretes.length === 0) return;
+
+    const container = document.getElementById('banner-lembretes');
+    if (!container) return;
+
+    const items = data.lembretes.map(l => `
+      <div class="lembrete-item" id="lembrete-${l.uuid}"
+           style="background:var(--bg3);
+                  border:1px solid ${l.atrasada ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'};
+                  border-radius:10px;padding:12px 14px;
+                  display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:600;color:var(--text);font-size:0.9rem">
+            ${l.atrasada ? '🔴' : '🟡'} ${l.descricao}
+          </div>
+          <div style="font-size:0.76rem;color:var(--text3);margin-top:2px">
+            Vencimento: ${l.data} ·
+            ${l.atrasada
+              ? '<span style="color:#f87171;font-weight:600">Em atraso!</span>'
+              : '<span style="color:#fbbf24;font-weight:600">Vence hoje</span>'}
+          </div>
+        </div>
+        <div style="font-family:var(--font-display);font-weight:700;color:var(--red2);
+                    font-size:0.95rem;flex-shrink:0">
+          R$ ${l.valor.toFixed(2).replace('.',',')}
+        </div>
+        <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
+          <button onclick="confirmarPagamento('${l.uuid}', '${l.descricao.replace(/'/g,"\\'")}', this)"
+                  style="padding:8px 16px;border:none;border-radius:8px;cursor:pointer;
+                         background:linear-gradient(135deg,#10b981,#34d399);color:white;
+                         font-weight:700;font-size:0.82rem;font-family:var(--font-body);
+                         box-shadow:0 3px 10px rgba(16,185,129,0.3)">
+            ✓ Já paguei
+          </button>
+          <button onclick="dispensarLembrete('${l.uuid}')"
+                  style="padding:8px 12px;border:1px solid var(--border2);border-radius:8px;
+                         cursor:pointer;background:var(--surface2);color:var(--text2);
+                         font-size:0.82rem;font-family:var(--font-body)">
+            Depois
+          </button>
+        </div>
+      </div>
+    `).join('');
+
+    container.innerHTML = `
+      <div style="background:rgba(245,158,11,0.07);border:1px solid rgba(245,158,11,0.25);
+                  border-radius:var(--radius);padding:16px;margin-bottom:16px;
+                  animation:fadeUp 0.4s ease both">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="font-size:1.5rem">🔔</div>
+          <div>
+            <div style="font-family:var(--font-display);font-weight:700;
+                        font-size:0.95rem;color:#fbbf24">
+              ${data.lembretes.length} conta${data.lembretes.length > 1 ? 's' : ''}
+              ${data.lembretes.length > 1 ? 'precisam' : 'precisa'} de atenção
+            </div>
+            <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">
+              Marque as que já pagou para manter o controle em dia
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">${items}</div>
+      </div>
+    `;
+    container.style.display = 'block';
+
+  } catch(e) { /* silencioso */ }
+}
+
+async function confirmarPagamento(uuid, descricao, btn) {
+  const original = btn.textContent;
+  btn.textContent = '...';
+  btn.disabled = true;
+
+  try {
+    const r = await fetch(`/api/fixo/${uuid}/confirmar`, { method: 'POST' });
+    const data = await r.json();
+
+    if (data.success) {
+      const item = document.getElementById(`lembrete-${uuid}`);
+      if (item) {
+        item.style.transition = 'opacity 0.3s, transform 0.3s';
+        item.style.opacity = '0';
+        item.style.transform = 'translateX(20px)';
+        setTimeout(() => {
+          item.remove();
+          if (!document.querySelector('[id^="lembrete-"]')) {
+            document.getElementById('banner-lembretes').style.display = 'none';
+          }
+        }, 300);
+      }
+      mostrarToast(`✓ ${descricao} marcada como paga!`, 'verde');
+    } else {
+      btn.textContent = original;
+      btn.disabled = false;
+      mostrarToast('Erro ao confirmar. Tente novamente.', 'vermelho');
+    }
+  } catch(e) {
+    btn.textContent = original;
+    btn.disabled = false;
+  }
+}
+
+function dispensarLembrete(uuid) {
+  const item = document.getElementById(`lembrete-${uuid}`);
+  if (!item) return;
+  item.style.transition = 'opacity 0.3s, transform 0.3s';
+  item.style.opacity = '0';
+  item.style.transform = 'translateX(-20px)';
+  setTimeout(() => {
+    item.remove();
+    if (!document.querySelector('[id^="lembrete-"]')) {
+      document.getElementById('banner-lembretes').style.display = 'none';
+    }
+  }, 300);
+  mostrarToast('💡 Lembre-se de pagar para evitar juros!', 'amarelo');
+}
+
+function mostrarToast(msg, cor) {
+  const c = {
+    verde:    'background:rgba(16,185,129,0.2);border-color:rgba(16,185,129,0.4);color:#34d399',
+    vermelho: 'background:rgba(239,68,68,0.2);border-color:rgba(239,68,68,0.4);color:#f87171',
+    amarelo:  'background:rgba(245,158,11,0.2);border-color:rgba(245,158,11,0.4);color:#fbbf24',
+  }[cor] || '';
+
+  const t = document.createElement('div');
+  t.style.cssText = `position:fixed;bottom:84px;left:50%;transform:translateX(-50%) translateY(12px);
+    ${c};border:1px solid;padding:10px 20px;border-radius:99px;font-size:0.86rem;font-weight:600;
+    z-index:9999;white-space:nowrap;max-width:90vw;text-align:center;
+    transition:all 0.3s ease;opacity:0;backdrop-filter:blur(12px);
+    box-shadow:0 4px 20px rgba(0,0,0,0.4)`;
+  t.textContent = msg;
+  document.body.appendChild(t);
+
+  requestAnimationFrame(() => {
+    t.style.opacity = '1';
+    t.style.transform = 'translateX(-50%) translateY(0)';
+  });
+
+  setTimeout(() => {
+    t.style.opacity = '0';
+    t.style.transform = 'translateX(-50%) translateY(10px)';
+    setTimeout(() => t.remove(), 300);
+  }, 3500);
+}
+
+// ── Onboarding — controlado pelo servidor ─────────────────────────────────
+(function() {
+  {% if not onboarding_completo %}
+  var el = document.getElementById('ob-backdrop');
+  if (el) { el.classList.add('open'); document.body.style.overflow = 'hidden'; }
+  {% endif %}
+})();
+
+function obIr(n) {
+  [1,2,3].forEach(function(i) {
+    document.getElementById('ob-p'+i).style.display = 'none';
+    var b = document.getElementById('ob-b'+i);
+    if (b) b.classList.remove('ativo');
+  });
+  document.getElementById('ob-p'+n).style.display = 'block';
+  for (var i=1; i<=n; i++) {
+    var b = document.getElementById('ob-b'+i);
+    if (b) b.classList.add('ativo');
+  }
+  document.getElementById('ob-cnt').textContent = 'Passo ' + n + ' de 3';
+}
+
+function obFechar() {
+  // Salva no servidor — não depende do browser
+  fetch('/api/onboarding/completo', { method: 'POST' });
+  var el = document.getElementById('ob-backdrop');
+  el.style.transition = 'opacity 0.2s';
+  el.style.opacity = '0';
+  setTimeout(function() { el.classList.remove('open'); document.body.style.overflow = ''; }, 220);
+}
+
+function obConta() {
+  obFechar();
+  setTimeout(function() { window.location.href = '{{ url_for("contas.lista") }}'; }, 220);
+}
+
+function obTransacao() {
+  obFechar();
+  setTimeout(function() { window.location.href = '{{ url_for("transacoes.novo") }}'; }, 220);
+}
+
+// ── Limites por categoria ─────────────────────────────────────────────────
+let _limites = {};
+
+async function abrirModalLimites() {
+  document.getElementById('modal-limites').classList.add('open');
+  const lista = document.getElementById('lista-limites');
+  lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Carregando...</div>';
+
+  try {
+    const [rCats, rLims] = await Promise.all([
+      fetch('/contas/api/listar').catch(() => null),
+      fetch('/api/limites')
+    ]);
+
+    const limites = await rLims.json();
+    _limites = {};
+    limites.limites.forEach(l => { _limites[l.categoria_id] = l.limite; });
+
+    // Usa TODAS as categorias de despesa (nao so as com gasto no mes)
+    const cats = {{ categorias | selectattr('tipo', 'equalto', 'despesa') | list | tojson }};
+
+    if (!cats || cats.length === 0) {
+      lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Nenhuma categoria de despesa cadastrada.</div>';
+      return;
+    }
+
+    lista.innerHTML = cats.map(c => {
+      const lim = _limites[c.id] || '';
+      const limFmt = lim ? String(lim).replace('.', ',') : '';
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:0.88rem;color:var(--text)">
+            <span style="margin-right:6px">${c.icone || ''}</span>${c.nome}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:0.75rem;color:var(--text3)">R$</span>
+            <input type="text" value="${limFmt}"
+                   placeholder="Sem limite"
+                   data-cat="${c.id}"
+                   oninput="salvarLimite(this)"
+                   style="width:100px;padding:6px 10px;background:var(--bg3);
+                          border:1px solid var(--border2);border-radius:6px;
+                          color:var(--text);font-size:0.85rem;text-align:right;
+                          font-family:var(--font-body)"/>
+            ${lim ? `<button onclick="removerLimite(${c.id}, this)" title="Remover limite"
+                             style="background:none;border:none;cursor:pointer;
+                                    color:var(--text3);font-size:0.9rem;padding:4px">✕</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--red2);font-size:0.85rem">Erro ao carregar.</div>';
+  }
+}
+
+let _limiteTimer = {};
+function salvarLimite(input) {
+  const catId = input.dataset.cat;
+  clearTimeout(_limiteTimer[catId]);
+  _limiteTimer[catId] = setTimeout(async () => {
+    const val = input.value.replace(',', '.').trim();
+    if (!val) return;
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) return;
+
+    await fetch('/api/limites', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({categoria_id: catId, limite: num})
+    });
+    mostrarToast('✓ Limite salvo!', 'verde');
+  }, 800);
+}
+
+async function removerLimite(catId, btn) {
+  await fetch('/api/limites/' + catId, { method: 'DELETE' });
+  mostrarToast('Limite removido', 'amarelo');
+  abrirModalLimites(); // recarrega a lista
+}
+
+function fecharModalLimites() {
+  document.getElementById('modal-limites').classList.remove('open');
+  // Recarrega a página para atualizar as barras
+  location.reload();
+}
+
+carregarLembretes();
+carregarSaldoContas();
+carregarGraficoMeses();
+
+// Tooltip do gráfico — abordagem direta sem variável global
+function mostrarTooltipGrafico(e, rec, des, ano, label) {
+  var tt = document.getElementById('grafico-tooltip');
+  if (!tt) {
+    tt = document.createElement('div');
+    tt.id = 'grafico-tooltip';
+    tt.style.cssText = 'position:fixed;pointer-events:none;' +
+      'background:var(--bg2);border:1px solid var(--border2);' +
+      'border-radius:8px;padding:12px 16px;font-size:0.82rem;' +
+      'box-shadow:0 4px 24px rgba(0,0,0,0.6);z-index:99999;' +
+      'transition:opacity 0.12s;min-width:180px;opacity:0;';
+    document.body.appendChild(tt);
+  }
+
+  var fmt = function(v) {
+    return 'R$ ' + Math.abs(v).toFixed(2).replace('.', ',');
+  };
+  var saldo = rec - des;
+  var mes = label.charAt(0).toUpperCase() + label.slice(1) + ' ' + ano;
+
+  tt.innerHTML =
+    '<div style="font-weight:600;color:var(--text);font-size:0.85rem;' +
+    'border-bottom:1px solid var(--border2);padding-bottom:6px;margin-bottom:8px">' + mes + '</div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'color:var(--green2);margin-bottom:5px;font-size:0.8rem">' +
+    '<span>Receitas</span><span style="font-weight:600">' + fmt(rec) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'color:var(--red2);margin-bottom:5px;font-size:0.8rem">' +
+    '<span>Despesas</span><span style="font-weight:600">' + fmt(des) + '</span></div>' +
+    '<div style="display:flex;justify-content:space-between;gap:20px;' +
+    'border-top:1px solid var(--border2);padding-top:6px;margin-top:2px;font-size:0.8rem;' +
+    'color:' + (saldo >= 0 ? 'var(--green2)' : 'var(--red2)') + '">' +
+    '<span>Saldo</span><span style="font-weight:600">' + fmt(saldo) + '</span></div>';
+
+  var bar = e.currentTarget.getBoundingClientRect();
+  var vw  = window.innerWidth;
+  var vh  = window.innerHeight;
+
+  tt.style.left    = '-9999px';
+  tt.style.top     = '-9999px';
+  tt.style.opacity = '0';
+
+  requestAnimationFrame(function() {
+    var tw = tt.offsetWidth || 190;
+    var th = tt.offsetHeight || 110;
+    var cx = bar.left + bar.width / 2;
+
+    // Centraliza horizontalmente
+    var left = cx - tw / 2;
+    if (left < 8)           left = 8;
+    if (left + tw > vw - 8) left = vw - tw - 8;
+
+    // Tenta acima — se não couber, coloca abaixo
+    var top = bar.top - th - 12;
+    if (top < 60) top = bar.bottom + 12;
+    // Se ainda não couber abaixo, força no centro da tela
+    if (top + th > vh - 8) top = Math.max(8, vh / 2 - th / 2);
+
+    tt.style.left    = left + 'px';
+    tt.style.top     = top  + 'px';
+    tt.style.opacity = '1';
+  });
+}
+
+function esconderTooltipGrafico() {
+  var tt = document.getElementById('grafico-tooltip');
+  if (tt) tt.style.opacity = '0';
+}
+
+// ── Saldo por conta ──────────────────────────────────────────────────────────
+async function carregarSaldoContas() {
+  try {
+    const r = await fetch('/api/saldo-contas');
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.saldos || data.saldos.length === 0) return;
+
+    const card = document.getElementById('card-saldo-contas');
+    const lista = document.getElementById('lista-saldo-contas');
+    if (!card || !lista) return;
+
+    lista.innerHTML = data.saldos.map(c => {
+      const cor = c.saldo >= 0 ? 'var(--green2)' : 'var(--red2)';
+      const sinal = c.saldo >= 0 ? '+' : '';
+      return `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;
+                    background:var(--bg3);border-radius:9px;border:1px solid var(--border)">
+          <div style="font-size:1.3rem">${c.icone}</div>
+          <div style="flex:1;font-size:0.88rem;font-weight:600;color:var(--text)">${c.nome}</div>
+          <div style="font-family:'Syne',sans-serif;font-weight:700;color:${cor};font-size:0.92rem">
+            ${sinal}R$ ${Math.abs(c.saldo).toFixed(2).replace('.',',')}
+          </div>
+        </div>`;
+    }).join('');
+
+    card.style.display = 'block';
+  } catch(e) {}
+}
+
+// ── Gráfico de barras dos últimos 6 meses ────────────────────────────────────
+async function carregarGraficoMeses() {
+  try {
+    const meses = [];
+    const hoje = new Date();
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+      meses.push({
+        ano: d.getFullYear(),
+        mes: d.getMonth() + 1,
+        label: d.toLocaleString('pt-BR', {month: 'short'}).replace('.',''),
+      });
+    }
+
+    // Busca dados de cada mês
+    const dados = await Promise.all(meses.map(async m => {
+      const ini = `${m.ano}-${String(m.mes).padStart(2,'0')}-01`;
+      const fim = new Date(m.ano, m.mes, 0).toISOString().split('T')[0];
+      const r = await fetch(`/api/buscar?inicio=${ini}&fim=${fim}`);
+      if (!r.ok) return { ...m, receitas: 0, despesas: 0 };
+      const d = await r.json();
+      return { ...m, receitas: d.total_receitas, despesas: d.total_despesas };
+    }));
+
+    const maxVal = Math.max(...dados.map(d => Math.max(d.receitas, d.despesas)), 1);
+    const grafico = document.getElementById('grafico-meses');
+    const labels  = document.getElementById('grafico-labels');
+    if (!grafico || !labels) return;
+
+    // Guarda dados para o tooltip
+    window.graficoData = dados;
+
+    // Monta as barras via innerHTML
+    grafico.innerHTML = dados.map((d, i) => {
+      const altR = Math.round((d.receitas / maxVal) * 100);
+      const altD = Math.round((d.despesas / maxVal) * 100);
+      return `
+        <div data-rec="${d.receitas}" data-des="${d.despesas}" data-ano="${d.ano}" data-label="${d.label}"
+             style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;cursor:pointer"
+             onmouseenter="mostrarTooltipGrafico(event,${d.receitas},${d.despesas},${d.ano},'${d.label}')"
+             onmouseleave="esconderTooltipGrafico()">
+          <div style="width:100%;display:flex;align-items:flex-end;gap:2px;height:100%">
+            <div style="flex:1;background:rgba(52,211,153,1);border-radius:4px 4px 0 0;
+                        height:${altR}%;min-height:${d.receitas > 0 ? 3 : 0}px;
+                        transition:height 0.6s ease,opacity 0.15s"></div>
+            <div style="flex:1;background:rgba(248,113,113,1);border-radius:4px 4px 0 0;
+                        height:${altD}%;min-height:${d.despesas > 0 ? 3 : 0}px;
+                        transition:height 0.6s ease,opacity 0.15s"></div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Suporte a toque no mobile — toca na barra para ver o tooltip
+    grafico.querySelectorAll('[data-rec]').forEach(function(el) {
+      el.addEventListener('touchstart', function(e) {
+        e.preventDefault();
+        var rec   = parseFloat(el.dataset.rec);
+        var des   = parseFloat(el.dataset.des);
+        var ano   = parseInt(el.dataset.ano);
+        var label = el.dataset.label;
+        // Cria evento sintético com currentTarget para reutilizar a função
+        mostrarTooltipGrafico({ currentTarget: el }, rec, des, ano, label);
+        clearTimeout(window._ttTimer);
+        window._ttTimer = setTimeout(esconderTooltipGrafico, 3000);
+      }, { passive: false });
+    });
+
+
+    labels.style.cssText = 'display:flex;gap:8px;margin-top:6px;padding:0 4px';
+    labels.innerHTML = dados.map(d =>
+      `<div style="flex:1;text-align:center;font-size:0.68rem;color:var(--text3);text-transform:capitalize">${d.label}</div>`
+    ).join('');
+
+    // Legenda
+    const legenda = document.createElement('div');
+    legenda.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:0.72rem;color:var(--text3)';
+    legenda.innerHTML = `
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(52,211,153,0.7);border-radius:2px;margin-right:4px"></span>Receitas</span>
+      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Despesas</span>`;
+    labels.after(legenda);
+
+  } catch(e) { console.error('Gráfico:', e); }
+}
+</script>
+{% endblock %}

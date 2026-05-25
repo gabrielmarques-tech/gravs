@@ -1,0 +1,517 @@
+{% extends "base.html" %}
+
+{% block title %}Fixas{% endblock %}
+{% block page_title %}Contas Fixas{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" onclick="abrirModal('modal-add')">+ Nova fixa</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── Item de fixa (mobile) ── */
+  .fixa-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .fixa-item:last-child { border-bottom: none; }
+
+  .fixa-icone {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--surface2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+  }
+
+  .fixa-info { flex: 1; min-width: 0; }
+
+  .fixa-desc {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 0.88rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fixa-meta {
+    font-size: 0.72rem;
+    color: var(--text3);
+    margin-top: 2px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .fixa-direita {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+    flex-shrink: 0;
+  }
+
+  .fixa-valor {
+    font-family: var(--font-display);
+    font-size: 0.92rem;
+    font-weight: 700;
+  }
+  .fixa-valor.text-receita { color: #34d399 !important; }
+  .fixa-valor.text-despesa { color: #f87171 !important; }
+
+  .fixa-acoes { display: flex; gap: 4px; }
+
+  /* Desktop: tabela */
+  @media (min-width: 769px) {
+    .lista-mobile  { display: none; }
+    .lista-desktop { display: block; }
+  }
+
+  /* Mobile: cards */
+  @media (max-width: 768px) {
+    .lista-mobile  { display: block; }
+    .lista-desktop { display: none; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Vencimentos do mês -->
+{% if proximos %}
+<div class="card mb-16 fade-up">
+  <div class="card-title mb-12">📅 Vencimentos deste mês</div>
+
+  <!-- Mobile -->
+  <div class="lista-mobile" style="max-height:320px;overflow-y:auto;scrollbar-width:thin">
+    {% for r in proximos %}
+      <div class="fixa-item">
+        <div class="fixa-icone">
+          {% if r.tipo == 'receita' %}💰{% else %}💸{% endif %}
+        </div>
+        <div class="fixa-info">
+          <div class="fixa-desc">{{ r.descricao }}</div>
+          <div class="fixa-meta">
+            <span>{{ r.data }}</span>
+            <span>·</span>
+            <span class="badge badge-{{ r.status }}" style="padding:1px 6px;font-size:0.68rem">
+              {% if r.status == 'lancado' %}✓ Pago
+              {% elif r.status == 'agendado' %}● Agendado
+              {% else %}⚠ Vencido{% endif %}
+            </span>
+          </div>
+        </div>
+        <div style="font-family:'Inter',system-ui,sans-serif;font-variant-numeric:tabular-nums;font-size:0.92rem;font-weight:700;
+                    color:{% if r.tipo == 'receita' %}#34d399{% else %}#f87171{% endif %}">
+          {{ r.valor | real }}
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+  <!-- Desktop -->
+  <div class="lista-desktop">
+    <div class="table-wrap" style="max-height:300px;overflow-y:auto;scrollbar-width:thin">
+      <table>
+        <thead>
+          <tr>
+            <th>Descrição</th>
+            <th>Vencimento</th>
+            <th>Tipo</th>
+            <th class="text-right">Valor</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in proximos %}
+            <tr>
+              <td style="color:var(--text);font-weight:500">{{ r.descricao }}</td>
+              <td>{{ r.data }}</td>
+              <td><span class="badge badge-{{ r.tipo }}">{{ r.tipo }}</span></td>
+              <td class="text-right fw-bold {% if r.tipo == 'receita' %}text-receita{% else %}text-despesa{% endif %}">
+                {{ r.valor | real }}
+              </td>
+              <td>
+                <span class="badge badge-{{ r.status }}">
+                  {% if r.status == 'lancado' %}✓ Lançado
+                  {% elif r.status == 'agendado' %}● Agendado
+                  {% else %}⚠ Vencido{% endif %}
+                </span>
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+<!-- Todas as fixas -->
+<div class="card fade-up delay-1">
+  <div class="card-title mb-12">🔁 Todas as contas fixas</div>
+
+  {% if recorrentes %}
+
+    <!-- Mobile -->
+    <div class="lista-mobile" style="max-height:420px;overflow-y:auto;scrollbar-width:thin">
+      {% for r in recorrentes %}
+        <div class="fixa-item">
+          <div class="fixa-icone">
+            {% if r.tipo == 'receita' %}💰{% else %}💸{% endif %}
+          </div>
+          <div class="fixa-info">
+            <div class="fixa-desc">{{ r.descricao }}</div>
+            <div class="fixa-meta">
+              <span>{{ r.categoria_nome }}</span>
+              <span>·</span>
+              {% if r.dia_vencimento > 0 %}
+                <span>Dia {{ r.dia_vencimento }}</span>
+              {% else %}
+                <span>{{ r.dia_vencimento|abs }}º dia útil</span>
+              {% endif %}
+            </div>
+          </div>
+          <div class="fixa-direita">
+            <div style="font-family:var(--font-display);font-size:0.92rem;font-weight:700;
+                            color:{% if r.tipo == 'receita' %}#34d399{% else %}#f87171{% endif %}">
+              {{ r.valor | real }}
+            </div>
+            <div class="fixa-acoes">
+              <button class="btn btn-secondary btn-icon" style="padding:5px 8px;font-size:0.8rem"
+                      onclick="abrirEditar('{{ r.uuid }}', '{{ r.descricao|e }}', {{ r.valor }}, '{{ r.tipo }}', {{ r.categoria_id }}, {{ r.dia_vencimento }})">✏</button>
+              <button class="btn btn-danger btn-icon" style="padding:5px 8px;font-size:0.8rem"
+                      onclick="deletarFixo('{{ r.uuid }}')">🗑</button>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+
+    <!-- Desktop -->
+    <div class="lista-desktop">
+      <div class="table-wrap" style="max-height:400px;overflow-y:auto;scrollbar-width:thin">
+        <table>
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th>Categoria</th>
+              <th>Vencimento</th>
+              <th>Tipo</th>
+              <th class="text-right">Valor</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for r in recorrentes %}
+              <tr>
+                <td style="color:var(--text);font-weight:500">{{ r.descricao }}</td>
+                <td>{{ r.categoria_nome }}</td>
+                <td>
+                  {% if r.dia_vencimento > 0 %}Dia {{ r.dia_vencimento }}
+                  {% else %}{{ r.dia_vencimento|abs }}º dia útil{% endif %}
+                </td>
+                <td><span class="badge badge-{{ r.tipo }}">{{ r.tipo }}</span></td>
+                <td class="text-right fw-bold {% if r.tipo == 'receita' %}text-receita{% else %}text-despesa{% endif %}">
+                  {{ r.valor | real }}
+                </td>
+                <td class="text-right">
+                  <div class="d-flex gap-8" style="justify-content:flex-end">
+                    <button class="btn btn-secondary btn-sm btn-icon"
+                            onclick="abrirEditar('{{ r.uuid }}', '{{ r.descricao|e }}', {{ r.valor }}, '{{ r.tipo }}', {{ r.categoria_id }}, {{ r.dia_vencimento }})"
+                            title="Editar">✏</button>
+                    <button class="btn btn-danger btn-sm btn-icon"
+                            onclick="deletarFixo('{{ r.uuid }}')"
+                            title="Desativar">🗑</button>
+                  </div>
+                </td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">🔁</div>
+      <div style="font-size:1rem;font-weight:600">Nenhuma conta fixa cadastrada</div>
+      <p>Cadastre aluguel, assinaturas, salário fixo e mais</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal: Nova fixa -->
+<div class="modal-backdrop" id="modal-add" onclick="fecharModalFora(event, 'modal-add')">
+  <div class="modal">
+    <div class="modal-title">🔁 Nova Conta Fixa</div>
+    <form method="POST" action="{{ url_for('recorrentes.fixas') }}">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="tipo-despesa" value="despesa" checked />
+          <label for="tipo-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="tipo-receita" value="receita" />
+          <label for="tipo-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" class="form-control"
+               placeholder="Ex: Aluguel, Netflix, Salário..." required />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="text" name="valor" class="form-control" placeholder="0,00" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de vencimento</label>
+          <div class="tipo-toggle" style="margin-bottom:8px">
+            <input type="radio" name="tipo_dia" id="tipo-fixo" value="fixo" checked
+                   onchange="atualizarTipoDia('add')" />
+            <label for="tipo-fixo" class="despesa" style="background:none;color:var(--text2)">📅 Dia fixo</label>
+            <input type="radio" name="tipo_dia" id="tipo-util" value="util"
+                   onchange="atualizarTipoDia('add')" />
+            <label for="tipo-util" class="receita" style="background:none;color:var(--text2)">🏦 Dia útil</label>
+          </div>
+          <input type="hidden" name="dia_vencimento" id="dia-vencimento-add" value="5" />
+          <select id="select-dia-add" class="form-control" onchange="sincronizarDia('add')">
+            {% for d in range(1, 29) %}
+              <option value="{{ d }}">Dia {{ d }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:0.72rem;color:var(--text3);margin-top:4px" id="hint-dia-add">
+            Dia fixo do mês (1 a 28)
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Conta bancária associada à fixa -->
+      <div class="form-group">
+        <label class="form-label" id="label-conta-add">💸 Pago com / Debitado em</label>
+        <select name="conta_id" id="select-conta-add" class="form-control">
+          <option value="">— Selecione (opcional) —</option>
+        </select>
+        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+          <a href="/contas/" style="color:var(--purple3)">+ Cadastrar nova conta</a>
+        </div>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modal-add')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Cadastrar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal: Editar fixa -->
+<div class="modal-backdrop" id="modal-editar" onclick="fecharModalFora(event, 'modal-editar')">
+  <div class="modal">
+    <div class="modal-title">✏ Editar Conta Fixa</div>
+    <form method="POST" id="form-editar" action="">
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="tipo" id="edit-tipo-despesa" value="despesa" />
+          <label for="edit-tipo-despesa" class="despesa">💸 Despesa</label>
+          <input type="radio" name="tipo" id="edit-tipo-receita" value="receita" />
+          <label for="edit-tipo-receita" class="receita">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição</label>
+        <input type="text" name="descricao" id="edit-descricao" class="form-control" required />
+      </div>
+
+      <div class="grid grid-2">
+        <div class="form-group">
+          <label class="form-label">Valor (R$)</label>
+          <input type="text" name="valor" id="edit-valor" class="form-control" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Tipo de vencimento</label>
+          <div class="tipo-toggle" style="margin-bottom:8px">
+            <input type="radio" name="tipo_dia_edit" id="edit-tipo-fixo" value="fixo" checked
+                   onchange="atualizarTipoDia('edit')" />
+            <label for="edit-tipo-fixo" class="despesa" style="background:none;color:var(--text2)">📅 Dia fixo</label>
+            <input type="radio" name="tipo_dia_edit" id="edit-tipo-util" value="util"
+                   onchange="atualizarTipoDia('edit')" />
+            <label for="edit-tipo-util" class="receita" style="background:none;color:var(--text2)">🦺 Dia útil</label>
+          </div>
+          <input type="hidden" name="dia_vencimento" id="edit-dia" value="5" />
+          <select id="select-dia-edit" class="form-control" onchange="sincronizarDia('edit')">
+            {% for d in range(1, 29) %}
+              <option value="{{ d }}">Dia {{ d }}</option>
+            {% endfor %}
+          </select>
+          <div style="font-size:0.72rem;color:var(--text3);margin-top:4px" id="hint-dia-edit">
+            Dia fixo do mês (1 a 28)
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Categoria</label>
+        <select name="categoria_id" id="edit-categoria" class="form-control">
+          {% for cat in categorias %}
+            <option value="{{ cat.id }}">{{ cat.icone }} {{ cat.nome }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Conta bancária associada à fixa -->
+      <div class="form-group">
+        <label class="form-label" id="label-conta-edit">💸 Pago com / Debitado em</label>
+        <select name="conta_id" id="select-conta-edit" class="form-control">
+          <option value="">— Selecione (opcional) —</option>
+        </select>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal('modal-editar')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  function atualizarTipoDia(modo) {
+    const isUtil = document.getElementById(
+      modo === 'add' ? 'tipo-util' : 'edit-tipo-util'
+    ).checked;
+
+    const select = document.getElementById(`select-dia-${modo}`);
+    const hint   = document.getElementById(`hint-dia-${modo}`);
+    const hidden = document.getElementById(
+      modo === 'add' ? 'dia-vencimento-add' : 'edit-dia'
+    );
+
+    select.innerHTML = '';
+
+    if (isUtil) {
+      // Dias úteis: 1 a 10
+      for (let d = 1; d <= 10; d++) {
+        const opt = document.createElement('option');
+        opt.value = -d;
+        opt.textContent = `${d}º dia útil do mês`;
+        select.appendChild(opt);
+      }
+      hint.textContent = 'O sistema avança para o próximo dia útil se cair em feriado ou fim de semana';
+      hidden.value = -1;
+    } else {
+      // Dias fixos: 1 a 28
+      for (let d = 1; d <= 28; d++) {
+        const opt = document.createElement('option');
+        opt.value = d;
+        opt.textContent = `Dia ${d}`;
+        select.appendChild(opt);
+      }
+      hint.textContent = 'Dia fixo do mês (1 a 28)';
+      hidden.value = 5;
+    }
+    select.value = hidden.value;
+  }
+
+  function sincronizarDia(modo) {
+    const select = document.getElementById(`select-dia-${modo}`);
+    const hidden = document.getElementById(
+      modo === 'add' ? 'dia-vencimento-add' : 'edit-dia'
+    );
+    hidden.value = select.value;
+  }
+
+  function abrirModal(id) { document.getElementById(id).classList.add('open'); }
+  function fecharModal(id) { document.getElementById(id).classList.remove('open'); }
+  function fecharModalFora(e, id) { if (e.target.id === id) fecharModal(id); }
+
+  function abrirEditar(uuid, descricao, valor, tipo, categoriaId, dia) {
+    document.getElementById('form-editar').action = '/fixas/editar/' + uuid;
+    document.getElementById('edit-descricao').value = descricao;
+    document.getElementById('edit-valor').value = valor.toFixed(2).replace('.', ',');
+    document.getElementById('edit-categoria').value = categoriaId;
+    document.getElementById(tipo === 'receita' ? 'edit-tipo-receita' : 'edit-tipo-despesa').checked = true;
+
+    // Configura seletor de dia
+    const isUtil = dia < 0;
+    document.getElementById('edit-tipo-util').checked = isUtil;
+    document.getElementById('edit-tipo-fixo').checked = !isUtil;
+    atualizarTipoDia('edit');
+
+    // Seleciona o dia correto
+    const select = document.getElementById('select-dia-edit');
+    select.value = dia;
+    document.getElementById('edit-dia').value = dia;
+
+    abrirModal('modal-editar');
+  }
+
+  async function deletarFixo(uuid) {
+    if (!confirm('Desativar esta conta fixa?')) return;
+    const r = await fetch('/api/fixo/' + uuid, { method: 'DELETE' });
+    if (r.ok) location.reload();
+  }
+
+  // Atualiza label da conta conforme tipo selecionado (nova fixa)
+  document.querySelectorAll('#modal-add input[name="tipo"]').forEach(el => {
+    el.addEventListener('change', () => {
+      const tipo = document.querySelector('#modal-add input[name="tipo"]:checked')?.value;
+      const label = document.getElementById('label-conta-add');
+      if (label) label.textContent = tipo === 'receita' ? '💰 Recebido em' : '💸 Pago com / Debitado em';
+    });
+  });
+
+  // Carrega contas nos selects de fixas
+  async function carregarContasFixas() {
+    try {
+      const r = await fetch('/contas/api/listar');
+      if (!r.ok) return;
+      const data = await r.json();
+      const contas = data.contas || [];
+
+      ['select-conta-add', 'select-conta-edit'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        // Remove opções antigas exceto a primeira
+        while (sel.options.length > 1) sel.remove(1);
+        contas.forEach(c => {
+          const opt = document.createElement('option');
+          opt.value = c.id;
+          opt.textContent = c.icone + ' ' + c.nome;
+          sel.appendChild(opt);
+        });
+      });
+    } catch(e) { /* silencioso */ }
+  }
+
+  carregarContasFixas();
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { fecharModal('modal-add'); fecharModal('modal-editar'); }
+  });
+</script>
+{% endblock %}

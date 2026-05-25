@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Confirmar email · Gravs</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg:      #0d0618;
+      --surface: #130a24;
+      --border:  rgba(255,255,255,0.08);
+      --border2: rgba(255,255,255,0.14);
+      --text:    #f1eeff;
+      --text2:   #a89bc2;
+      --text3:   #6b5f82;
+      --purple:  #7c3aed;
+      --purple2: #9f5fff;
+    }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      -webkit-font-smoothing: antialiased;
+      padding: 16px;
+    }
+    .card {
+      background: var(--surface);
+      border: 0.5px solid var(--border2);
+      border-radius: 14px;
+      padding: 40px 36px;
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    .logo { margin-bottom: 24px; }
+    .logo img { width: 64px; height: 64px; border-radius: 16px; box-shadow: 0 8px 32px rgba(124,58,237,0.35); }
+    .logo-name { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; margin-top: 10px; color: var(--text); }
+    h1 { font-size: 18px; font-weight: 600; letter-spacing: -0.02em; margin-bottom: 8px; }
+    .subtitle { font-size: 13px; color: var(--text2); line-height: 1.6; margin-bottom: 28px; }
+    .email-dest { color: var(--text); font-weight: 600; }
+
+    .codigo-wrap { display: flex; gap: 10px; justify-content: center; margin-bottom: 24px; }
+    .codigo-wrap input {
+      width: 48px; height: 56px;
+      background: rgba(255,255,255,0.04);
+      border: 0.5px solid var(--border2);
+      border-radius: 10px;
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      font-size: 22px; font-weight: 700;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      caret-color: var(--purple2);
+    }
+    .codigo-wrap input:focus {
+      border-color: var(--purple2);
+      box-shadow: 0 0 0 3px rgba(159,95,255,0.15);
+    }
+    .btn-submit {
+      width: 100%; padding: 11px;
+      background: var(--text); border: none; border-radius: 8px;
+      color: #0d0618; font-family: 'Inter', system-ui, sans-serif;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+      letter-spacing: -0.01em; margin-bottom: 16px;
+    }
+    .btn-submit:hover { opacity: 0.88; }
+    .btn-submit:active { transform: scale(0.99); }
+    .reenviar { font-size: 13px; color: var(--text3); }
+    .reenviar button {
+      background: none; border: none; cursor: pointer;
+      color: var(--text2); font-size: 13px; font-family: inherit;
+      text-decoration: underline; text-decoration-color: var(--border2);
+      transition: color 0.15s; padding: 0;
+    }
+    .reenviar button:hover { color: var(--text); }
+    .flash-list { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .flash { padding: 9px 13px; border-radius: 7px; font-size: 13px; display: flex; align-items: center; gap: 7px; text-align: left; }
+    .flash-erro    { background: rgba(220,38,38,0.12); border: 0.5px solid rgba(220,38,38,0.25); color: #fca5a5; }
+    .flash-sucesso { background: rgba(22,163,74,0.12);  border: 0.5px solid rgba(22,163,74,0.25);  color: #86efac; }
+    .hidden-input { position: absolute; opacity: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div class="card">
+
+  <div class="logo">
+    <img src="/static/icon-192.png" alt="Gravs" />
+    <div class="logo-name">Gravs</div>
+  </div>
+
+  <h1>Confirme seu email</h1>
+  <p class="subtitle">
+    Enviamos um código de 6 dígitos para<br>
+    <span class="email-dest">{{ email }}</span>
+  </p>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="flash-list">
+        {% for category, message in messages %}
+          <div class="flash flash-{{ category }}">
+            {% if category == 'erro' %}✕{% else %}✓{% endif %} {{ message }}
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+
+  <form method="POST" action="{{ url_for('auth.verificar_email') }}" id="form-codigo">
+    <input type="hidden" name="codigo" id="codigo-hidden" />
+
+    <div class="codigo-wrap" id="digitos">
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" autocomplete="one-time-code" />
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" />
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" />
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" />
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" />
+      <input type="text" inputmode="numeric" maxlength="1" class="digito" />
+    </div>
+
+    <button type="submit" class="btn-submit">Confirmar email</button>
+  </form>
+
+  <div class="reenviar">
+    Não recebeu?
+    <form method="POST" action="{{ url_for('auth.reenviar_codigo') }}" style="display:inline">
+      <button type="submit">Reenviar código</button>
+    </form>
+  </div>
+
+</div>
+
+<script>
+  const digitos = Array.from(document.querySelectorAll('.digito'));
+  const hidden  = document.getElementById('codigo-hidden');
+
+  function atualizarHidden() {
+    hidden.value = digitos.map(d => d.value).join('');
+  }
+
+  digitos.forEach((inp, i) => {
+    inp.addEventListener('input', e => {
+      // Permite colar código inteiro
+      const val = e.target.value;
+      if (val.length > 1) {
+        const chars = val.replace(/\D/g, '').split('');
+        digitos.forEach((d, j) => { if (chars[j]) d.value = chars[j]; });
+        digitos[Math.min(chars.length, 5)].focus();
+        atualizarHidden();
+        return;
+      }
+      if (val && !/\d/.test(val)) { inp.value = ''; return; }
+      if (val && i < 5) digitos[i + 1].focus();
+      atualizarHidden();
+    });
+
+    inp.addEventListener('keydown', e => {
+      if (e.key === 'Backspace' && !inp.value && i > 0) {
+        digitos[i - 1].focus();
+        digitos[i - 1].value = '';
+        atualizarHidden();
+      }
+    });
+  });
+
+  // Submit automático ao preencher os 6 dígitos
+  document.getElementById('form-codigo').addEventListener('submit', e => {
+    atualizarHidden();
+    if (hidden.value.length !== 6) {
+      e.preventDefault();
+      digitos[0].focus();
+    }
+  });
+
+  digitos[0].focus();
+</script>
+</body>
+</html>

@@ -1,0 +1,247 @@
+{% extends "base.html" %}
+
+{% block title %}Categorias{% endblock %}
+{% block page_title %}Categorias{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm" onclick="abrirModal('despesa')">+ Nova categoria</button>
+{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cat-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .cat-item:last-child { border-bottom: none; }
+
+  .cat-icone {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.15rem;
+    flex-shrink: 0;
+  }
+
+  .cat-info { flex: 1; min-width: 0; }
+  .cat-nome { font-weight: 600; color: var(--text); font-size: 0.88rem; }
+
+  .icone-grid {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 6px;
+    max-height: 160px;
+    overflow-y: auto;
+    padding: 4px;
+  }
+  .icone-opt {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: var(--surface);
+    cursor: pointer;
+    font-size: 1.1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .icone-opt:hover { border-color: var(--purple2); background: var(--surface2); }
+  .icone-opt.selecionado { border-color: var(--purple2); background: rgba(124,58,237,0.15); }
+
+  @media (max-width: 480px) {
+    .icone-grid { grid-template-columns: repeat(6, 1fr); }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+
+{% if request.args.get('erro') == 'tem_transacoes' %}
+<div class="card mb-16" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3)">
+  <div style="font-size:0.88rem;color:var(--red2)">
+    ⚠ Não é possível excluir uma categoria que possui transações vinculadas.
+  </div>
+</div>
+{% endif %}
+
+<!-- Info -->
+<div class="card mb-16 fade-up" style="background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.2)">
+  <div style="font-size:0.88rem;color:var(--text2);line-height:1.6">
+    🗂 Organize seus gastos e receitas com categorias personalizadas. Você pode criar novas, editar o ícone e a cor, ou excluir as que não usa.
+  </div>
+</div>
+
+<!-- Despesas -->
+<div class="card fade-up mb-16">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="card-title" style="margin-bottom:0;color:var(--red2)">💸 Despesas</div>
+    <button class="btn btn-sm btn-secondary" onclick="abrirModal('despesa')">+ Nova</button>
+  </div>
+  {% if despesas %}
+    {% for c in despesas %}
+      <div class="cat-item">
+        <div class="cat-icone" style="background:{{ c.cor }}22;border:1px solid {{ c.cor }}44">
+          <span>{{ c.icone }}</span>
+        </div>
+        <div class="cat-info">
+          <div class="cat-nome">{{ c.nome }}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-secondary btn-icon"
+                  onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'despesa')"
+                  title="Editar">✏️</button>
+          <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
+                onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
+            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir">🗑</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state" style="padding:24px">
+      <p>Nenhuma categoria de despesa</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Receitas -->
+<div class="card fade-up delay-1">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+    <div class="card-title" style="margin-bottom:0;color:var(--green2)">💰 Receitas</div>
+    <button class="btn btn-sm btn-secondary" onclick="abrirModal('receita')">+ Nova</button>
+  </div>
+  {% if receitas %}
+    {% for c in receitas %}
+      <div class="cat-item">
+        <div class="cat-icone" style="background:{{ c.cor }}22;border:1px solid {{ c.cor }}44">
+          <span>{{ c.icone }}</span>
+        </div>
+        <div class="cat-info">
+          <div class="cat-nome">{{ c.nome }}</div>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-sm btn-secondary btn-icon"
+                  onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'receita')"
+                  title="Editar">✏️</button>
+          <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
+                onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
+            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir">🗑</button>
+          </form>
+        </div>
+      </div>
+    {% endfor %}
+  {% else %}
+    <div class="empty-state" style="padding:24px">
+      <p>Nenhuma categoria de receita</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Modal nova categoria -->
+<div class="modal-backdrop" id="modal-cat" onclick="if(event.target.id==='modal-cat')fecharModal()">
+  <div class="modal">
+    <div class="modal-title" id="modal-titulo">🗂 Nova Categoria</div>
+    <form method="POST" id="form-cat" action="{{ url_for('categorias.nova') }}">
+      <input type="hidden" name="tipo" id="input-tipo" value="despesa" />
+
+      <div class="form-group">
+        <label class="form-label">Tipo</label>
+        <div class="tipo-toggle">
+          <input type="radio" name="_tipo_visual" id="tv-despesa" value="despesa" checked />
+          <label for="tv-despesa" class="despesa" onclick="setTipo('despesa')">💸 Despesa</label>
+          <input type="radio" name="_tipo_visual" id="tv-receita" value="receita" />
+          <label for="tv-receita" class="receita" onclick="setTipo('receita')">💰 Receita</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Nome</label>
+        <input type="text" name="nome" id="input-nome" class="form-control"
+               placeholder="Ex: Pet, Viagem, Streaming..." required />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Ícone</label>
+        <div class="icone-grid" id="icone-grid">
+          {% for i in icones %}
+            <div class="icone-opt {% if loop.first %}selecionado{% endif %}"
+                 onclick="selecionarIcone('{{ i }}')"
+                 data-icone="{{ i }}">{{ i }}</div>
+          {% endfor %}
+        </div>
+        <input type="hidden" name="icone" id="input-icone" value="{{ icones[0] }}" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Cor</label>
+        <div style="display:flex;align-items:center;gap:10px">
+          <input type="color" name="cor" id="input-cor" value="#7c3aed"
+                 style="width:44px;height:36px;border:none;border-radius:8px;
+                        cursor:pointer;background:none;padding:0" />
+          <span style="font-size:0.82rem;color:var(--text2)">Escolha a cor da categoria</span>
+        </div>
+      </div>
+
+      <div class="d-flex gap-12" style="justify-content:flex-end">
+        <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-salvar">Criar categoria</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let modoEditar = false;
+
+  function abrirModal(tipo) {
+    modoEditar = false;
+    document.getElementById('modal-titulo').textContent = '🗂 Nova Categoria';
+    document.getElementById('btn-salvar').textContent = 'Criar categoria';
+    document.getElementById('form-cat').action = '{{ url_for("categorias.nova") }}';
+    document.getElementById('input-nome').value = '';
+    document.getElementById('input-cor').value = '#7c3aed';
+    selecionarIcone('{{ icones[0] }}');
+    setTipo(tipo);
+    document.getElementById('modal-cat').classList.add('open');
+    setTimeout(() => document.getElementById('input-nome').focus(), 100);
+  }
+
+  function abrirEditar(id, nome, icone, cor, tipo) {
+    modoEditar = true;
+    document.getElementById('modal-titulo').textContent = '✏️ Editar Categoria';
+    document.getElementById('btn-salvar').textContent = 'Salvar alterações';
+    document.getElementById('form-cat').action = '/categorias/editar/' + id;
+    document.getElementById('input-nome').value = nome;
+    document.getElementById('input-cor').value = cor;
+    selecionarIcone(icone);
+    setTipo(tipo);
+    document.getElementById('modal-cat').classList.add('open');
+    setTimeout(() => document.getElementById('input-nome').focus(), 100);
+  }
+
+  function fecharModal() {
+    document.getElementById('modal-cat').classList.remove('open');
+  }
+
+  function setTipo(tipo) {
+    document.getElementById('input-tipo').value = tipo;
+    document.getElementById('tv-' + tipo).checked = true;
+  }
+
+  function selecionarIcone(icone) {
+    document.querySelectorAll('.icone-opt').forEach(el => {
+      el.classList.toggle('selecionado', el.dataset.icone === icone);
+    });
+    document.getElementById('input-icone').value = icone;
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') fecharModal();
+  });
+</script>
+{% endblock %}

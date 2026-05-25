@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Importar Extrato{% endblock %}
+{% block page_title %}Importar Extrato{% endblock %}
+
+{% block content %}
+<div style="max-width:560px;margin:0 auto">
+
+  <div class="card fade-up">
+    <div style="text-align:center;margin-bottom:24px">
+      <div style="font-size:3rem;margin-bottom:8px">📥</div>
+      <div style="font-family:var(--font-display);font-size:1.1rem;font-weight:700;color:var(--text)">
+        Importar Extrato do Bradesco
+      </div>
+      <div style="font-size:0.85rem;color:var(--text2);margin-top:4px">
+        Envie o CSV exportado pelo app ou internet banking do Bradesco.<br>
+        O sistema vai classificar cada lançamento automaticamente.
+      </div>
+    </div>
+
+    <!-- Instruções de como exportar do Bradesco -->
+    <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;
+                padding:14px 16px;margin-bottom:20px">
+      <div style="font-size:0.78rem;color:var(--text3);margin-bottom:10px;font-weight:600;
+                  text-transform:uppercase;letter-spacing:0.05em">Como exportar do Bradesco</div>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <div style="font-size:0.84rem;color:var(--text2);display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--purple2);font-weight:700;min-width:18px">1.</span>
+          Acesse o Internet Banking ou app do Bradesco
+        </div>
+        <div style="font-size:0.84rem;color:var(--text2);display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--purple2);font-weight:700;min-width:18px">2.</span>
+          Vá em <strong>Extrato → Exportar</strong> e escolha o formato <strong>CSV</strong>
+        </div>
+        <div style="font-size:0.84rem;color:var(--text2);display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--purple2);font-weight:700;min-width:18px">3.</span>
+          Selecione o período desejado e baixe o arquivo
+        </div>
+        <div style="font-size:0.84rem;color:var(--text2);display:flex;gap:8px;align-items:flex-start">
+          <span style="color:var(--purple2);font-weight:700;min-width:18px">4.</span>
+          Faça o upload abaixo — você vai revisar tudo antes de confirmar
+        </div>
+      </div>
+    </div>
+
+    <!-- Upload -->
+    <form method="POST" action="{{ url_for('importacao.upload') }}" enctype="multipart/form-data">
+      <div class="form-group">
+        <label class="form-label">Arquivo CSV do Bradesco</label>
+        <div id="drop-zone" style="border:2px dashed var(--border2);border-radius:12px;
+                  padding:32px;text-align:center;cursor:pointer;transition:all .2s;
+                  background:var(--bg3);"
+             onclick="document.getElementById('arquivo').click()">
+          <div style="font-size:2rem;margin-bottom:8px">📂</div>
+          <div id="drop-label" style="font-size:0.9rem;color:var(--text2)">
+            Clique para selecionar ou arraste o arquivo aqui
+          </div>
+          <div style="font-size:0.78rem;color:var(--text3);margin-top:4px">Apenas .csv · Máximo 2MB</div>
+        </div>
+        <input type="file" id="arquivo" name="arquivo" accept=".csv"
+               style="display:none" required onchange="mostrarArquivo(this)">
+      </div>
+
+      <button type="submit" class="btn btn-primary" style="width:100%;margin-top:8px">
+        📤 Processar arquivo
+      </button>
+    </form>
+
+    <!-- Aviso de privacidade -->
+    <div style="margin-top:16px;padding:10px 14px;background:rgba(124,58,237,0.07);
+                border-radius:8px;border:1px solid rgba(124,58,237,0.2)">
+      <div style="font-size:0.78rem;color:var(--text3)">
+        🔒 <strong>Privacidade:</strong> O arquivo é processado apenas em memória e nunca é salvo
+        no servidor. Você revisa todos os lançamentos antes de qualquer dado ser registrado.
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  function mostrarArquivo(input) {
+    if (input.files && input.files[0]) {
+      const nome = input.files[0].name;
+      document.getElementById('drop-label').textContent = '✓ ' + nome;
+      document.getElementById('drop-zone').style.borderColor = 'var(--purple2)';
+      document.getElementById('drop-zone').style.background = 'rgba(124,58,237,0.07)';
+    }
+  }
+
+  // Drag and drop
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor = 'var(--purple2)'; });
+  zone.addEventListener('dragleave', () => { zone.style.borderColor = 'var(--border2)'; });
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      document.getElementById('arquivo').files = e.dataTransfer.files;
+      mostrarArquivo(document.getElementById('arquivo'));
+    }
+  });
+</script>
+{% endblock %}
