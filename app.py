@@ -41,6 +41,7 @@ from routes.transacoes import transacoes_bp
 from routes.recorrentes import recorrentes_bp
 from routes.contabil import contabil_bp
 from routes.contas import contas_bp
+from routes.categorias import categorias_bp
 from routes.perfil import perfil_bp
 from routes.recuperacao import recuperacao_bp
 from services.container import ServiceContainer
@@ -108,6 +109,7 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     app.register_blueprint(recorrentes_bp)
     app.register_blueprint(contabil_bp)
     app.register_blueprint(contas_bp)
+    app.register_blueprint(categorias_bp)
     app.register_blueprint(perfil_bp)
     app.register_blueprint(recuperacao_bp)
 

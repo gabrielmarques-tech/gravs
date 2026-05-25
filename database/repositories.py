@@ -275,7 +275,9 @@ class TransacaoRepository:
         """Agrupa despesas por categoria para o gráfico de pizza."""
         with self._db.get_conn() as conn:
             rows = conn.execute(
-                """SELECT COALESCE(c.nome, 'Sem categoria') AS nome,
+                """SELECT COALESCE(c.id, 0) AS id,
+                          COALESCE(c.nome, 'Sem categoria') AS nome,
+                          COALESCE(c.icone, '💸') AS icone,
                           COALESCE(SUM(t.valor), 0) AS total,
                           COALESCE(c.cor, '#6b7280') AS cor
                    FROM transacoes t
@@ -284,7 +286,7 @@ class TransacaoRepository:
                      AND strftime('%Y-%m', t.data) = ?
                      AND t.tipo = 'despesa'
                      AND t.deletado = 0
-                   GROUP BY c.nome, c.cor
+                   GROUP BY c.id, c.nome, c.icone, c.cor
                    ORDER BY total DESC""",
                 (usuario_id, f"{ano}-{mes:02d}"),
             ).fetchall()
@@ -553,6 +555,55 @@ class MetaRepository:
                 (usuario_id,),
             ).fetchall()
         return _rows_to_list(rows)
+
+class LimiteCategoriaRepository:
+    """Gerencia limites de gasto mensais por categoria."""
+
+    def __init__(self, db: DatabaseManager) -> None:
+        self._db = db
+
+    def salvar(self, usuario_id: int, categoria_id: int, limite: float) -> None:
+        """Insere ou atualiza o limite de uma categoria (upsert)."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                """INSERT INTO limites_categoria (usuario_id, categoria_id, limite)
+                   VALUES (?, ?, ?)
+                   ON CONFLICT(usuario_id, categoria_id)
+                   DO UPDATE SET limite = excluded.limite""",
+                (usuario_id, categoria_id, round(limite, 2))
+            )
+
+    def remover(self, usuario_id: int, categoria_id: int) -> None:
+        """Remove o limite de uma categoria."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "DELETE FROM limites_categoria WHERE usuario_id = ? AND categoria_id = ?",
+                (usuario_id, categoria_id)
+            )
+
+    def listar(self, usuario_id: int) -> list[dict]:
+        """Retorna todos os limites do usuário com nome e cor da categoria."""
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT lc.categoria_id, lc.limite,
+                          c.nome, c.icone, c.cor
+                   FROM limites_categoria lc
+                   JOIN categorias c ON c.id = lc.categoria_id
+                   WHERE lc.usuario_id = ?
+                   ORDER BY c.nome""",
+                (usuario_id,)
+            ).fetchall()
+        return _rows_to_list(rows)
+
+    def buscar(self, usuario_id: int, categoria_id: int) -> float | None:
+        """Retorna o limite de uma categoria específica ou None."""
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT limite FROM limites_categoria WHERE usuario_id = ? AND categoria_id = ?",
+                (usuario_id, categoria_id)
+            ).fetchone()
+        return row["limite"] if row else None
+
 
 class BuscaRepository:
     """

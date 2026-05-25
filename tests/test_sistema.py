@@ -759,3 +759,137 @@ class TestOnboarding:
         # Verifica no banco
         usuario = container.usuarios_repo.buscar_por_id(uid)
         assert usuario["onboarding_completo"] == 1
+
+
+class TestCategorias:
+    """Testa CRUD de categorias personalizadas."""
+
+    def test_categorias_padrao_criadas_no_cadastro(self, container):
+        """Novo usuário já tem categorias padrão."""
+        uid, _ = container.auth.registrar("cat1@test.com", "senha123", "Cat1")
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        assert len(cats) > 0
+
+    def test_criar_categoria_personalizada(self, container):
+        """Usuário pode criar categoria com nome, ícone e cor."""
+        uid, _ = container.auth.registrar("cat2@test.com", "senha123", "Cat2")
+        with container.categorias_repo._db.get_write_conn() as conn:
+            conn.execute(
+                "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                ("Pet", "despesa", uid, "🐾", "#f59e0b")
+            )
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        nomes = [c["nome"] for c in cats]
+        assert "Pet" in nomes
+
+    def test_categoria_isolada_por_usuario(self, container):
+        """Categoria de um usuário não aparece para outro."""
+        uid_a, _ = container.auth.registrar("cat3@test.com", "senha123", "Cat3")
+        uid_b, _ = container.auth.registrar("cat4@test.com", "senha123", "Cat4")
+        with container.categorias_repo._db.get_write_conn() as conn:
+            conn.execute(
+                "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                ("Secreta", "despesa", uid_a, "🔒", "#ef4444")
+            )
+        cats_b = container.categorias_repo.listar_por_usuario(uid_b)
+        nomes_b = [c["nome"] for c in cats_b]
+        assert "Secreta" not in nomes_b
+
+    def test_editar_categoria(self, container):
+        """Editar nome e ícone de uma categoria."""
+        uid, _ = container.auth.registrar("cat5@test.com", "senha123", "Cat5")
+        with container.categorias_repo._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                ("Viagem", "despesa", uid, "✈️", "#7c3aed")
+            )
+            cat_id = cur.lastrowid
+
+        with container.categorias_repo._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE categorias SET nome=?, icone=? WHERE id=? AND usuario_id=?",
+                ("Viagens Internacionais", "🌍", cat_id, uid)
+            )
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        editada = next((c for c in cats if c["id"] == cat_id), None)
+        assert editada is not None
+        assert editada["nome"] == "Viagens Internacionais"
+        assert editada["icone"] == "🌍"
+
+    def test_deletar_categoria_sem_transacoes(self, container):
+        """Categoria sem transações pode ser deletada."""
+        uid, _ = container.auth.registrar("cat6@test.com", "senha123", "Cat6")
+        with container.categorias_repo._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                ("Temporária", "despesa", uid, "🗑", "#6b7280")
+            )
+            cat_id = cur.lastrowid
+
+        with container.categorias_repo._db.get_write_conn() as conn:
+            conn.execute(
+                "DELETE FROM categorias WHERE id=? AND usuario_id=?",
+                (cat_id, uid)
+            )
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        assert not any(c["id"] == cat_id for c in cats)
+
+    def test_nao_permite_categoria_duplicada(self, container):
+        """Não pode criar duas categorias com mesmo nome para o mesmo usuário."""
+        uid, _ = container.auth.registrar("cat7@test.com", "senha123", "Cat7")
+        with container.categorias_repo._db.get_write_conn() as conn:
+            conn.execute(
+                "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                ("Duplicada", "despesa", uid, "💸", "#6b7280")
+            )
+        import sqlite3
+        with pytest.raises(sqlite3.IntegrityError):
+            with container.categorias_repo._db.get_write_conn() as conn:
+                conn.execute(
+                    "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                    ("Duplicada", "despesa", uid, "💸", "#6b7280")
+                )
+
+
+class TestLimitesCategorias:
+    """Testa limites de gasto por categoria."""
+
+    def test_salvar_limite(self, container):
+        """Salva limite de uma categoria."""
+        uid, _ = container.auth.registrar("lim1@test.com", "senha123", "Lim1")
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = next(c["id"] for c in cats if c["tipo"] == "despesa")
+        container.limites_repo.salvar(uid, cat_id, 500.0)
+        limite = container.limites_repo.buscar(uid, cat_id)
+        assert limite == 500.0
+
+    def test_atualizar_limite(self, container):
+        """Atualizar limite existente via upsert."""
+        uid, _ = container.auth.registrar("lim2@test.com", "senha123", "Lim2")
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = next(c["id"] for c in cats if c["tipo"] == "despesa")
+        container.limites_repo.salvar(uid, cat_id, 300.0)
+        container.limites_repo.salvar(uid, cat_id, 600.0)
+        limite = container.limites_repo.buscar(uid, cat_id)
+        assert limite == 600.0
+
+    def test_remover_limite(self, container):
+        """Remove limite de uma categoria."""
+        uid, _ = container.auth.registrar("lim3@test.com", "senha123", "Lim3")
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = next(c["id"] for c in cats if c["tipo"] == "despesa")
+        container.limites_repo.salvar(uid, cat_id, 400.0)
+        container.limites_repo.remover(uid, cat_id)
+        limite = container.limites_repo.buscar(uid, cat_id)
+        assert limite is None
+
+    def test_limite_isolado_por_usuario(self, container):
+        """Limite de um usuário não afeta outro."""
+        uid_a, _ = container.auth.registrar("lim4@test.com", "senha123", "Lim4")
+        uid_b, _ = container.auth.registrar("lim5@test.com", "senha123", "Lim5")
+        cats_a = container.categorias_repo.listar_por_usuario(uid_a)
+        cats_b = container.categorias_repo.listar_por_usuario(uid_b)
+        cat_a = next(c["id"] for c in cats_a if c["tipo"] == "despesa")
+        cat_b = next(c["id"] for c in cats_b if c["tipo"] == "despesa")
+        container.limites_repo.salvar(uid_a, cat_a, 999.0)
+        assert container.limites_repo.buscar(uid_b, cat_b) is None

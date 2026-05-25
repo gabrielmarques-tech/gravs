@@ -26,13 +26,17 @@
   <style>
     /* ── Tema escuro (padrão) ── */
     :root {
-      --bg:        #0d0618;
-      --bg2:       #130a24;
-      --bg3:       #1c1035;
-      --surface:   rgba(255,255,255,0.04);
-      --surface2:  rgba(255,255,255,0.07);
-      --border:    rgba(255,255,255,0.08);
-      --border2:   rgba(255,255,255,0.14);
+      /* Tema escuro — Linear/Vercel premium com toque Gravs */
+      --bg:        #0a0612;
+      --bg2:       #100920;
+      --bg3:       #160d28;
+      --surface:   #14091f;
+      --surface2:  #1a0f2e;
+      --surface3:  #221540;
+      --border:    #1c1429;
+      --border2:   #2a1d44;
+      --border3:   #3a2860;
+
       --purple:    #7c3aed;
       --purple2:   #9f5fff;
       --purple3:   #c084fc;
@@ -40,30 +44,39 @@
       --cyan2:     #22d3ee;
       --gold2:     #fbbf24;
       --green2:    #34d399;
+      --green-bg:  rgba(52,211,153,0.10);
       --red2:      #f87171;
+      --red-bg:    rgba(248,113,113,0.10);
+
       --text:      #f1eeff;
       --text2:     #a89bc2;
       --text3:     #6b5f82;
-      --radius:    14px;
+
+      --radius:    12px;
       --radius-sm: 8px;
-      --radius-lg: 20px;
-      --shadow:    0 4px 24px rgba(124,58,237,0.15);
-      --shadow-lg: 0 8px 48px rgba(124,58,237,0.25);
-      --font-display: 'Syne', sans-serif;
-      --font-body:    'DM Sans', sans-serif;
-      --nav-w:     265px;
+      --radius-lg: 14px;
+      --shadow:    none;
+      --shadow-lg: none;
+
+      --font-display: 'Inter', system-ui, sans-serif;
+      --font-body:    'Inter', system-ui, sans-serif;
+      --nav-w:     250px;
       --bottom-nav-h: 0px;
     }
 
     /* ── Tema claro ── */
     [data-tema="claro"] {
-      --bg:        #f4f1fb;
-      --bg2:       #ffffff;
-      --bg3:       #ede8f8;
-      --surface:   rgba(124,58,237,0.04);
-      --surface2:  rgba(124,58,237,0.08);
-      --border:    rgba(124,58,237,0.12);
-      --border2:   rgba(124,58,237,0.2);
+      /* Tema claro — off-white quente sem estourar o olho */
+      --bg:        #f7f5f0;
+      --bg2:       #faf8f4;
+      --bg3:       #ffffff;
+      --surface:   #ffffff;
+      --surface2:  #faf8f4;
+      --surface3:  #f0ece2;
+      --border:    #e8e3d6;
+      --border2:   #d9d2c2;
+      --border3:   #c4baa3;
+
       --purple:    #7c3aed;
       --purple2:   #6d28d9;
       --purple3:   #5b21b6;
@@ -71,12 +84,16 @@
       --cyan2:     #0e7490;
       --gold2:     #d97706;
       --green2:    #059669;
+      --green-bg:  #ecfdf5;
       --red2:      #dc2626;
-      --text:      #1e1035;
-      --text2:     #4c3d6e;
-      --text3:     #7c6fa0;
-      --shadow:    0 4px 24px rgba(124,58,237,0.10);
-      --shadow-lg: 0 8px 48px rgba(124,58,237,0.18);
+      --red-bg:    #fef2f2;
+
+      --text:      #1a1a1a;
+      --text2:     #5a5a5a;
+      --text3:     #8a8a8a;
+
+      --shadow:    none;
+      --shadow-lg: none;
     }
 
     /* Ajustes específicos para tema claro */
@@ -85,21 +102,21 @@
     }
 
     [data-tema="claro"] .sidebar {
-      background: #ffffff;
+      background: var(--bg2);
       border-right-color: var(--border);
     }
 
     [data-tema="claro"] .topbar {
-      background: rgba(244,241,251,0.92);
+      background: var(--bg2);
     }
 
     [data-tema="claro"] .bottom-nav {
-      background: rgba(255,255,255,0.96);
+      background: var(--bg2);
       border-top-color: var(--border);
     }
 
     [data-tema="claro"] .form-control {
-      background: #ffffff;
+      background: var(--surface);
       color: var(--text);
     }
 
@@ -125,6 +142,7 @@
       color: var(--text);
       min-height: 100vh;
       line-height: 1.6;
+      font-size: 15px;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -139,93 +157,87 @@
     .sidebar {
       width: var(--nav-w);
       background: var(--bg2);
-      border-right: 1px solid var(--border);
+      border-right: 0.5px solid var(--border);
       display: flex;
       flex-direction: column;
       position: fixed;
       top: 0; left: 0; bottom: 0;
       z-index: 200;
-      padding: 20px 0;
+      padding: 16px 0 0;
       transition: transform 0.28s cubic-bezier(0.4,0,0.2,1);
       overflow-y: auto;
     }
 
     /* ── Logo com destaque visual ── */
     .sidebar-logo {
-      padding: 0 20px;
-      border-bottom: 1px solid var(--border);
+      padding: 0 18px;
+      border-bottom: 0.5px solid var(--border);
       display: flex;
       align-items: center;
       gap: 10px;
-      height: 56px;
+      height: 54px;
       flex-shrink: 0;
     }
 
     .sidebar-nav {
       flex: 1;
-      padding: 20px 12px;
+      padding: 12px 10px;
       display: flex;
       flex-direction: column;
-      gap: 2px;
+      gap: 1px;
     }
 
     .nav-label {
-      font-size: 0.65rem;
-      font-weight: 600;
-      letter-spacing: 0.12em;
+      font-size: 0.66rem;
+      font-weight: 500;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       color: var(--text3);
-      padding: 8px 12px 4px;
+      padding: 12px 12px 6px;
     }
 
     .nav-link {
       display: flex;
       align-items: center;
       gap: 10px;
-      padding: 10px 12px;
-      border-radius: var(--radius-sm);
+      padding: 8px 12px;
+      border-radius: 7px;
       color: var(--text2);
       text-decoration: none;
-      font-size: 0.9rem;
+      font-size: 0.82rem;
       font-weight: 500;
-      transition: all 0.18s;
+      transition: background 0.15s, color 0.15s;
       position: relative;
     }
 
     .nav-link .nav-icon {
-      width: 32px; height: 32px;
-      border-radius: 8px;
+      width: 24px; height: 24px;
+      border-radius: 6px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1rem;
-      background: var(--surface);
-      transition: all 0.18s;
+      transition: color 0.15s;
       flex-shrink: 0;
+      color: var(--text3);
+      background: transparent;
     }
+    .nav-link .nav-icon svg { width: 16px; height: 16px; }
+    .nav-link:hover .nav-icon { color: var(--text2); }
+    .nav-link.active .nav-icon { color: var(--text); }
 
     .nav-link:hover {
       color: var(--text);
-      background: var(--surface2);
-    }
-    .nav-link:hover .nav-icon {
-      background: var(--surface2);
+      background: var(--surface);
     }
 
     .nav-link.active {
       color: var(--text);
-      background: var(--surface2);
-      font-weight: 600;
+      background: var(--surface);
     }
-
-    .nav-link.active .nav-icon {
-      background: var(--surface2);
-    }
-
     .nav-link.active::before {
       content: '';
       position: absolute;
-      left: 0; top: 25%; bottom: 25%;
+      left: -1px; top: 30%; bottom: 30%;
       width: 2px;
-      background: var(--text);
+      background: var(--purple2);
       border-radius: 0 2px 2px 0;
     }
 
@@ -235,27 +247,27 @@
     }
 
     .sidebar-user {
-      padding: 16px 16px 0;
-      border-top: 1px solid var(--border);
+      padding: 12px 16px;
+      border-top: 0.5px solid var(--border);
       display: flex;
       align-items: center;
       gap: 10px;
     }
 
     .user-avatar {
-      width: 36px; height: 36px;
+      width: 30px; height: 30px;
       border-radius: 50%;
-      background: var(--surface2);
-      border: 1px solid var(--border2);
+      background: var(--purple);
+      color: white;
       display: flex; align-items: center; justify-content: center;
-      font-family: var(--font-display);
-      font-weight: 600;
-      font-size: 0.9rem;
+      font-weight: 500;
+      font-size: 0.8rem;
       flex-shrink: 0;
+      letter-spacing: -0.01em;
     }
 
     .user-info { flex: 1; min-width: 0; }
-    .user-name { font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .user-name { font-size: 0.8rem; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text); }
     .user-email { font-size: 0.72rem; color: var(--text3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .logout-btn { color: var(--text3); text-decoration: none; font-size: 1rem; transition: color 0.15s; padding: 4px; }
     .logout-btn:hover { color: var(--red2); }
@@ -282,13 +294,12 @@
     }
 
     .topbar {
-      padding: 16px 28px;
-      border-bottom: 1px solid var(--border);
+      padding: 12px 24px;
+      border-bottom: 0.5px solid var(--border);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: var(--bg2);
-      backdrop-filter: blur(8px);
+      background: var(--bg);
       position: sticky;
       top: 0;
       z-index: 50;
@@ -308,8 +319,8 @@
     }
     .hamburger span { display: block; width: 18px; height: 2px; background: var(--text); border-radius: 2px; }
 
-    .page-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 700; letter-spacing: -0.3px; }
-    .page-content { padding: 24px 28px; flex: 1; }
+    .page-title { font-size: 1.05rem; font-weight: 500; letter-spacing: -0.02em; color: var(--text); }
+    .page-content { padding: 24px; flex: 1; max-width: 1200px; width: 100%; margin: 0 auto; }
 
     /* ── Navegação inferior mobile ── */
     .bottom-nav {
@@ -345,19 +356,21 @@
     .bottom-nav-item.active { color: var(--purple2); }
 
     .bottom-nav-icon {
-      width: 28px; height: 28px;
+      width: 32px; height: 32px;
       border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.1rem;
       transition: all 0.18s;
+      color: var(--text3);
     }
+    .bottom-nav-icon svg { width: 20px; height: 20px; }
+    .bottom-nav-item.active .bottom-nav-icon { color: var(--purple2); }
 
     .bottom-nav-item.active .bottom-nav-icon {
       background: rgba(124,58,237,0.2);
     }
 
     .bottom-nav-label {
-      font-size: 0.65rem;
+      font-size: 0.7rem;
       font-weight: 600;
       letter-spacing: 0.02em;
     }
@@ -366,48 +379,43 @@
     /* ── Cards com microinteração de hover ── */
     .card {
       background: var(--surface);
-      border: 1px solid var(--border);
+      border: 0.5px solid var(--border);
       border-radius: var(--radius);
-      padding: 20px;
+      padding: 18px;
       position: relative;
-      overflow: hidden;
-      transition: border-color 0.25s ease, box-shadow 0.25s ease, transform 0.2s ease;
+      transition: border-color 0.18s ease;
     }
 
     .card:hover {
-      border-color: rgba(124,58,237,0.22);
-      box-shadow: 0 6px 32px rgba(124,58,237,0.10);
+      border-color: var(--border2);
     }
 
 
 
-    .card-title { font-family: var(--font-display); font-size: 0.78rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text2); margin-bottom: 8px; }
-    .card-value { font-family: 'Inter', system-ui, sans-serif; font-size: 1.9rem; font-weight: 600; letter-spacing: -0.04em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .card-title { font-size: 0.7rem; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text3); margin-bottom: 12px; }
+    .card-value { font-family: 'Inter', system-ui, sans-serif; font-size: 1.5rem; font-weight: 500; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
 
     /* ── Botões ── */
-    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.88rem; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: all 0.18s; white-space: nowrap; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 18px; border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 0.95rem; font-weight: 500; cursor: pointer; border: none; text-decoration: none; transition: all 0.18s; white-space: nowrap; }
     /* ── Botão primário com efeito de brilho no hover ── */
     .btn-primary {
-      background: linear-gradient(135deg, var(--purple), var(--purple2));
+      background: var(--purple);
       color: white;
-      box-shadow: 0 4px 14px rgba(124,58,237,0.35);
-      position: relative;
-      overflow: hidden;
     }
-    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(124,58,237,0.45); }
-    .btn-primary:active { transform: scale(0.99); }
-    .btn-secondary { background: var(--surface2); color: var(--text); border: 1px solid var(--border2); }
-    .btn-secondary:hover { background: rgba(255,255,255,0.1); }
+    .btn-primary:hover { background: var(--purple2); }
+    .btn-primary:active { transform: scale(0.98); }
+    .btn-secondary { background: transparent; color: var(--text2); border: 0.5px solid var(--border2); }
+    .btn-secondary:hover { background: var(--surface2); color: var(--text); border-color: var(--border3); }
     .btn-danger { background: rgba(239,68,68,0.15); color: var(--red2); border: 1px solid rgba(239,68,68,0.3); }
     .btn-danger:hover { background: rgba(239,68,68,0.25); }
-    .btn-sm { padding: 7px 14px; font-size: 0.82rem; }
+    .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
     .btn-icon { padding: 7px; border-radius: var(--radius-sm); }
 
     /* ── Forms ── */
     .form-group { margin-bottom: 16px; }
-    .form-label { display: block; font-size: 0.82rem; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
-    .form-control { width: 100%; padding: 10px 14px; background: var(--bg3); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 0.9rem; transition: all 0.18s; outline: none; -webkit-appearance: none; }
-    .form-control:focus { border-color: var(--purple2); box-shadow: 0 0 0 3px rgba(124,58,237,0.18), 0 2px 8px rgba(124,58,237,0.1); outline: none; }
+    .form-label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
+    .form-control { width: 100%; padding: 9px 12px; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 0.88rem; transition: border-color 0.15s, box-shadow 0.15s; outline: none; -webkit-appearance: none; }
+    .form-control:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); outline: none; }
     .form-control::placeholder { color: var(--text3); }
     select.form-control { cursor: pointer; }
     .form-control option { background: var(--bg3); color: var(--text); }
@@ -420,7 +428,7 @@
       width: 90%; max-width: 400px;
     }
     .flash {
-      padding: 12px 18px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      padding: 12px 18px; border-radius: 10px; font-size: 0.95rem; font-weight: 600;
       display: flex; align-items: center; gap: 10px;
       animation: flashIn 0.35s cubic-bezier(0.34,1.56,0.64,1) both;
       border: 1px solid; box-shadow: 0 8px 32px rgba(0,0,0,0.45);
@@ -436,7 +444,7 @@
 
     /* ── Tabelas ── */
     .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
     thead th { text-align: left; padding: 10px 14px; font-size: 0.7rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text3); border-bottom: 1px solid var(--border); }
     tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
     tbody tr:last-child { border-bottom: none; }
@@ -506,7 +514,7 @@
     /* ── Empty state ── */
     .empty-state { text-align: center; padding: 48px 16px; color: var(--text3); }
     .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: 0.5; }
-    .empty-state p { font-size: 0.88rem; margin-top: 6px; }
+    .empty-state p { font-size: 0.95rem; margin-top: 6px; }
 
     /* ════════════════════════════════════════
        RESPONSIVO — MOBILE FIRST
@@ -596,7 +604,7 @@
   <aside class="sidebar" id="sidebar">
 
     <div class="sidebar-logo">
-      <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
+      <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
         <path d="M14 4C14 4 22 8.5 22 14C22 18.4183 18.4183 22 14 22C9.58172 22 6 18.4183 6 14C6 11.2 7.4 9.2 9.5 7.8" stroke="var(--text)" stroke-width="1.6" stroke-linecap="round" fill="none"/>
         <path d="M14 10C14 10 17.5 11.8 17.5 14C17.5 15.933 15.933 17.5 14 17.5C12.067 17.5 10.5 15.933 10.5 14C10.5 12.8 11.1 11.9 12 11.3" stroke="var(--text)" stroke-width="1.4" stroke-linecap="round" fill="none"/>
         <circle cx="14" cy="14" r="1.8" fill="var(--text)"/>
@@ -616,31 +624,35 @@
       <span class="nav-label">Menu</span>
       <a href="{{ url_for('dashboard.index') }}"
          class="nav-link {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-        <div class="nav-icon">📊</div>Dashboard
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>Dashboard
       </a>
       <a href="{{ url_for('transacoes.todas') }}"
          class="nav-link {% if request.blueprint == 'transacoes' %}active{% endif %}">
-        <div class="nav-icon">🧾</div>Transações
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h12"/></svg></div>Transações
       </a>
       <a href="{{ url_for('recorrentes.fixas') }}"
          class="nav-link {% if request.blueprint == 'recorrentes' %}active{% endif %}">
-        <div class="nav-icon">📌</div>Fixas
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg></div>Contas Fixas
       </a>
       <a href="{{ url_for('transacoes.parcelados') }}"
          class="nav-link {% if request.endpoint == 'transacoes.parcelados' %}active{% endif %}">
-        <div class="nav-icon">💳</div>Parcelados
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>Compras Parceladas
       </a>
       <a href="{{ url_for('contas.lista') }}"
          class="nav-link {% if request.blueprint == 'contas' %}active{% endif %}">
-        <div class="nav-icon">🏦</div>Contas
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg></div>Bancos e Cartões
+      </a>
+      <a href="{{ url_for('categorias.lista') }}"
+         class="nav-link {% if request.blueprint == 'categorias' %}active{% endif %}">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7l9-4 9 4M3 7v10l9 4 9-4V7M3 7l9 4 9-4M12 11v10"/></svg></div>Categorias
       </a>
       <a href="{{ url_for('contabil.exportar') }}"
          class="nav-link {% if request.blueprint == 'contabil' %}active{% endif %}">
-        <div class="nav-icon">📥</div>Exportar
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></div>Exportar Excel
       </a>
       <a href="{{ url_for('perfil.index') }}"
          class="nav-link {% if request.blueprint == 'perfil' %}active{% endif %}">
-        <div class="nav-icon">⚙</div>Perfil
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Meu Perfil
       </a>
     </nav>
 
@@ -731,33 +743,33 @@
     <div class="bottom-nav-items">
       <a href="{{ url_for('dashboard.index') }}"
          class="bottom-nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
-        <div class="bottom-nav-icon">📊</div>
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg></div>
         <div class="bottom-nav-label">Início</div>
       </a>
       <a href="{{ url_for('transacoes.novo') }}"
          class="bottom-nav-item">
-        <div class="bottom-nav-icon" style="background:var(--purple);border-radius:14px;width:44px;height:44px;font-size:1.3rem;color:white">+</div>
+        <div class="bottom-nav-icon" style="background:var(--purple);border-radius:14px;width:44px;height:44px;color:white;display:flex;align-items:center;justify-content:center"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></div>
         <div class="bottom-nav-label">Novo</div>
       </a>
       <a href="{{ url_for('transacoes.todas') }}"
          class="bottom-nav-item {% if request.blueprint == 'transacoes' %}active{% endif %}">
-        <div class="bottom-nav-icon">🧾</div>
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M3 6h18M3 18h12"/></svg></div>
         <div class="bottom-nav-label">Gastos</div>
       </a>
       <a href="{{ url_for('recorrentes.fixas') }}"
          class="bottom-nav-item {% if request.blueprint == 'recorrentes' %}active{% endif %}">
-        <div class="bottom-nav-icon">📌</div>
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg></div>
         <div class="bottom-nav-label">Fixas</div>
       </a>
       <a href="{{ url_for('transacoes.parcelados') }}"
          class="bottom-nav-item {% if request.endpoint == 'transacoes.parcelados' %}active{% endif %}">
-        <div class="bottom-nav-icon">💳</div>
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
         <div class="bottom-nav-label">Parcelados</div>
       </a>
       <a href="{{ url_for('contas.lista') }}"
          class="bottom-nav-item {% if request.blueprint == 'contas' %}active{% endif %}">
-        <div class="bottom-nav-icon">🏦</div>
-        <div class="bottom-nav-label">Contas</div>
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M3 10h18M5 6l7-3 7 3M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/></svg></div>
+        <div class="bottom-nav-label">Bancos</div>
       </a>
     </div>
   </nav>

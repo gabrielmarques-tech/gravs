@@ -30,6 +30,7 @@ from database.repositories import (
     MetaRepository,
     RecorrenteRepository,
     SaldoContaRepository,
+    LimiteCategoriaRepository,
     TransacaoRepository,
     UsuarioRepository,
 )
@@ -62,6 +63,7 @@ class ServiceContainer:
         self.contas_repo = ContaBancariaRepository(self.db)
         self.busca_repo = BuscaRepository(self.db)
         self.saldo_conta_repo = SaldoContaRepository(self.db)
+        self.limites_repo = LimiteCategoriaRepository(self.db)
 
         # ── Utilitários ───────────────────────────────────────────────────────
         self.calendario = CalendarioUtil()

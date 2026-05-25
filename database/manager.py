@@ -290,6 +290,7 @@ class DatabaseManager:
         self._add_column_if_missing(conn, "transacoes", "conta_id", "INTEGER")
         self._add_column_if_missing(conn, "recorrentes", "conta_id", "INTEGER")
         self._add_column_if_missing(conn, "usuarios", "onboarding_completo", "INTEGER DEFAULT 0")
+        self._criar_tabela_limites_categoria(conn)
         self._criar_tabela_contas_bancarias(conn)
         self._criar_tabela_tokens_recuperacao(conn)
 
@@ -308,6 +309,42 @@ class DatabaseManager:
                 (agora,)
             )
         return cur.rowcount
+
+    def _criar_tabela_limites_categoria(self, conn) -> None:
+        """Limites de gasto por categoria por mês."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS limites_categoria (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id   INTEGER NOT NULL,
+                categoria_id INTEGER NOT NULL,
+                limite       REAL    NOT NULL CHECK(limite > 0),
+                criado_em    TEXT    DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id)   REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE CASCADE,
+                UNIQUE(usuario_id, categoria_id)
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_limites_user ON limites_categoria(usuario_id)"
+        )
+
+    def _criar_tabela_limites_categoria(self, conn) -> None:
+        """Limites de gasto mensais por categoria."""
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS limites_categoria (
+                id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id   INTEGER NOT NULL,
+                categoria_id INTEGER NOT NULL,
+                limite       REAL    NOT NULL CHECK(limite > 0),
+                criado_em    TEXT    DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id)   REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (categoria_id) REFERENCES categorias(id) ON DELETE CASCADE,
+                UNIQUE(usuario_id, categoria_id)
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_limites_user ON limites_categoria(usuario_id)"
+        )
 
     def _criar_tabela_tokens_recuperacao(self, conn) -> None:
         """Cria tabela de tokens para recuperação de senha."""

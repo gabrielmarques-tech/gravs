@@ -101,6 +101,17 @@
   .ob-btn-acao { flex:2; padding:10px 16px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:8px; color:white; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:opacity 0.15s; }
   .ob-btn-acao:hover { opacity:0.88; }
   .ob-contador { text-align:center; font-size:0.75rem; color:var(--text3); margin-top:16px; }
+
+  /* ── Metas / Limites ── */
+  .meta-barra-wrap { height:6px; background:var(--bg3); border-radius:99px; overflow:hidden; margin-top:5px; }
+  .meta-barra-fill { height:100%; border-radius:99px; transition:width 0.8s ease; }
+  .meta-barra-ok   { background:var(--green2); }
+  .meta-barra-warn { background:var(--gold2); }
+  .meta-barra-over { background:var(--red2); }
+  .meta-badge { font-size:0.68rem; padding:1px 7px; border-radius:99px; font-weight:600; }
+  .meta-badge-ok   { background:rgba(52,211,153,0.12); color:var(--green2); }
+  .meta-badge-warn { background:rgba(251,191,36,0.12); color:var(--gold2); }
+  .meta-badge-over { background:rgba(248,113,113,0.15); color:var(--red2); }
 </style>
 {% endblock %}
 
@@ -156,40 +167,51 @@
 <!-- Banner de lembretes — preenchido via JS -->
 <div id="banner-lembretes" style="display:none"></div>
 
-<!-- Cards de resumo -->
-<div class="resumo-grid fade-up">
-
-  <div class="card resumo-card" style="border-color:rgba(16,185,129,0.25);background:linear-gradient(135deg,rgba(16,185,129,0.07),rgba(16,185,129,0.02))">
-    <div class="resumo-icon" style="background:rgba(16,185,129,0.15)">💰</div>
-    <div class="resumo-body">
-      <div class="card-title" style="color:var(--green2)">Receitas</div>
-      <div class="card-value text-receita">{{ resumo.receitas | real }}</div>
-      <div class="resumo-sub">este mês</div>
+<!-- Hero — saldo destaque -->
+<div class="card fade-up" style="padding:24px;background:var(--surface2);position:relative;overflow:hidden;margin-bottom:14px">
+  <div style="position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,0.12) 0%,transparent 70%);pointer-events:none"></div>
+  <p style="font-size:0.7rem;color:var(--text3);margin:0 0 8px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500">Saldo deste mês</p>
+  <p style="font-size:2.2rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.03em;font-variant-numeric:tabular-nums;line-height:1">
+    {{ resumo.saldo | real }}
+  </p>
+  {% if resumo.diferenca_despesas != 0 and resumo.despesas_anterior > 0 %}
+    {% set pct_dif = ((resumo.diferenca_despesas / resumo.despesas_anterior) * 100) | round(1) %}
+    <div style="display:flex;align-items:center;gap:6px;margin-top:10px">
+      {% if resumo.diferenca_despesas < 0 %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>
+        <span style="color:var(--green2);font-size:0.78rem;font-variant-numeric:tabular-nums">{{ pct_dif|abs }}%</span>
+      {% else %}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--red2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+        <span style="color:var(--red2);font-size:0.78rem;font-variant-numeric:tabular-nums">{{ pct_dif }}%</span>
+      {% endif %}
+      <span style="color:var(--text3);font-size:0.78rem">em despesas comparado ao mês passado</span>
     </div>
-  </div>
+  {% endif %}
+</div>
 
-  <div class="card resumo-card delay-1 fade-up" style="border-color:rgba(239,68,68,0.25);background:linear-gradient(135deg,rgba(239,68,68,0.07),rgba(239,68,68,0.02))">
-    <div class="resumo-icon" style="background:rgba(239,68,68,0.15)">💸</div>
-    <div class="resumo-body">
-      <div class="card-title" style="color:var(--red2)">Despesas</div>
-      <div class="card-value text-despesa">{{ resumo.despesas | real }}</div>
-      <div class="resumo-sub">este mês</div>
-    </div>
-  </div>
+<!-- Cards Receitas + Despesas -->
+<div class="grid grid-2 fade-up delay-1" style="gap:12px;margin-bottom:14px">
 
-  <div class="card resumo-card delay-2 fade-up"
-       style="border-color:{% if resumo.saldo >= 0 %}rgba(16,185,129,0.2){% else %}rgba(239,68,68,0.2){% endif %};
-              background:{% if resumo.saldo >= 0 %}rgba(16,185,129,0.04){% else %}rgba(239,68,68,0.04){% endif %}">
-    <div class="resumo-icon" style="background:{% if resumo.saldo >= 0 %}rgba(16,185,129,0.15){% else %}rgba(239,68,68,0.15){% endif %}">
-      {% if resumo.saldo >= 0 %}📈{% else %}📉{% endif %}
-    </div>
-    <div class="resumo-body">
-      <div class="card-title" style="color:{% if resumo.saldo >= 0 %}var(--green2){% else %}var(--red2){% endif %}">Saldo do mês</div>
-      <div class="card-value {% if resumo.saldo >= 0 %}text-receita{% else %}text-despesa{% endif %}">
-        {{ resumo.saldo | real }}
+  <div class="card" style="padding:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:28px;height:28px;background:var(--green-bg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--green2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="17 17 17 7 7 7"/></svg>
       </div>
-      <div class="resumo-sub">{% if resumo.saldo >= 0 %}no positivo ✓{% else %}no negativo ✗{% endif %}</div>
+      <span style="font-size:0.78rem;color:var(--text2);font-weight:500">Receitas</span>
     </div>
+    <p style="font-size:1.15rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">{{ resumo.receitas | real }}</p>
+    <p style="font-size:0.7rem;color:var(--text3);margin:4px 0 0">recebido este mês</p>
+  </div>
+
+  <div class="card" style="padding:16px">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+      <div style="width:28px;height:28px;background:var(--red-bg);border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--red2)">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+      </div>
+      <span style="font-size:0.78rem;color:var(--text2);font-weight:500">Despesas</span>
+    </div>
+    <p style="font-size:1.15rem;font-weight:500;color:var(--text);margin:0;letter-spacing:-0.02em;font-variant-numeric:tabular-nums">{{ resumo.despesas | real }}</p>
+    <p style="font-size:0.7rem;color:var(--text3);margin:4px 0 0">gasto este mês</p>
   </div>
 
 </div>
@@ -205,7 +227,7 @@
 
       <!-- Desktop -->
       <div class="economia-desktop" style="align-items:center;gap:20px;flex-wrap:wrap">
-        <div style="width:52px;height:52px;border-radius:14px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;font-size:1.6rem;flex-shrink:0">🎉</div>
+        <div style="width:52px;height:52px;border-radius:14px;background:rgba(16,185,129,0.2);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;color:var(--green2);flex-shrink:0"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
         <div style="flex:1;min-width:160px">
           <div style="font-size:1.1rem;font-weight:600;color:#34d399;margin-bottom:4px">Você está economizando!</div>
           <div style="font-size:0.88rem;color:var(--text2)">
@@ -227,7 +249,7 @@
       <!-- Mobile -->
       <div class="economia-mobile">
         <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <div style="font-size:1.8rem">🎉</div>
+          <div style="color:var(--green2)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
           <div>
             <div style="font-size:1rem;font-weight:600;color:#34d399">Você está economizando!</div>
             <div style="font-size:0.82rem;color:var(--text2);margin-top:2px">
@@ -266,7 +288,7 @@
          style="border-color:rgba(239,68,68,0.3);background:linear-gradient(135deg,rgba(239,68,68,0.1),rgba(239,68,68,0.03));position:relative;overflow:hidden">
       <div style="position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="font-size:1.8rem;flex-shrink:0">⚠️</div>
+        <div style="flex-shrink:0;color:var(--red2)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
         <div style="flex:1;min-width:140px">
           <div style="font-size:1rem;font-weight:600;color:#f87171;margin-bottom:3px">Gastos acima da receita</div>
           <div style="font-size:0.85rem;color:var(--text2)">
@@ -283,7 +305,7 @@
   {% else %}
     <div class="card" style="background:rgba(107,95,130,0.08);border-color:rgba(107,95,130,0.2)">
       <div style="display:flex;align-items:center;gap:12px">
-        <div style="font-size:1.5rem">⚖️</div>
+        <div style="color:var(--text3)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg></div>
         <div style="font-size:0.88rem;color:var(--text2)">Nenhum lançamento ainda este mês.</div>
       </div>
     </div>
@@ -313,39 +335,84 @@
 <!-- Gastos por categoria -->
 {% if resumo.gastos_por_categoria %}
 <div class="card mt-16 fade-up">
-  <div class="card-title mb-16">🗂 Gastos por categoria</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+    <div class="card-title" style="margin-bottom:0">Gastos por categoria</div>
+    <button onclick="abrirModalLimites()"
+            style="font-size:0.75rem;color:var(--purple3);background:none;border:none;
+                   cursor:pointer;font-family:var(--font-body);padding:4px 8px;
+                   border-radius:6px;border:1px solid var(--border2)">
+      + Definir limites
+    </button>
+  </div>
   <div style="display:flex;flex-direction:column;gap:10px">
     {% set total = resumo.despesas if resumo.despesas > 0 else 1 %}
     {% for item in resumo.gastos_por_categoria %}
+      {% set limite = limites.get(item.id, 0) %}
+      {% set pct_total = (item.total / total * 100)|round(1) %}
+      {% set pct_limite = [(item.total / limite * 100)|round(1), 100]|min if limite > 0 else 0 %}
       <div class="cat-item" style="display:flex;flex-direction:column;gap:5px">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
           <span style="font-size:0.85rem;color:var(--text2);min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ item.nome }}</span>
-          <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
-            <span style="font-size:0.72rem;color:var(--text3)">{{ (item.total / total * 100)|round(1) }}%</span>
+          <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
+            {% if limite > 0 %}
+              {% if item.total >= limite %}
+                <span class="meta-badge meta-badge-over">Limite atingido</span>
+              {% elif (item.total / limite * 100) >= 80 %}
+                <span class="meta-badge meta-badge-warn">{{ (item.total / limite * 100)|round(0)|int }}%</span>
+              {% else %}
+                <span class="meta-badge meta-badge-ok">{{ (item.total / limite * 100)|round(0)|int }}%</span>
+              {% endif %}
+            {% else %}
+              <span style="font-size:0.72rem;color:var(--text3)">{{ pct_total }}%</span>
+            {% endif %}
             <span style="font-size:0.85rem;font-weight:600;color:var(--text)">{{ item.total | real }}</span>
+            {% if limite > 0 %}
+              <span style="font-size:0.72rem;color:var(--text3)">/ {{ limite | real }}</span>
+            {% endif %}
           </div>
         </div>
-        <div class="cat-barra" style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
-          <div style="height:100%;width:{{ [(item.total / total * 100)|round(1), 100]|min }}%;background:{{ item.cor or '#7c3aed' }};border-radius:99px;transition:width 0.8s ease"></div>
-        </div>
+        {% if limite > 0 %}
+          <div class="meta-barra-wrap">
+            <div class="meta-barra-fill {% if item.total >= limite %}meta-barra-over{% elif (item.total / limite * 100) >= 80 %}meta-barra-warn{% else %}meta-barra-ok{% endif %}"
+                 style="width:{{ pct_limite }}%"></div>
+          </div>
+        {% else %}
+          <div class="cat-barra" style="height:6px;background:var(--bg3);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:{{ [pct_total, 100]|min }}%;background:{{ item.cor or '#7c3aed' }};border-radius:99px;transition:width 0.8s ease"></div>
+          </div>
+        {% endif %}
       </div>
     {% endfor %}
   </div>
 </div>
 {% endif %}
 
+<!-- Modal de limites por categoria -->
+<div class="modal-backdrop" id="modal-limites">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title">Limites por categoria</div>
+    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:20px">
+      Defina um limite de gastos mensais para cada categoria. A barra muda de cor quando você se aproxima do limite.
+    </p>
+    <div id="lista-limites" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto"></div>
+    <div style="display:flex;justify-content:flex-end;margin-top:20px">
+      <button onclick="fecharModalLimites()" class="btn btn-secondary">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Ações rápidas (desktop) -->
 <!-- Saldo por conta bancária -->
 <div id="card-saldo-contas" class="mt-16 fade-up" style="display:none">
   <div class="card">
-    <div class="card-title mb-12">🏦 Saldo por conta</div>
+    <div class="card-title mb-12">Saldo por conta</div>
     <div id="lista-saldo-contas" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
 </div>
 
 <!-- Gráfico de evolução dos últimos 6 meses -->
 <div class="card mt-16 fade-up">
-  <div class="card-title mb-16">📈 Evolução dos últimos 6 meses</div>
+  <div class="card-title mb-16">Evolução dos últimos 6 meses</div>
   <div id="grafico-meses" style="display:flex;align-items:flex-end;gap:8px;height:120px;padding:0 4px">
     <div style="color:var(--text3);font-size:0.8rem;margin:auto">Carregando...</div>
   </div>
@@ -361,7 +428,7 @@
             border-color:rgba(124,58,237,0.22);transition:all 0.25s ease"
      onmouseover="this.style.borderColor='var(--purple2)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 32px rgba(124,58,237,0.22)'"
      onmouseout="this.style.borderColor='rgba(124,58,237,0.22)';this.style.transform='';this.style.boxShadow=''">
-    <div style="font-size:2.2rem;margin-bottom:12px">💳</div>
+    <div style="margin-bottom:12px;color:var(--purple2);display:flex;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
     <div style="font-weight:600;font-size:1rem;color:var(--text)">Nova Transação</div>
     <div style="font-size:0.8rem;color:var(--text2);margin-top:6px">Registrar receita ou despesa</div>
   </a>
@@ -372,7 +439,7 @@
             border-color:rgba(6,182,212,0.22);transition:all 0.25s ease"
      onmouseover="this.style.borderColor='var(--cyan)';this.style.transform='translateY(-3px)';this.style.boxShadow='0 10px 32px rgba(6,182,212,0.18)'"
      onmouseout="this.style.borderColor='rgba(6,182,212,0.22)';this.style.transform='';this.style.boxShadow=''">
-    <div style="font-size:2.2rem;margin-bottom:12px">📌</div>
+    <div style="margin-bottom:12px;color:var(--cyan);display:flex;justify-content:center"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg></div>
     <div style="font-family:var(--font-display);font-weight:800;font-size:1rem;color:var(--text)">Contas Fixas</div>
     <div style="font-size:0.8rem;color:var(--text2);margin-top:6px">Gerenciar recorrências</div>
   </a>
@@ -574,6 +641,92 @@ function obConta() {
 function obTransacao() {
   obFechar();
   setTimeout(function() { window.location.href = '{{ url_for("transacoes.novo") }}'; }, 220);
+}
+
+// ── Limites por categoria ─────────────────────────────────────────────────
+let _limites = {};
+
+async function abrirModalLimites() {
+  document.getElementById('modal-limites').classList.add('open');
+  const lista = document.getElementById('lista-limites');
+  lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Carregando...</div>';
+
+  try {
+    const [rCats, rLims] = await Promise.all([
+      fetch('/contas/api/listar').catch(() => null),
+      fetch('/api/limites')
+    ]);
+
+    const limites = await rLims.json();
+    _limites = {};
+    limites.limites.forEach(l => { _limites[l.categoria_id] = l.limite; });
+
+    const cats = {{ resumo.gastos_por_categoria | tojson }};
+
+    if (!cats || cats.length === 0) {
+      lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Nenhum gasto este mês.</div>';
+      return;
+    }
+
+    lista.innerHTML = cats.map(c => {
+      const lim = _limites[c.id] || '';
+      const limFmt = lim ? String(lim).replace('.', ',') : '';
+      return `
+        <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+          <div style="flex:1;font-size:0.88rem;color:var(--text)">
+            <span style="margin-right:6px">${c.icone || ''}</span>${c.nome}
+          </div>
+          <div style="display:flex;align-items:center;gap:6px">
+            <span style="font-size:0.75rem;color:var(--text3)">R$</span>
+            <input type="text" value="${limFmt}"
+                   placeholder="Sem limite"
+                   data-cat="${c.id}"
+                   oninput="salvarLimite(this)"
+                   style="width:100px;padding:6px 10px;background:var(--bg3);
+                          border:1px solid var(--border2);border-radius:6px;
+                          color:var(--text);font-size:0.85rem;text-align:right;
+                          font-family:var(--font-body)"/>
+            ${lim ? `<button onclick="removerLimite(${c.id}, this)" title="Remover limite"
+                             style="background:none;border:none;cursor:pointer;
+                                    color:var(--text3);font-size:0.9rem;padding:4px">✕</button>` : ''}
+          </div>
+        </div>`;
+    }).join('');
+
+  } catch(e) {
+    lista.innerHTML = '<div style="color:var(--red2);font-size:0.85rem">Erro ao carregar.</div>';
+  }
+}
+
+let _limiteTimer = {};
+function salvarLimite(input) {
+  const catId = input.dataset.cat;
+  clearTimeout(_limiteTimer[catId]);
+  _limiteTimer[catId] = setTimeout(async () => {
+    const val = input.value.replace(',', '.').trim();
+    if (!val) return;
+    const num = parseFloat(val);
+    if (isNaN(num) || num <= 0) return;
+
+    await fetch('/api/limites', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({categoria_id: catId, limite: num})
+    });
+    mostrarToast('✓ Limite salvo!', 'verde');
+  }, 800);
+}
+
+async function removerLimite(catId, btn) {
+  await fetch('/api/limites/' + catId, { method: 'DELETE' });
+  mostrarToast('Limite removido', 'amarelo');
+  abrirModalLimites(); // recarrega a lista
+}
+
+function fecharModalLimites() {
+  document.getElementById('modal-limites').classList.remove('open');
+  // Recarrega a página para atualizar as barras
+  location.reload();
 }
 
 carregarLembretes();
