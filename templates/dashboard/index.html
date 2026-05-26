@@ -158,9 +158,11 @@
   }
 
   /* Layout de duas colunas desktop */
-  .dash-row { display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start }
+  .dash-row { display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start }
+  .dash-row-stretch { align-items:stretch }
+  .dash-row-stretch .dash-col-main > .card { height:100%; }
   .dash-col-main { min-width:0 }
-  .dash-col-side { display:flex;flex-direction:column;gap:0;min-width:0 }
+  .dash-col-side { display:flex;flex-direction:column;gap:12px;min-width:0 }
 
   /* Últimas transações */
   .trans-item { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border) }
@@ -182,7 +184,7 @@
   /* Mobile — empilha tudo */
   @media (max-width:768px) {
     .dash-row { grid-template-columns:1fr }
-    .dash-col-side { margin-top:0 }
+    .dash-col-side { gap:12px }
     .dash-saldo { font-size:1.7rem }
     .acoes-rapidas { display:none }
   }
@@ -366,7 +368,7 @@
 </div>
 
 <!-- Linha 1: Gastos por categoria + Saldo por conta -->
-<div class="dash-row fade-up" style="margin-top:20px">
+<div class="dash-row dash-row-stretch fade-up" style="margin-top:20px">
 
   <!-- Gastos por categoria -->
   {% if resumo.gastos_por_categoria %}
@@ -428,7 +430,7 @@
   <div class="dash-col-side">
 
     <!-- Saldo por conta -->
-    <div class="card" id="card-saldo-contas" style="display:none;margin-bottom:12px">
+    <div class="card" id="card-saldo-contas" style="display:none">
       <div class="card-title mb-12">Saldo por conta</div>
       <div id="lista-saldo-contas" class="flex flex-col gap-8"></div>
     </div>
@@ -440,7 +442,7 @@
     </div>
 
     <!-- Metas financeiras -->
-    <div class="card" id="card-metas-dash" style="display:none;margin-top:12px">
+    <div class="card" id="card-metas-dash" style="display:none">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div class="card-title" style="margin-bottom:0">Metas</div>
         <a href="/metas/" class="link-muted">Ver todas</a>
