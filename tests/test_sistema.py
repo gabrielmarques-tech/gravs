@@ -1811,6 +1811,26 @@ class TestClassificacaoPIX:
             assert t["categoria_sugerida"] != "Outros", \
                 f"PIX não deveria cair em 'Outros': {t['descricao']}"
 
+    def test_pix_qr_code_categoria_transferencias(self):
+        """PIX QR CODE DINAMICO deve cair em Transferências PIX."""
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "26/05/2026;PIX QR CODE DINAMICO;;;70,32;0,00\n"
+        )
+        trans = self._parsear(csv)
+        assert len(trans) == 1
+        assert trans[0]["categoria_sugerida"] == "Transferências PIX"
+        assert trans[0]["tipo"] == "despesa"
+
+    def test_qr_code_generico_categoria_transferencias(self):
+        """QR CODE genérico deve cair em Transferências PIX."""
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "26/05/2026;QR CODE PAGAMENTO;;;50,00;0,00\n"
+        )
+        trans = self._parsear(csv)
+        assert trans[0]["categoria_sugerida"] == "Transferências PIX"
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Testes de Transferências entre Contas

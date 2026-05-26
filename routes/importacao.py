@@ -50,6 +50,10 @@ _KEYWORDS_CATEGORIA: list[tuple[str, str]] = [
     ("debito pix",             "Transferências PIX"),
     ("transferencia pix",      "Transferências PIX"),
     ("pagamento pix",          "Transferências PIX"),
+    ("pix qr code",             "Transferências PIX"),
+    ("qr code",                 "Transferências PIX"),
+    ("pix cobranca",            "Transferências PIX"),
+    ("pix agendado",            "Transferências PIX"),
     # Alimentação
     ("ifood",       "Alimentação"),
     ("rappi",       "Alimentação"),
