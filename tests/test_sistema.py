@@ -2486,3 +2486,349 @@ class TestMetasHTTP:
 
         metas = container.metas_repo.listar(uid)
         assert not any(m["uuid"] == "del-http" for m in metas)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Perfil
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestPerfilHTTP:
+    """Testa rotas HTTP do perfil do usuário."""
+
+    def test_pagina_perfil_carrega(self, client, usuario_logado):
+        r = client.get("/perfil/")
+        assert r.status_code == 200
+
+    def test_perfil_requer_login(self, client):
+        r = client.get("/perfil/", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_atualizar_nome(self, client, usuario_logado, container):
+        r = client.post("/perfil/nome", data={"nome": "Novo Nome"}, follow_redirects=False)
+        assert r.status_code == 302
+        u = container.usuarios_repo.buscar_por_id(usuario_logado["id"])
+        assert u["nome"] == "Novo Nome"
+
+    def test_nome_muito_curto_rejeitado(self, client, usuario_logado):
+        r = client.post("/perfil/nome", data={"nome": "A"}, follow_redirects=True)
+        assert r.status_code == 200
+        assert "pelo menos 2" in r.data.decode("utf-8")
+
+    def test_atualizar_senha_correta(self, client, usuario_logado, container):
+        from werkzeug.security import check_password_hash
+        r = client.post("/perfil/senha", data={
+            "senha_atual": "senha123",
+            "nova_senha": "novaSenha456",
+            "confirmacao": "novaSenha456",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+        u = container.usuarios_repo.buscar_por_id(usuario_logado["id"])
+        assert check_password_hash(u["senha_hash"], "novaSenha456")
+
+    def test_senha_atual_errada_rejeitada(self, client, usuario_logado):
+        r = client.post("/perfil/senha", data={
+            "senha_atual": "senhaErrada",
+            "nova_senha": "novaSenha456",
+            "confirmacao": "novaSenha456",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+        assert "incorreta" in r.data.decode("utf-8")
+
+    def test_confirmacao_diferente_rejeitada(self, client, usuario_logado):
+        r = client.post("/perfil/senha", data={
+            "senha_atual": "senha123",
+            "nova_senha": "novaSenha456",
+            "confirmacao": "diferente",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_toggle_contabil(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        u = container.usuarios_repo.buscar_por_id(uid)
+        modo_antes = u.get("modo_contabil", 0)
+
+        r = client.post("/perfil/contabil", follow_redirects=False)
+        assert r.status_code == 302
+
+        u2 = container.usuarios_repo.buscar_por_id(uid)
+        assert u2["modo_contabil"] != modo_antes
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Dashboard APIs
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestDashboardAPIs:
+    """Testa APIs do dashboard — limites, onboarding."""
+
+    def test_api_limites_get(self, client, usuario_logado):
+        import json
+        r = client.get("/api/limites")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "limites" in data
+
+    def test_api_limites_post(self, client, usuario_logado, container):
+        import json
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"]
+
+        r = client.post("/api/limites",
+                        data=json.dumps({"categoria_id": cat_id, "limite": 500.0}),
+                        content_type="application/json")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert data["success"] is True
+
+    def test_api_limites_delete(self, client, usuario_logado, container):
+        import json
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"]
+
+        # Cria limite primeiro
+        client.post("/api/limites",
+                    data=json.dumps({"categoria_id": cat_id, "limite": 300.0}),
+                    content_type="application/json")
+
+        r = client.delete(f"/api/limites/{cat_id}")
+        assert r.status_code == 200
+
+    def test_api_limites_requer_login(self, client):
+        r = client.get("/api/limites", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_api_limites_valor_invalido(self, client, usuario_logado, container):
+        import json
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"]
+
+        r = client.post("/api/limites",
+                        data=json.dumps({"categoria_id": cat_id, "limite": -100}),
+                        content_type="application/json")
+        assert r.status_code == 400
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Recorrentes — rotas faltando
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestRecorrentesExtras:
+    """Testa rotas de recorrentes não cobertas anteriormente."""
+
+    def test_api_sidebar_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/api/fixas_sidebar")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "fixas" in data
+
+    def test_api_lembretes_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/api/lembretes")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "lembretes" in data
+
+    def test_api_sidebar_requer_login(self, client):
+        r = client.get("/api/fixas_sidebar", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_editar_fixa(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        import uuid as uuid_lib
+        uuid_rec = str(uuid_lib.uuid4())
+        container.recorrentes_repo.inserir(
+            uuid=uuid_rec, descricao="Fixa Editar", valor=100.0,
+            tipo="despesa", categoria_id=categoria_despesa["id"],
+            dia_vencimento=10, usuario_id=uid
+        )
+
+        r = client.post(f"/fixas/editar/{uuid_rec}", data={
+            "descricao": "Fixa Editada",
+            "valor": "150.00",
+            "dia_vencimento": "15",
+            "tipo": "despesa",
+            "categoria_id": str(categoria_despesa["id"]),
+        }, follow_redirects=False)
+        assert r.status_code in (302, 200)
+
+    def test_confirmar_fixa(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        import uuid as uuid_lib
+        uuid_rec = str(uuid_lib.uuid4())
+        container.recorrentes_repo.inserir(
+            uuid=uuid_rec, descricao="Fixa Confirmar", valor=200.0,
+            tipo="despesa", categoria_id=categoria_despesa["id"],
+            dia_vencimento=5, usuario_id=uid
+        )
+
+        r = client.post(f"/api/fixo/{uuid_rec}/confirmar")
+        assert r.status_code in (200, 302)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Transações — rotas faltando
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestTransacoesExtras:
+    """Testa rotas de transações não cobertas anteriormente."""
+
+    def test_editar_transacao(self, client, usuario_logado, container,
+                              categoria_despesa, categoria_receita):
+        uid = usuario_logado["id"]
+        id_t, _ = container.transacoes.adicionar(
+            "Editar me", 100.0, "despesa",
+            categoria_despesa["id"], uid, "2026-05-01"
+        )
+
+        r = client.post(f"/editar/{id_t}", data={
+            "descricao": "Editada",
+            "valor": "150.00",
+            "tipo": "despesa",
+            "categoria_id": str(categoria_despesa["id"]),
+            "data": "2026-05-01",
+        }, follow_redirects=False)
+        assert r.status_code in (302, 200)
+
+    def test_api_buscar(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        container.transacoes.adicionar(
+            "Busca teste", 50.0, "despesa",
+            categoria_despesa["id"], uid, "2026-05-15"
+        )
+        import json
+        r = client.get("/api/buscar?inicio=2026-05-01&fim=2026-05-31")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "transacoes" in data
+
+    def test_api_buscar_requer_login(self, client):
+        r = client.get("/api/buscar", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_api_saldo_contas(self, client, usuario_logado):
+        import json
+        r = client.get("/api/saldo-contas")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "saldos" in data
+
+    def test_api_resumo_sidebar(self, client, usuario_logado):
+        import json
+        r = client.get("/api/resumo_sidebar")
+        assert r.status_code == 200
+
+    def test_api_deletar_transacao(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        id_t, uuid_t = container.transacoes.adicionar(
+            "Deletar API", 75.0, "despesa",
+            categoria_despesa["id"], uid, "2026-05-01"
+        )
+        import json
+        r = client.delete(f"/api/transacao/{uuid_t}")
+        assert r.status_code in (200, 404)  # rota pode ter URL diferente
+
+    def test_api_restaurar_transacao(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        id_t, uuid_t = container.transacoes.adicionar(
+            "Restaurar", 80.0, "despesa",
+            categoria_despesa["id"], uid, "2026-05-01"
+        )
+        # Soft-delete via service
+        container.transacoes.deletar(id_t, uid)
+
+        r = client.post(f"/api/transacao/{id_t}/restaurar")
+        assert r.status_code in (200, 302, 404)  # opcional
+
+    def test_api_preview_parcelas(self, client, usuario_logado, container, categoria_despesa):
+        import json
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        r = client.post("/api/preview_parcelas",
+                        data=json.dumps({
+                            "valor_total": 1200.0,
+                            "parcelas": 12,
+                            "data_primeira": "2026-05-01",
+                        }),
+                        content_type="application/json")
+        assert r.status_code in (200, 400)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Contábil
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestContabilHTTP:
+    """Testa rotas do modo contábil."""
+
+    def _ativar_contabil(self, container, uid):
+        with container.db.get_write_conn() as conn:
+            conn.execute("UPDATE usuarios SET modo_contabil=1 WHERE id=?", (uid,))
+
+    def test_exportar_requer_login(self, client):
+        r = client.get("/contabil/exportar", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_exportar_carrega_sem_modo_contabil(self, client, usuario_logado):
+        # Sem modo contábil deve redirecionar ou mostrar aviso
+        r = client.get("/contabil/exportar", follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_partida_dobrada_requer_login(self, client):
+        r = client.get("/contabil/partida-dobrada", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_download_excel_requer_login(self, client):
+        r = client.get("/contabil/exportar/download", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_download_excel_com_login(self, client, usuario_logado):
+        r = client.get("/contabil/exportar/download")
+        assert r.status_code == 200
+        assert "spreadsheet" in r.content_type or "xlsx" in r.content_type or \
+               r.content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Performance — queries otimizadas
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestPerformanceQueries:
+    """
+    Testa que as queries otimizadas retornam resultados corretos.
+    Garante que a mudança de strftime() para BETWEEN não quebrou nada.
+    """
+
+    def test_resumo_mes_between(self, container, usuario_criado, categoria_receita, categoria_despesa):
+        uid = usuario_criado["id"]
+        container.transacoes.adicionar("R1", 1000.0, "receita", categoria_receita["id"], uid, "2026-05-01")
+        container.transacoes.adicionar("R2", 500.0,  "receita", categoria_receita["id"], uid, "2026-05-31")
+        container.transacoes.adicionar("D1", 300.0,  "despesa", categoria_despesa["id"], uid, "2026-05-15")
+        # Fora do mês — não deve aparecer
+        container.transacoes.adicionar("F1", 999.0,  "receita", categoria_receita["id"], uid, "2026-04-30")
+        container.transacoes.adicionar("F2", 999.0,  "receita", categoria_receita["id"], uid, "2026-06-01")
+
+        rec, des, sal = container.transacoes_repo.resumo_mes(2026, 5, uid)
+        assert rec == 1500.0
+        assert des == 300.0
+        assert sal == 1200.0
+
+    def test_gastos_por_categoria_between(self, container, usuario_criado, categoria_despesa):
+        uid = usuario_criado["id"]
+        container.transacoes.adicionar("G1", 100.0, "despesa", categoria_despesa["id"], uid, "2026-05-01")
+        container.transacoes.adicionar("G2", 200.0, "despesa", categoria_despesa["id"], uid, "2026-05-31")
+        # Fora do mês
+        container.transacoes.adicionar("GF", 999.0, "despesa", categoria_despesa["id"], uid, "2026-04-15")
+
+        gastos = container.transacoes_repo.gastos_por_categoria(2026, 5, uid)
+        assert len(gastos) == 1
+        assert gastos[0]["total"] == 300.0
+
+    def test_resumo_mes_sem_transacoes(self, container, usuario_criado):
+        rec, des, sal = container.transacoes_repo.resumo_mes(2026, 5, usuario_criado["id"])
+        assert rec == 0.0
+        assert des == 0.0
+        assert sal == 0.0

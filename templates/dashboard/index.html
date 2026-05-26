@@ -808,10 +808,15 @@ function fecharModalLimites() {
 carregarLembretes();
 carregarSaldoContas();
 carregarGraficoMeses();
+// Carrega dados críticos imediatamente
 carregarUltimasTransacoes();
 carregarVencimentos();
 carregarMetasDash();
 gerarDicas();
+
+// Carrega dados secundários com delay para não competir com o render inicial
+setTimeout(carregarSaldoContas, 100);
+setTimeout(carregarGrafico, 300);
 
 // Tooltip do gráfico — abordagem direta sem variável global
 function mostrarTooltipGrafico(e, rec, des, ano, label) {

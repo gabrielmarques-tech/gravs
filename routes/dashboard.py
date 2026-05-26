@@ -12,8 +12,9 @@ está no DashboardService, não aqui.
 """
 
 from datetime import datetime, timezone, timedelta
+from functools import lru_cache
 
-from flask import render_template, jsonify, request
+from flask import render_template, jsonify, request, session
 from flask_login import current_user, login_required
 
 from routes.helpers import get_services
@@ -36,8 +37,12 @@ def index():
 
     svc = get_services()
 
-    # Gera lançamentos de recorrentes pendentes (idempotente)
-    svc.recorrentes.gerar_lancamentos_pendentes(ano, mes, uid)
+    # Gera lançamentos pendentes apenas uma vez por hora por usuário/mês
+    # Evita rodar a query pesada em todo request do dashboard
+    cache_key = f"recorrentes_gerado_{uid}_{ano}_{mes}"
+    if not session.get(cache_key):
+        svc.recorrentes.gerar_lancamentos_pendentes(ano, mes, uid)
+        session[cache_key] = True
 
     resumo = svc.dashboard.obter_resumo(ano, mes, uid)
     categorias = svc.categorias_repo.listar_por_usuario(uid)

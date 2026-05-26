@@ -1,187 +1,140 @@
 <div align="center">
 
-  <img src="docs/tela_login.png" alt="Gravs" width="220" />
+  <img src="static/icon-192.png" alt="Gravs" width="80" style="border-radius:18px" />
 
-  # 🌀 Gravs — Controle Financeiro Pessoal
+  # Gravs — Controle Financeiro Pessoal
 
-  > *"Você sabe quanto ganhou esse mês. Mas sabe onde foi parar cada centavo?"*
+  > *Clareza total sobre onde seu dinheiro vai.*
 
   ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
   ![Flask](https://img.shields.io/badge/Flask-3.x-black?style=flat-square&logo=flask)
   ![SQLite](https://img.shields.io/badge/SQLite-WAL-blue?style=flat-square&logo=sqlite)
-  ![Tests](https://img.shields.io/badge/Testes-211%20passing-green?style=flat-square)
+  ![Tests](https://img.shields.io/badge/Testes-289%20passing-green?style=flat-square)
   ![License](https://img.shields.io/badge/Licença-Privada-red?style=flat-square)
 
 </div>
 
 ---
 
-## 💡 Motivação
+## Motivação
 
-A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi parar. Salário entrou, contas saíram, e sobrou menos do que deveria. O **Gravs** foi criado para mudar isso — dar visibilidade total sobre receitas, despesas, contas fixas e parcelamentos de forma simples e visual, no celular ou no computador.
+A maioria das pessoas termina o mês sem saber onde o dinheiro foi parar. O Gravs foi criado para mudar isso — visibilidade total sobre receitas, despesas, contas fixas, parcelamentos, transferências entre contas e metas financeiras, de forma simples e visual.
 
 ---
 
-## 📸 Preview
+## Funcionalidades
 
-### Login
-<img src="docs/tela_login.png" alt="Login" width="100%" />
+### Controle financeiro
+- **Transações** — registre receitas e despesas com categoria, data e conta
+- **Parcelamentos** — acompanhe o progresso de cada compra parcelada
+- **Contas fixas** — salário, aluguel, assinaturas com geração automática de lançamentos
+- **Transferências entre contas** — pague fatura do cartão, transfira para poupança sem criar despesa duplicada
+- **Metas financeiras** — defina objetivos com valor alvo e prazo, acompanhe o progresso
+- **Importação CSV Bradesco** — classifica automaticamente PIX recebido/enviado, QR Code e categorias
 
 ### Dashboard
-<img src="docs/dashboard.png" alt="Dashboard" width="100%" />
+- Saldo do mês com comparação ao mês anterior
+- Cards de Receitas, Despesas e Taxa de Poupança (meta de 30%)
+- Gastos por categoria com barras e limites configuráveis
+- Saldo por conta bancária (considera transferências)
+- Próximos vencimentos e metas na coluna lateral
+- Evolução dos últimos 6 meses
+- Dicas automáticas baseadas nos dados reais
 
-<details>
-<summary>Ver mais screenshots</summary>
-
-### Menu e Navegação
-<img src="docs/menu.png" alt="Menu" width="100%" />
-
-### Transações
-<img src="docs/transacoes.png" alt="Transações" width="100%" />
-
-### Exportar para Excel
-<img src="docs/exel.png" alt="Exportar Excel" width="100%" />
-
-</details>
-
----
-
-## ✨ Funcionalidades
-
-### Controle completo
-- **Transações avulsas** — registre receitas e despesas com categoria, data e conta bancária
-- **Contas fixas** — cadastre salário, aluguel, assinaturas e receba lembretes automáticos de vencimento
-- **Compras parceladas** — acompanhe o progresso de cada parcelamento com barra visual
-- **Contas bancárias e cartões** — saiba de qual conta saiu cada gasto
-- **Transferências entre contas** — mova dinheiro entre suas contas sem criar despesa ou receita. Use para pagar fatura do cartão, PIX entre contas próprias ou guardar na poupança. O saldo de cada conta é recalculado automaticamente
-- **Importação de extrato CSV** — importe o extrato do Bradesco e o app classifica automaticamente cada lançamento (receita/despesa/categoria), com tela de revisão antes de confirmar. PIX recebido e PIX enviado são separados em categorias distintas
-
-### Dashboard inteligente
-- **Hero com saldo do mês** e comparação percentual com o mês anterior
-- **3 cards harmônicos** — Receitas, Despesas e Taxa de Poupança com meta de 30% e indicador de meta atingida
-- **Gastos por categoria** com barras de progresso e limites configuráveis por categoria
-- **Saldo por conta bancária** atualizado em tempo real, considerando transferências
-- **Próximos vencimentos** — contas fixas que vencem nos próximos 10 dias
-- **Dicas automáticas** geradas com base nos seus dados reais do mês
-- **Últimas transações** do mês com ícone e categoria
-- **Evolução dos últimos 6 meses** com gráfico de barras interativo
-
-### Cartão de crédito sem duplicidade
-- Registre cada compra no cartão como despesa (na conta do cartão)
-- Ao pagar a fatura, use **Transferências** — o saldo do cartão sobe, o da corrente cai, sem criar nova despesa
-- Suporta múltiplos cartões pagos pelo mesmo banco
-
-### Busca e filtros
-- Busca em tempo real por descrição
-- Filtro por tipo (receita/despesa) e por conta bancária
-- Filtro por período com atalhos (mês, trimestre, ano)
-
-### Exportação e contabilidade
-- Exportar transações para Excel com totais e cores
+### Exportação e modo contábil
+- Excel com totais, cores e filtros por período
 - Modo contábil com lançamentos em partida dobrada (débito/crédito)
 
 ### Segurança
-- **Proteção CSRF** em todos os formulários e chamadas fetch/AJAX (Flask-WTF)
-- **HSTS** — força HTTPS por 1 ano após a primeira visita
-- **Content-Security-Policy** — bloqueia scripts e estilos de origens não autorizadas
-- **Rate limiting** no login — 5 tentativas por minuto por IP
-- **Hash bcrypt** nas senhas via Werkzeug
-- **Isolamento total por usuario_id** — cada usuário vê só os próprios dados
-- **Headers de segurança HTTP** em todas as respostas
-- **Cookies seguros** em produção (HttpOnly, SameSite, Secure)
-- **SQL 100% parametrizado** — sem SQL injection
-- **Logs de auditoria** com emails anonimizados em ações sensíveis
+- CSRF em todos os formulários e chamadas fetch/AJAX
+- HSTS, CSP, X-Frame-Options, Referrer-Policy, Permissions-Policy
+- Rate limiting no login (5/min por IP)
+- Senhas com hash bcrypt
+- Isolamento total por `usuario_id`
+- Logs de auditoria com emails anonimizados
 
 ### Conta e LGPD
-- **Verificação de email** por código de 6 dígitos no cadastro (expira em 15 minutos)
-- **Aceite obrigatório dos Termos de Uso** no cadastro
-- **Política de Privacidade** em conformidade com a LGPD
-- **Exclusão de conta** com confirmação de senha e anonimização do email (direito ao esquecimento)
-- **Reuso de email** — após excluir a conta, o mesmo email pode ser usado para criar uma nova
-- Recuperação de senha por email com token de expiração de 1 hora
-
-### Experiência
-- Tema claro e escuro com um clique
-- Totalmente responsivo — funciona igual no celular e no computador
-- Instalável como app (PWA) na tela inicial do celular
-- Favicon e ícone do app em todas as abas do browser
-- Widget na sidebar com resumo de fixas e lançamentos recentes
+- Verificação de email por código de 6 dígitos (expira em 15 min)
+- Aceite obrigatório dos Termos de Uso no cadastro
+- Exclusão de conta com anonimização de email (direito ao esquecimento)
+- Recuperação de senha por email com token de 1 hora
 
 ---
 
-## 🛠 Tecnologias
+## Stack
 
 | Camada | Tecnologia |
 |--------|-----------|
 | Backend | Python 3.11+ + Flask 3.x |
 | Autenticação | Flask-Login + Werkzeug (bcrypt) |
 | Segurança | Flask-WTF (CSRF) + Flask-Limiter |
-| Banco de dados | SQLite com WAL mode + índices otimizados |
-| Frontend | HTML5 + CSS3 + JavaScript puro |
-| Tipografia | Inter + Syne (Google Fonts) |
+| Compressão | Flask-Compress (gzip automático) |
+| Banco | SQLite WAL + índices otimizados |
+| Frontend | HTML5 + CSS3 + JS puro (sem frameworks) |
+| Tipografia | Inter (Google Fonts) |
 | Excel | openpyxl |
-| Email | Gmail SMTP (verificação + recuperação de senha) |
-| Testes | pytest — 211 testes automatizados |
+| Email | Gmail SMTP |
+| Testes | pytest — 289 testes automatizados |
 | Deploy | PythonAnywhere |
 
 ---
 
-## 🏗 Arquitetura
+## Arquitetura
 
 ```
 gravs/
-├── app.py                    # Application Factory (create_app)
-├── config.py                 # Configurações por ambiente (dev/test/prod)
-├── wsgi.py                   # Entry point para produção
+├── app.py                    # Application Factory
+├── config.py                 # Configurações por ambiente
+├── wsgi.py                   # Entry point produção
 │
 ├── database/
-│   ├── manager.py            # Gerenciador SQLite + migrations automáticas
-│   └── repositories.py       # Repositórios de dados — padrão Repository
+│   ├── manager.py            # SQLite + migrations + índices
+│   └── repositories.py       # Repository Pattern
 │
 ├── services/
-│   ├── container.py          # Service Container (injeção de dependência)
-│   ├── auth_service.py       # Autenticação e registro
-│   ├── transacao_service.py  # Lógica de transações e parcelamentos
-│   ├── recorrente_service.py # Lógica de contas fixas e lembretes
-│   ├── dashboard_service.py  # Agregação de dados para o dashboard
-│   └── email_service.py      # Envio de emails
+│   ├── container.py          # Service Container (DI)
+│   ├── auth_service.py
+│   ├── transacao_service.py
+│   ├── recorrente_service.py
+│   ├── dashboard_service.py
+│   └── email_service.py
 │
-├── routes/                   # Blueprints Flask por domínio
-│   ├── auth.py               # Login, cadastro, verificação de email
-│   ├── dashboard.py          # Dashboard e APIs de dados
-│   ├── transacoes.py         # CRUD de transações
-│   ├── recorrentes.py        # Contas fixas
-│   ├── transferencias.py     # Transferências entre contas
-│   ├── importacao.py         # Importação de extrato CSV (Bradesco)
-│   ├── perfil.py             # Perfil, senha, exclusão de conta
-│   ├── publico.py            # Termos de uso e política de privacidade
+├── routes/                   # Blueprints por domínio
+│   ├── auth.py
+│   ├── dashboard.py
+│   ├── transacoes.py
+│   ├── recorrentes.py
+│   ├── transferencias.py
+│   ├── metas.py
+│   ├── importacao.py
+│   ├── contabil.py
+│   ├── perfil.py
 │   └── ...
 │
 ├── templates/                # Jinja2 — mobile-first
-│   ├── base.html             # Layout base com CSRF global e tema
-│   ├── auth/                 # Login, cadastro, verificação de email
-│   ├── dashboard/            # Dashboard com layout de duas colunas
-│   ├── transferencias/       # Nova transferência e histórico
-│   ├── importacao/           # Upload e revisão de CSV
-│   └── publico/              # Termos e privacidade
+│   ├── base.html             # Layout base + tema claro/escuro
+│   ├── dashboard/
+│   ├── transacoes/
+│   ├── metas/
+│   └── ...
 │
-├── static/                   # Ícones PWA + favicon + manifest.json
-├── utils/                    # Formatadores, validadores, calendário BR
-└── tests/                    # 211 testes automatizados
+└── tests/                    # 289 testes automatizados
 ```
 
-**Padrões adotados:** Application Factory · Repository Pattern · Service Container · Blueprints · Soft Delete · Migrations automáticas · CSRF global via interceptor JS
+**Padrões:** Application Factory · Repository Pattern · Service Container · Blueprints · Soft Delete · Migrations automáticas · CSRF global
 
 ---
 
-## 🚀 Rodando localmente
+## Rodando localmente
 
 ```bash
 git clone https://github.com/gabrielmarques-tech/gravs.git
 cd gravs
 pip install -r requirements.txt
+
+# Criar .env.secret
 cp .env.secret.example .env.secret
-# Edite o .env.secret com seus valores
+# Editar com seus valores
 
 # Windows
 set FLASK_ENV=development
@@ -193,59 +146,42 @@ FLASK_ENV=development flask --app app run --debug
 
 Acesse `http://127.0.0.1:5000`
 
-> **Nota:** sem `EMAIL_REMETENTE` configurado, o app funciona normalmente em desenvolvimento — a verificação de email é automática e o código aparece no log do terminal.
+Sem `EMAIL_REMETENTE` configurado, o código de verificação aparece no log do terminal.
 
 ---
 
-## 🧪 Testes
+## Testes
 
 ```bash
 python -m pytest tests/ -v
 ```
 
-**211 testes** cobrindo autenticação, verificação de email, LGPD, transações, parcelamentos, recorrentes, transferências entre contas, importação CSV, exclusão de conta, migrations, dashboard e APIs.
+**289 testes** cobrindo: autenticação, CSRF, LGPD, transações, parcelamentos, recorrentes, transferências, metas, importação CSV, exportação Excel, dashboard APIs, perfil, contábil, segurança e performance das queries.
 
 ---
 
-## ⚙️ Variáveis de ambiente
+## Variáveis de ambiente
 
 | Variável | Descrição |
 |----------|-----------|
-| `SECRET_KEY` | Chave secreta do Flask (obrigatório em produção) |
+| `SECRET_KEY` | Chave secreta Flask (obrigatório em produção) |
 | `DATABASE_URL` | Caminho do banco SQLite |
 | `EMAIL_REMETENTE` | Gmail para envio de emails |
 | `EMAIL_SENHA_APP` | Senha de app do Google |
 | `FLASK_ENV` | `development`, `testing` ou `production` |
 
-Consulte `.env.secret.example` para o modelo completo.
-
 ---
 
-## 📧 Configurar email (Gmail)
-
-1. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-2. Crie uma senha de app para "Gravs"
-3. Adicione no `.env.secret`:
+## Como usar cartão de crédito
 
 ```
-EMAIL_REMETENTE=seu@gmail.com
-EMAIL_SENHA_APP=xxxx xxxx xxxx xxxx
-```
-
-Usado para verificação de conta, recuperação de senha e resumo mensal (dia 28).
-
----
-
-## 💳 Como usar cartão de crédito corretamente
-
-```
-1. Compra no cartão → lança como Despesa na conta "Cartão Nubank"
+1. Compra no cartão → Despesa na conta "Cartão Nubank"
    Saldo Nubank: -R$ 500
 
-2. Paga a fatura → Nova Transferência: Corrente → Cartão Nubank, R$ 500
+2. Paga fatura → Transferência: Corrente → Cartão Nubank
    Saldo Corrente: -R$ 500
    Saldo Nubank:    R$ 0
-   Despesas do mês: sem alteração (já contadas na compra)
+   Despesas do mês: sem alteração (já contadas)
 ```
 
 Funciona com múltiplos cartões pagos pelo mesmo banco.
@@ -253,5 +189,5 @@ Funciona com múltiplos cartões pagos pelo mesmo banco.
 ---
 
 <div align="center">
-  <sub>Feito com dedicação para quem quer saber para onde o dinheiro vai.</sub>
+  <sub>Feito para quem quer saber para onde o dinheiro vai.</sub>
 </div>

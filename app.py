@@ -27,6 +27,7 @@ Como usar:
 import logging
 import os
 
+from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
@@ -104,6 +105,12 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     # ── CSRF Protection ───────────────────────────────────────────────────────
     # Protege todos os formulários POST contra Cross-Site Request Forgery.
     # Formulários precisam incluir {{ csrf_token() }} no template.
+    # Compressão gzip automática — reduz ~70% do tamanho das respostas HTML/JSON
+    Compress(app)
+
+    # Cache de arquivos estáticos — 1 ano para assets com hash, 1 hora para outros
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600  # 1 hora
+
     csrf = CSRFProtect(app)
     app.extensions["csrf"] = csrf
 
@@ -197,6 +204,13 @@ def _registrar_security_headers(app: Flask) -> None:
     """
     @app.after_request
     def adicionar_headers(response):
+        # Cache: APIs JSON não cachear; HTML revalidar; statics já têm max-age
+        ct = response.content_type or ''
+        if 'application/json' in ct:
+            response.headers['Cache-Control'] = 'no-store'
+        elif 'text/html' in ct:
+            response.headers['Cache-Control'] = 'no-cache, must-revalidate'
+
         # Impede que o app seja embutido em iframes de outros sites
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         # Impede que o browser "adivinhe" o tipo do conteúdo

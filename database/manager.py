@@ -68,6 +68,9 @@ class DatabaseManager:
         conn.execute("PRAGMA synchronous = NORMAL")
         conn.execute("PRAGMA busy_timeout = 5000")
         conn.execute("PRAGMA cache_size = -8000")   # 8MB de cache em memória
+        conn.execute("PRAGMA mmap_size = 134217728") # 128MB de memory-mapped I/O
+        conn.execute("PRAGMA temp_store = MEMORY")   # tabelas temporárias em memória
+        conn.execute("PRAGMA cache_size = -8000")   # 8MB de cache em memória
         conn.execute("PRAGMA temp_store = MEMORY")  # tabelas temporárias em RAM
         conn.execute("PRAGMA mmap_size = 268435456") # 256MB memory-mapped I/O
         conn.row_factory = sqlite3.Row
@@ -465,6 +468,20 @@ class DatabaseManager:
         )
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_transf_uuid ON transferencias(uuid)"
+        )
+
+        # Índices de performance adicionais
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_categoria ON transacoes(usuario_id, categoria_id) WHERE deletado=0"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_mes ON transacoes(usuario_id, strftime('%Y-%m', data)) WHERE deletado=0"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_recorrentes_dia ON recorrentes(usuario_id, dia_vencimento) WHERE ativo=1"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_limites_cat ON limites_categoria(usuario_id, categoria_id)"
         )
 
     def _anonimizar_emails_excluidos(self, conn: sqlite3.Connection) -> None:

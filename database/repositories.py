@@ -274,21 +274,22 @@ class TransacaoRepository:
         """
         Retorna (total_receitas, total_despesas, saldo) do mês.
 
-        Por que uma única query com GROUP BY?
-        ----------------------------------------
-        No código original, isso poderia ser feito com duas queries separadas.
-        Uma query com GROUP BY é mais eficiente: uma passagem na tabela,
-        não duas. Com índice em (usuario_id, data), isso é muito rápido.
+        Usa BETWEEN em vez de strftime() para aproveitar o índice
+        composto (usuario_id, data DESC), reduzindo scan de tabela.
         """
+        import calendar as cal
+        ultimo_dia = cal.monthrange(ano, mes)[1]
+        d_ini = f"{ano:04d}-{mes:02d}-01"
+        d_fim = f"{ano:04d}-{mes:02d}-{ultimo_dia:02d}"
         with self._db.get_conn() as conn:
             rows = conn.execute(
                 """SELECT tipo, COALESCE(SUM(valor), 0) AS total
                    FROM transacoes
                    WHERE usuario_id = ?
-                     AND strftime('%Y-%m', data) = ?
+                     AND data BETWEEN ? AND ?
                      AND deletado = 0
                    GROUP BY tipo""",
-                (usuario_id, f"{ano}-{mes:02d}"),
+                (usuario_id, d_ini, d_fim),
             ).fetchall()
         totais = {row["tipo"]: row["total"] for row in rows}
         receitas = totais.get("receita", 0.0)
@@ -298,7 +299,16 @@ class TransacaoRepository:
     def gastos_por_categoria(
         self, ano: int, mes: int, usuario_id: int
     ) -> list[dict]:
-        """Agrupa despesas por categoria para o gráfico de pizza."""
+        """
+        Agrupa despesas por categoria para o gráfico de pizza.
+
+        Usa BETWEEN em vez de strftime() para aproveitar o índice
+        idx_trans_user_data, reduzindo scan de tabela para lookup por índice.
+        """
+        import calendar as cal
+        ultimo_dia = cal.monthrange(ano, mes)[1]
+        d_ini = f"{ano:04d}-{mes:02d}-01"
+        d_fim = f"{ano:04d}-{mes:02d}-{ultimo_dia:02d}"
         with self._db.get_conn() as conn:
             rows = conn.execute(
                 """SELECT COALESCE(c.id, 0) AS id,
@@ -309,12 +319,12 @@ class TransacaoRepository:
                    FROM transacoes t
                    LEFT JOIN categorias c ON t.categoria_id = c.id
                    WHERE t.usuario_id = ?
-                     AND strftime('%Y-%m', t.data) = ?
+                     AND t.data BETWEEN ? AND ?
                      AND t.tipo = 'despesa'
                      AND t.deletado = 0
                    GROUP BY c.id, c.nome, c.icone, c.cor
                    ORDER BY total DESC""",
-                (usuario_id, f"{ano}-{mes:02d}"),
+                (usuario_id, d_ini, d_fim),
             ).fetchall()
         return _rows_to_list(rows)
 
