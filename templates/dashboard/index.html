@@ -439,15 +439,7 @@
       <div id="lista-vencimentos" class="flex flex-col gap-8"></div>
     </div>
 
-    <!-- Metas financeiras -->
-    <div class="card" id="card-metas-dash" style="display:none;margin-top:12px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-        <div class="card-title" style="margin-bottom:0">Metas</div>
-        <a href="/metas/" class="link-muted">Ver todas</a>
-      </div>
-      <div id="lista-metas-dash" style="display:flex;flex-direction:column;gap:10px"></div>
-    </div>
-    </div>
+  </div>
 </div>
 
 <!-- Modal de limites por categoria -->
@@ -1084,30 +1076,59 @@ async function carregarVencimentos() {
     const data = await r.json();
     const fixas = data.fixas || [];
     const hoje  = new Date();
-    const diasNoMes = new Date(hoje.getFullYear(), hoje.getMonth()+1, 0).getDate();
+
+    // API retorna campo 'data' no formato DD/MM/YYYY
+    // Mostra todas as fixas — status agendado = futuras, lancado = já lançadas, atrasada = passadas
     const proximas = fixas.filter(f => {
-      const dia = f.dia_vencimento > 0 ? f.dia_vencimento : diasNoMes + f.dia_vencimento + 1;
-      const diff = dia - hoje.getDate();
-      return diff >= 0 && diff <= 10;
-    }).slice(0, 4);
+      if (!f.data) return false;
+      const partes = f.data.split('/');
+      if (partes.length !== 3) return false;
+      const dataFixa = new Date(partes[2], partes[1] - 1, partes[0]);
+      const diffDias = Math.round((dataFixa - hoje) / (1000 * 60 * 60 * 24));
+      // Mostra atrasadas (até 30 dias atrás) e próximas (até 15 dias)
+      return diffDias >= -30 && diffDias <= 15;
+    }).slice(0, 5);
+
     const card  = document.getElementById('card-vencimentos');
     const lista = document.getElementById('lista-vencimentos');
     if (!card || !lista || proximas.length === 0) return;
+
     const fmtVal = v => 'R$ ' + Math.abs(v).toFixed(2).replace('.',',');
+
     lista.innerHTML = proximas.map(f => {
-      const dia  = f.dia_vencimento > 0 ? f.dia_vencimento : diasNoMes + f.dia_vencimento + 1;
-      const diff = dia - hoje.getDate();
-      const urgente = diff <= 2;
-      const cor   = urgente ? 'var(--red2)' : 'var(--gold2)';
-      const label = diff === 0 ? 'Hoje' : diff === 1 ? 'Amanha' : `Em ${diff} dias`;
+      const partes = f.data.split('/');
+      const dataFixa = new Date(partes[2], partes[1] - 1, partes[0]);
+      const diffDias = Math.round((dataFixa - hoje) / (1000 * 60 * 60 * 24));
+
+      let label, cor;
+      if (f.atrasada || diffDias < 0) {
+        label = diffDias === -1 ? 'Ontem' : `${Math.abs(diffDias)}d atrás`;
+        cor = 'var(--red2)';
+      } else if (diffDias === 0) {
+        label = 'Hoje';
+        cor = 'var(--red2)';
+      } else if (diffDias === 1) {
+        label = 'Amanhã';
+        cor = 'var(--gold2)';
+      } else if (f.status === 'lancado') {
+        label = 'Lançada';
+        cor = 'var(--green2)';
+      } else {
+        label = `Em ${diffDias}d`;
+        cor = 'var(--text3)';
+      }
+
       return `<div class="venc-item">
         <div style="flex:1;min-width:0">
-          <div style="font-size:0.84rem;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.descricao}</div>
-          <div style="font-size:0.7rem;color:${cor};margin-top:1px">${label}</div>
+          <div style="font-size:0.84rem;font-weight:500;color:var(--text);
+                      overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.descricao}</div>
+          <div style="font-size:0.7rem;color:${cor};margin-top:2px">${label}</div>
         </div>
-        <div style="font-size:0.84rem;font-weight:700;color:var(--red2);flex-shrink:0;font-variant-numeric:tabular-nums">${fmtVal(f.valor)}</div>
+        <div style="font-size:0.84rem;font-weight:700;color:var(--text2);
+                    flex-shrink:0;font-variant-numeric:tabular-nums">${fmtVal(f.valor)}</div>
       </div>`;
     }).join('');
+
     card.style.display = 'block';
   } catch(e) { console.error('Vencimentos:', e); }
 }
