@@ -1,14 +1,14 @@
 """
 routes/perfil.py — Perfil do usuário: troca de nome e senha.
-
-Mantém separado de auth.py para manter cada blueprint focado
-em uma responsabilidade única (SRP).
 """
 
 import logging
+from datetime import datetime
+
 from flask import Blueprint, flash, redirect, render_template, request, url_for
-from flask_login import login_required, current_user
+from flask_login import login_required, login_user, logout_user, current_user
 from werkzeug.security import check_password_hash, generate_password_hash
+
 from routes.helpers import get_services
 
 logger = logging.getLogger(__name__)
@@ -19,14 +19,12 @@ perfil_bp = Blueprint("perfil", __name__, url_prefix="/perfil")
 @perfil_bp.route("/", methods=["GET"])
 @login_required
 def index():
-    """Exibe a página de perfil do usuário."""
     return render_template("perfil/index.html")
 
 
 @perfil_bp.route("/nome", methods=["POST"])
 @login_required
 def atualizar_nome():
-    """Atualiza o nome do usuário."""
     novo_nome = request.form.get("nome", "").strip()
 
     if not novo_nome or len(novo_nome) < 2:
@@ -44,7 +42,6 @@ def atualizar_nome():
             (novo_nome, current_user.id)
         )
 
-    # Atualiza o nome na sessão atual
     current_user.nome = novo_nome
     flash("✓ Nome atualizado com sucesso!", "sucesso")
     return redirect(url_for("perfil.index"))
@@ -53,12 +50,10 @@ def atualizar_nome():
 @perfil_bp.route("/senha", methods=["POST"])
 @login_required
 def atualizar_senha():
-    """Atualiza a senha do usuário após verificar a senha atual."""
-    senha_atual  = request.form.get("senha_atual", "")
-    nova_senha   = request.form.get("nova_senha", "")
-    confirmacao  = request.form.get("confirmacao", "")
+    senha_atual = request.form.get("senha_atual", "")
+    nova_senha  = request.form.get("nova_senha", "")
+    confirmacao = request.form.get("confirmacao", "")
 
-    # Validações
     if not senha_atual or not nova_senha or not confirmacao:
         flash("Preencha todos os campos.", "erro")
         return redirect(url_for("perfil.index"))
@@ -71,14 +66,12 @@ def atualizar_senha():
         flash("A nova senha deve ter pelo menos 6 caracteres.", "erro")
         return redirect(url_for("perfil.index"))
 
-    # Verifica senha atual
     svc = get_services()
     usuario = svc.usuarios_repo.buscar_por_id(current_user.id)
     if not usuario or not check_password_hash(usuario["senha_hash"], senha_atual):
         flash("Senha atual incorreta.", "erro")
         return redirect(url_for("perfil.index"))
 
-    # Salva nova senha com hash seguro
     novo_hash = generate_password_hash(nova_senha)
     with svc.db.get_write_conn() as conn:
         conn.execute(
@@ -93,10 +86,8 @@ def atualizar_senha():
 @perfil_bp.route("/contabil", methods=["POST"])
 @login_required
 def toggle_contabil():
-    """Ativa ou desativa o modo contábil do usuário."""
     svc = get_services()
 
-    # Busca estado atual
     with svc.db.get_conn() as conn:
         row = conn.execute(
             "SELECT modo_contabil FROM usuarios WHERE id = ?",
@@ -125,17 +116,9 @@ def toggle_contabil():
 def excluir_conta():
     """
     Exclusão de conta conforme LGPD.
-
-    Soft-delete: marca excluido_em e ativo=0.
-    Dados financeiros são mantidos por 30 dias antes da remoção definitiva.
-    O usuário é deslogado imediatamente.
-
-    Exige confirmação da senha atual para evitar exclusões acidentais.
+    Anonimiza o email, desativa a conta e desloga o usuário.
+    Exige confirmação da senha atual.
     """
-    from flask_login import logout_user
-    from werkzeug.security import check_password_hash
-    from datetime import datetime
-
     senha_confirmacao = request.form.get("senha_confirmacao", "")
 
     if not senha_confirmacao:
@@ -147,24 +130,22 @@ def excluir_conta():
 
     if not usuario or not check_password_hash(usuario["senha_hash"], senha_confirmacao):
         flash("Senha incorreta. Exclusão cancelada.", "erro")
-        logger.warning("Tentativa de exclusão de conta com senha errada: user_id=%d", current_user.id)
+        logger.warning("Tentativa de exclusão com senha errada: user_id=%d", current_user.id)
         return redirect(url_for("perfil.index"))
 
     agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     uid = current_user.id
 
-    # Marca data de exclusão
     with svc.db.get_write_conn() as conn:
         conn.execute(
             "UPDATE usuarios SET excluido_em=? WHERE id=?",
             (agora, uid)
         )
 
-    # Anonimiza o email — libera o UNIQUE para novo cadastro com o mesmo email
-    # Isso também seta ativo=0, conforme LGPD (direito ao esquecimento)
     svc.usuarios_repo.anonimizar_email(uid)
 
-    logger.warning("AUDITORIA: conta_excluida user_id=%d ip=%s em=%s", uid, request.remote_addr, agora)
+    logger.warning("AUDITORIA: conta_excluida user_id=%d ip=%s em=%s",
+                   uid, request.remote_addr, agora)
 
     logout_user()
     flash("Sua conta foi excluída. Sentiremos sua falta!", "sucesso")

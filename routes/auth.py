@@ -124,7 +124,8 @@ def login():
     usuario, erro = svc.auth.autenticar(email, senha)
 
     if erro:
-        logger.warning("Login falhou para email=%s ip=%s", email, request.remote_addr)
+        email_log = email[0] + "***@" + email.split("@")[-1] if "@" in email else "***"
+        logger.warning("Login falhou para email=%s ip=%s", email_log, request.remote_addr)
         flash(erro, "erro")
         return render_template("auth/login.html", email=email), 401
 

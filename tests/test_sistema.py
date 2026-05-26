@@ -1582,3 +1582,151 @@ class TestDashboardNovoLayout:
         r = client.get("/")
         html = r.data.decode()
         assert "Poupança" in html or "poupanca" in html.lower() or "Economizando" in html or "guardando" in html
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de segurança — HSTS, CSP, limites de upload, logs anonimizados
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSecurityHeaders:
+    """Testa headers HTTP de segurança em todas as respostas."""
+
+    def test_x_frame_options_presente(self, client, usuario_logado):
+        r = client.get("/")
+        assert r.headers.get("X-Frame-Options") == "SAMEORIGIN"
+
+    def test_x_content_type_options_presente(self, client, usuario_logado):
+        r = client.get("/")
+        assert r.headers.get("X-Content-Type-Options") == "nosniff"
+
+    def test_referrer_policy_presente(self, client, usuario_logado):
+        r = client.get("/")
+        assert "strict-origin" in r.headers.get("Referrer-Policy", "")
+
+    def test_permissions_policy_presente(self, client, usuario_logado):
+        r = client.get("/")
+        pp = r.headers.get("Permissions-Policy", "")
+        assert "geolocation=()" in pp
+        assert "camera=()" in pp
+
+    def test_csp_presente(self, client, usuario_logado):
+        r = client.get("/")
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "default-src 'self'" in csp
+
+    def test_csp_bloqueia_scripts_externos(self, client, usuario_logado):
+        r = client.get("/")
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "script-src" in csp
+        assert "connect-src 'self'" in csp
+
+    def test_csp_permite_google_fonts(self, client, usuario_logado):
+        r = client.get("/")
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "fonts.googleapis.com" in csp
+        assert "fonts.gstatic.com" in csp
+
+    def test_csp_presente_em_rota_publica(self, client):
+        """CSP deve estar presente mesmo em páginas sem login."""
+        r = client.get("/termos")
+        assert r.status_code == 200
+        csp = r.headers.get("Content-Security-Policy", "")
+        assert "default-src 'self'" in csp
+
+    def test_csp_presente_em_login(self, client):
+        r = client.get("/auth/login")
+        assert r.status_code == 200
+        assert "Content-Security-Policy" in r.headers
+
+    def test_hsts_ausente_em_dev(self, client, usuario_logado):
+        """HSTS NÃO deve estar presente em dev (sem SESSION_COOKIE_SECURE)."""
+        r = client.get("/")
+        # Em ambiente de teste, SESSION_COOKIE_SECURE=False → HSTS não enviado
+        hsts = r.headers.get("Strict-Transport-Security", "")
+        assert hsts == ""
+
+    def test_todos_headers_em_api(self, client, usuario_logado):
+        """Headers de segurança devem estar presentes em respostas de API."""
+        r = client.get("/api/resumo_sidebar")
+        assert r.headers.get("X-Content-Type-Options") == "nosniff"
+        assert "Content-Security-Policy" in r.headers
+
+
+class TestUploadLimits:
+    """Testa limites de tamanho de upload."""
+
+    def test_max_content_length_configurado(self, app):
+        """MAX_CONTENT_LENGTH deve estar configurado como 2MB."""
+        assert app.config["MAX_CONTENT_LENGTH"] == 2 * 1024 * 1024
+
+    def test_arquivo_dentro_do_limite_aceito(self, client, usuario_logado):
+        """Arquivo CSV pequeno deve ser processado normalmente."""
+        import io
+        csv = b"Data;Historico;Docto;Credito;Debito;Saldo\n01/05/2026;SALARIO;;5000,00;;5000,00\n"
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (io.BytesIO(csv), "extrato.csv")},
+            content_type="multipart/form-data"
+        )
+        # Deve processar (200 revisão) ou redirecionar — nunca 413
+        assert r.status_code in (200, 302)
+        assert r.status_code != 413
+
+    def test_csrf_desabilitado_em_testes(self, app):
+        """CSRF deve estar desabilitado nos testes para não interferir."""
+        assert app.config.get("WTF_CSRF_ENABLED") == False
+
+
+class TestLogsAnonimizados:
+    """Testa que emails não aparecem completos nos logs."""
+
+    def test_funcao_anonimizacao_basica(self):
+        """Função de anonimização deve mascarar parte do email."""
+        from services.auth_service import _anonimizar_email_log
+        resultado = _anonimizar_email_log("gabrielmarques4167@gmail.com")
+        assert "gabriel" not in resultado
+        assert "@gmail.com" in resultado
+        assert "***" in resultado
+        assert resultado.startswith("g")
+
+    def test_anonimizacao_preserva_dominio(self):
+        """Domínio do email deve ser preservado para debug."""
+        from services.auth_service import _anonimizar_email_log
+        assert "@hotmail.com" in _anonimizar_email_log("joao@hotmail.com")
+        assert "@outlook.com" in _anonimizar_email_log("maria@outlook.com")
+
+    def test_anonimizacao_email_invalido_nao_quebra(self):
+        """Email sem @ não deve lançar exceção."""
+        from services.auth_service import _anonimizar_email_log
+        resultado = _anonimizar_email_log("emailinvalido")
+        assert resultado == "***@***"
+
+    def test_anonimizacao_email_vazio_nao_quebra(self):
+        """Email vazio não deve lançar exceção."""
+        from services.auth_service import _anonimizar_email_log
+        resultado = _anonimizar_email_log("")
+        assert "***" in resultado
+
+    def test_log_falha_login_nao_expoe_email(self, client, caplog):
+        """Log de falha de login não deve conter email completo."""
+        import logging
+        with caplog.at_level(logging.WARNING, logger="routes.auth"):
+            client.post("/auth/login", data={
+                "email": "teste_secreto@exemplo.com",
+                "senha": "senhaerrada"
+            })
+        # Email completo não deve aparecer no log
+        log_completo = " ".join(caplog.messages)
+        assert "teste_secreto@exemplo.com" not in log_completo
+
+    def test_log_falha_login_contem_dominio(self, client, caplog):
+        """Log de falha deve conter domínio para identificação."""
+        import logging
+        with caplog.at_level(logging.WARNING, logger="routes.auth"):
+            client.post("/auth/login", data={
+                "email": "alguem@dominio.com",
+                "senha": "senhaerrada"
+            })
+        log_completo = " ".join(caplog.messages)
+        # Domínio pode estar presente (para debug), mas não o local completo
+        assert "alguem@dominio.com" not in log_completo

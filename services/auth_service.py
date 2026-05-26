@@ -33,6 +33,20 @@ from utils.validators import (
 logger = logging.getLogger(__name__)
 
 
+def _anonimizar_email_log(email: str) -> str:
+    """
+    Retorna email parcialmente anonimizado para logs.
+    Ex: gabrielmarques4167@gmail.com → g***@gmail.com
+
+    Protege privacidade nos logs sem perder utilidade de debug.
+    """
+    try:
+        local, dominio = email.split("@", 1)
+        return f"{local[0]}***@{dominio}"
+    except Exception:
+        return "***@***"
+
+
 class AuthService:
     """
     Serviço de autenticação e registro de usuários.
@@ -87,7 +101,7 @@ class AuthService:
             # Falha ao criar categorias não deve reverter o cadastro
             logger.error("Erro ao criar categorias padrão para user %d: %s", user_id, exc)
 
-        logger.info("Novo usuário registrado: id=%d email=%s", user_id, email)
+        logger.info("Novo usuário registrado: id=%d email=%s", user_id, _anonimizar_email_log(email))
         return user_id, {}
 
     def autenticar(
@@ -111,11 +125,11 @@ class AuthService:
 
         usuario = self._usuarios.buscar_por_email(email)
         if usuario is None:
-            logger.warning("Tentativa de login com email não cadastrado: %s", email)
+            logger.warning("Tentativa de login com email não cadastrado: %s", _anonimizar_email_log(email))
             return None, "Credenciais inválidas"
 
         if not check_password_hash(usuario["senha_hash"], senha):
-            logger.warning("Senha incorreta para usuário: %s", email)
+            logger.warning("Senha incorreta para usuário: %s", _anonimizar_email_log(email))
             return None, "Credenciais inválidas"
 
         logger.info("Login bem-sucedido: user_id=%d", usuario["id"])

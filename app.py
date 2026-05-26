@@ -105,12 +105,11 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     csrf = CSRFProtect(app)
     app.extensions["csrf"] = csrf
 
-    # Rotas de API que recebem JSON não precisam de CSRF token
-    # (autenticadas por sessão, sem formulário HTML)
-    from routes.transacoes import transacoes_bp as _tbp
-    from routes.dashboard import dashboard_bp as _dbp
-    csrf.exempt(_tbp)
-    csrf.exempt(_dbp)
+    # Aceita CSRF token via header X-CSRFToken (para chamadas fetch/AJAX)
+    # além do campo de form padrão csrf_token
+    app.config["WTF_CSRF_HEADERS"] = ["X-CSRFToken", "X-CSRF-Token"]
+
+
 
     # ── Flask-Login ───────────────────────────────────────────────────────────
     _configurar_login(app, container)
@@ -202,6 +201,38 @@ def _registrar_security_headers(app: Flask) -> None:
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         # Desativa APIs sensíveis que não usamos
         response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+
+        # ── HSTS: força HTTPS por 1 ano ───────────────────────────────────────
+        # Depois da primeira visita, o browser nunca mais tenta HTTP puro.
+        # includeSubDomains cobre subdomínios. Só ativo em produção — em dev
+        # não temos HTTPS então não pode forçar.
+        if app.config.get("SESSION_COOKIE_SECURE"):
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+
+        # ── Content-Security-Policy ───────────────────────────────────────────
+        # Restringe de onde o browser pode carregar recursos.
+        # Se alguém injetar JS malicioso, o browser bloqueia antes de executar.
+        #
+        # default-src 'self'   → por padrão, só recursos do próprio domínio
+        # script-src           → JS: próprio domínio + cdnjs (Chart.js, etc.)
+        # style-src            → CSS: próprio domínio + Google Fonts + inline (necessário para Jinja2)
+        # font-src             → Fontes: Google Fonts
+        # img-src              → Imagens: próprio domínio + data: (ícones base64)
+        # connect-src 'self'   → fetch/XHR: só para o próprio domínio
+        # frame-ancestors      → reforça X-Frame-Options
+        csp = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "img-src 'self' data: blob:; "
+            "connect-src 'self'; "
+            "frame-ancestors 'none';"
+        )
+        response.headers["Content-Security-Policy"] = csp
+
         return response
 
 
@@ -239,6 +270,15 @@ def _registrar_error_handlers(app: Flask) -> None:
             mensagem="Você não tem permissão para acessar esta página.",
             voltar_url="/", voltar_texto="← Voltar ao início"
         ), 403
+
+    @app.errorhandler(413)
+    def arquivo_muito_grande(e):
+        """Arquivo de upload maior que MAX_CONTENT_LENGTH (2MB)."""
+        if _is_api_request():
+            return jsonify({"error": "Arquivo muito grande. Máximo permitido: 2MB"}), 413
+        from flask import render_template as rt, flash, redirect, url_for
+        flash("O arquivo é muito grande. O limite é 2MB.", "erro")
+        return redirect(url_for("importacao.index"))
 
     @app.errorhandler(500)
     def erro_interno(e):

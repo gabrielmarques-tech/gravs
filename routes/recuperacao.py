@@ -120,7 +120,8 @@ def enviar_email_recuperacao(destinatario: str, nome: str, link: str) -> bool:
             smtp.login(EMAIL_REMETENTE, EMAIL_SENHA_APP)
             smtp.sendmail(EMAIL_REMETENTE, destinatario, msg.as_string())
 
-        logger.info("Email de recuperação enviado para %s", destinatario)
+        email_log = destinatario[0] + "***@" + destinatario.split("@")[-1] if "@" in destinatario else "***"
+        logger.info("Email de recuperação enviado para %s", email_log)
         return True
 
     except Exception as exc:

@@ -1,5 +1,10 @@
 """
 tests/conftest.py — Fixtures compartilhadas do pytest.
+
+Estratégia de isolamento:
+  Cada teste recebe um banco SQLite em arquivo temporário (não :memory:)
+  porque Flask test_client e ServiceContainer precisam compartilhar o mesmo banco.
+  O arquivo é apagado após cada teste.
 """
 
 import os
@@ -12,6 +17,7 @@ from services.container import ServiceContainer
 
 @pytest.fixture
 def db_file():
+    """Cria um arquivo temporário de banco e o apaga após o teste."""
     fd, path = tempfile.mkstemp(suffix=".db")
     os.close(fd)
     yield path
@@ -23,16 +29,20 @@ def db_file():
 
 @pytest.fixture
 def container(db_file):
+    """
+    ServiceContainer com banco em arquivo temporário.
+    Compartilhado com o app Flask para que client e container usem o mesmo banco.
+    """
     return ServiceContainer(db_path=db_file)
 
 
 @pytest.fixture
 def app(db_file):
+    """Flask app apontando para o mesmo arquivo de banco do container."""
     from app import create_app
     flask_app = create_app(config_class=TestingConfig, db_path=db_file)
     flask_app.config["TESTING"] = True
     flask_app.config["WTF_CSRF_ENABLED"] = False
-    flask_app.config["WTF_CSRF_CHECK_DEFAULT"] = False
     return flask_app
 
 
@@ -43,6 +53,7 @@ def client(app):
 
 @pytest.fixture
 def usuario_criado(container):
+    """Cria e retorna um usuário de teste."""
     user_id, erros = container.auth.registrar(
         email="teste@exemplo.com", senha="senha123", nome="Usuário Teste"
     )
@@ -52,6 +63,7 @@ def usuario_criado(container):
 
 @pytest.fixture
 def usuario_logado(client, container):
+    """Cria usuário e faz login no client HTTP."""
     user_id, _ = container.auth.registrar(
         email="logado@exemplo.com", senha="senha123", nome="Logado"
     )
