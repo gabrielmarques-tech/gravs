@@ -117,6 +117,7 @@
   {% endwith %}
 
   <form method="POST" action="{{ url_for('auth.verificar_email') }}" id="form-codigo">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <input type="hidden" name="codigo" id="codigo-hidden" />
 
     <div class="codigo-wrap" id="digitos">
@@ -134,6 +135,7 @@
   <div class="reenviar">
     Não recebeu?
     <form method="POST" action="{{ url_for('auth.reenviar_codigo') }}" style="display:inline">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <button type="submit">Reenviar código</button>
     </form>
   </div>

@@ -2064,3 +2064,60 @@ class TestTransferenciaHTTP:
         data = json.loads(r.data)
         assert "transferencias" in data
         assert "count" in data
+
+
+class TestCSRFVerificacaoEmail:
+    """
+    Testa que os forms da tela de verificação de email
+    têm o token CSRF presente — evita Bad Request 400.
+    """
+
+    def test_form_verificar_tem_csrf(self, client, container):
+        """Form de verificação deve conter campo csrf_token."""
+        uid, _ = container.auth.registrar("csrf_verif@t.com", "senha123", "Verif")
+        with client.session_transaction() as sess:
+            sess["verificacao_user_id"] = uid
+            sess["verificacao_email"]   = "csrf_verif@t.com"
+
+        r = client.get("/auth/verificar-email")
+        assert r.status_code == 200
+        assert b"csrf_token" in r.data
+
+    def test_form_reenviar_tem_csrf(self, client, container):
+        """Form de reenvio deve conter campo csrf_token."""
+        uid, _ = container.auth.registrar("csrf_reenv@t.com", "senha123", "Reenv")
+        with client.session_transaction() as sess:
+            sess["verificacao_user_id"] = uid
+            sess["verificacao_email"]   = "csrf_reenv@t.com"
+
+        r = client.get("/auth/verificar-email")
+        assert r.status_code == 200
+        # Dois forms com csrf_token na página
+        assert r.data.count(b"csrf_token") >= 2
+
+    def test_post_sem_csrf_retorna_400(self, app, container):
+        """POST sem CSRF token deve retornar 400 quando CSRF está ativo."""
+        # Ativa CSRF para este teste específico
+        app.config["WTF_CSRF_ENABLED"] = True
+        app.config["WTF_CSRF_CHECK_DEFAULT"] = True
+        with app.test_client() as c:
+            uid, _ = container.auth.registrar("csrf_block@t.com", "senha123", "Block")
+            with c.session_transaction() as sess:
+                sess["verificacao_user_id"] = uid
+                sess["verificacao_email"]   = "csrf_block@t.com"
+            r = c.post("/auth/verificar-email", data={"codigo": "123456"})
+            assert r.status_code == 400
+        app.config["WTF_CSRF_ENABLED"] = False
+        app.config["WTF_CSRF_CHECK_DEFAULT"] = False
+
+    def test_form_login_tem_csrf(self, client):
+        """Form de login deve conter csrf_token."""
+        r = client.get("/auth/login")
+        assert r.status_code == 200
+        assert b"csrf_token" in r.data
+
+    def test_form_cadastro_tem_csrf(self, client):
+        """Form de cadastro deve conter csrf_token."""
+        r = client.get("/auth/cadastro")
+        assert r.status_code == 200
+        assert b"csrf_token" in r.data
