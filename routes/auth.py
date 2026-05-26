@@ -221,18 +221,31 @@ def cadastro():
     logger.info("Cadastro: user_id=%d email=%s email_enviado=%s", user_id, email, email_enviado)
 
     if not email_enviado:
-        # Sem email configurado (dev): verifica automaticamente e loga o código
-        logger.warning("DEV: código de verificação para %s = %s", email, codigo)
-        with svc.db.get_write_conn() as conn:
-            conn.execute(
-                "UPDATE usuarios SET email_verificado=1 WHERE id=?", (user_id,)
+        EMAIL_REMETENTE = os.environ.get("EMAIL_REMETENTE", "")
+        if not EMAIL_REMETENTE:
+            # Ambiente de desenvolvimento sem email configurado — verifica automaticamente
+            logger.warning("DEV: código de verificação para %s = %s", email, codigo)
+            with svc.db.get_write_conn() as conn:
+                conn.execute(
+                    "UPDATE usuarios SET email_verificado=1 WHERE id=?", (user_id,)
+                )
+                conn.execute(
+                    "UPDATE verificacao_email SET usado=1 WHERE usuario_id=? AND codigo=?",
+                    (user_id, codigo)
+                )
+            flash("Conta criada com sucesso! Faça login.", "sucesso")
+            return redirect(url_for("auth.login"))
+        else:
+            # Produção: email configurado mas falhou (timeout, rede lenta, etc)
+            # Mostra tela de verificação mesmo assim — o email pode chegar atrasado
+            logger.warning(
+                "PROD: falha ao enviar email para %s — redirecionando para verificação",
+                email
             )
-            conn.execute(
-                "UPDATE verificacao_email SET usado=1 WHERE usuario_id=? AND codigo=?",
-                (user_id, codigo)
+            flash(
+                "Enviamos um código para seu email. Pode demorar alguns minutos para chegar.",
+                "info"
             )
-        flash("Conta criada com sucesso! Faça login.", "sucesso")
-        return redirect(url_for("auth.login"))
 
     return redirect(url_for("auth.verificar_email"))
 
