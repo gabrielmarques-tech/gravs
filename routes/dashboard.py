@@ -11,9 +11,9 @@ Toda a lógica de negócio (insight, comparação com mês anterior)
 está no DashboardService, não aqui.
 """
 
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 
-from flask import render_template, jsonify
+from flask import render_template, jsonify, request
 from flask_login import current_user, login_required
 
 from routes.helpers import get_services
@@ -22,11 +22,15 @@ from flask import Blueprint
 
 dashboard_bp = Blueprint("dashboard", __name__)
 
+# Fuso horário de Brasília (UTC-3)
+_BRASILIA = timezone(timedelta(hours=-3))
+
 
 @dashboard_bp.route("/")
 @login_required
 def index():
-    hoje = datetime.now()
+    # Usa fuso de Brasília para evitar erro de mês no PythonAnywhere (UTC)
+    hoje = datetime.now(_BRASILIA)
     ano, mes = hoje.year, hoje.month
     uid = current_user.id
 

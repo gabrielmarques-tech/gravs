@@ -4,7 +4,14 @@ routes/transacoes.py — Rotas de transações (avulsas e parceladas).
 
 import calendar as cal
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone, timedelta
+
+# Fuso horário de Brasília (UTC-3)
+_BRASILIA = timezone(timedelta(hours=-3))
+
+def _hoje_brasilia() -> date:
+    """Retorna data atual no fuso de Brasília (evita erro de dia/mês no PythonAnywhere)."""
+    return datetime.now(_BRASILIA).date()
 
 from flask import (
     Blueprint, jsonify,
@@ -29,7 +36,7 @@ def rapido():
             valor  = parse_valor_monetario(request.form.get("valor", "0"))
             desc   = request.form.get("descricao", "").strip()
             tipo   = request.form.get("tipo", "despesa")
-            data   = request.form.get("data") or date.today().strftime("%Y-%m-%d")
+            data   = request.form.get("data") or _hoje_brasilia().strftime("%Y-%m-%d")
             cat    = svc.categorias_repo.buscar_padrao_por_tipo(current_user.id, tipo)
             cat_id = cat["id"] if cat else 1
             svc.transacoes.adicionar(descricao=desc, valor=valor, tipo=tipo,
@@ -39,7 +46,7 @@ def rapido():
         return redirect(url_for("dashboard.index"))
 
     return render_template("transacoes/rapido.html",
-                           data_hoje=date.today().strftime("%Y-%m-%d"))
+                           data_hoje=_hoje_brasilia().strftime("%Y-%m-%d"))
 
 
 @transacoes_bp.route("/novo", methods=["GET", "POST"])
@@ -102,7 +109,7 @@ def novo():
         "transacoes/novo.html",
         categorias=categorias,
         valor_sugerido=request.args.get("valor", ""),
-        data_sugerida=request.args.get("data", date.today().strftime("%Y-%m-%d")),
+        data_sugerida=request.args.get("data", _hoje_brasilia().strftime("%Y-%m-%d")),
         desc_sugerida=request.args.get("desc", ""),
     )
 
@@ -144,7 +151,7 @@ def parcelado():
     return render_template(
         "transacoes/parcelado.html",
         categorias=categorias,
-        data_hoje=date.today().strftime("%Y-%m-%d"),
+        data_hoje=_hoje_brasilia().strftime("%Y-%m-%d"),
     )
 
 
@@ -153,7 +160,7 @@ def parcelado():
 def todas():
     svc = get_services()
     uid  = current_user.id
-    hoje = date.today()
+    hoje = _hoje_brasilia()
 
     inicio_padrao = date(hoje.year - 1, 1, 1).strftime("%Y-%m-%d")
     fim_padrao    = hoje.strftime("%Y-%m-%d")
@@ -281,7 +288,7 @@ def parcelados():
     uid = current_user.id
 
     from datetime import date
-    hoje_str = date.today().strftime("%Y-%m-%d")
+    hoje_str = _hoje_brasilia().strftime("%Y-%m-%d")
 
     with svc.transacoes._repo._db.get_conn() as conn:
         rows = conn.execute("""
@@ -393,7 +400,7 @@ def api_saldo_contas():
 def api_resumo_sidebar():
     """Retorna últimas 5 transações do mês para o widget da sidebar."""
     svc = get_services()
-    hoje = date.today()
+    hoje = _hoje_brasilia()
     inicio = f"{hoje.year}-{hoje.month:02d}-01"
     fim = hoje.strftime("%Y-%m-%d")
 
