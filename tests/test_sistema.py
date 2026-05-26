@@ -1730,3 +1730,83 @@ class TestLogsAnonimizados:
         log_completo = " ".join(caplog.messages)
         # Domínio pode estar presente (para debug), mas não o local completo
         assert "alguem@dominio.com" not in log_completo
+
+
+class TestClassificacaoPIX:
+    """
+    Testa que PIX recebido e PIX enviado são classificados
+    em categorias separadas ao importar CSV do Bradesco.
+
+    Problema reportado: todos os PIX caíam em "Outros",
+    misturando receitas e despesas na mesma categoria.
+    """
+
+    def _parsear(self, conteudo):
+        import sys, os
+        sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+        from routes.importacao import _parsear_csv_bradesco
+        return _parsear_csv_bradesco(conteudo)
+
+    def test_pix_recebido_categoria_receita_pix(self):
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;PIX RECEBIDO JOAO;;500,00;;500,00\n"
+        )
+        trans = self._parsear(csv)
+        assert len(trans) == 1
+        assert trans[0]["tipo"] == "receita"
+        assert trans[0]["categoria_sugerida"] == "Receita PIX"
+
+    def test_pix_enviado_categoria_transferencias_pix(self):
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;PIX ENVIADO MARIA;;;300,00;200,00\n"
+        )
+        trans = self._parsear(csv)
+        assert len(trans) == 1
+        assert trans[0]["tipo"] == "despesa"
+        assert trans[0]["categoria_sugerida"] == "Transferências PIX"
+
+    def test_pix_recebido_e_enviado_separados(self):
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;PIX RECEBIDO EMPRESA;;2000,00;;2000,00\n"
+            "02/05/2026;PIX ENVIADO ALUGUEL;;;800,00;1200,00\n"
+            "03/05/2026;PIX ENVIADO MERCADO;;;150,00;1050,00\n"
+        )
+        trans = self._parsear(csv)
+        assert len(trans) == 3
+
+        recebido = [t for t in trans if t["categoria_sugerida"] == "Receita PIX"]
+        enviados = [t for t in trans if t["categoria_sugerida"] == "Transferências PIX"]
+
+        assert len(recebido) == 1
+        assert len(enviados) == 2
+
+    def test_pix_efetuado_categoria_transferencias(self):
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;PIX EFETUADO CONTA;;;500,00;0,00\n"
+        )
+        trans = self._parsear(csv)
+        assert trans[0]["categoria_sugerida"] == "Transferências PIX"
+
+    def test_debito_pix_categoria_transferencias(self):
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;DEBITO PIX FORNECEDOR;;;1000,00;0,00\n"
+        )
+        trans = self._parsear(csv)
+        assert trans[0]["categoria_sugerida"] == "Transferências PIX"
+
+    def test_pix_nao_cai_mais_em_outros(self):
+        """Garante que nenhum PIX cai em 'Outros' por padrão."""
+        csv = (
+            "Data;Historico;Docto;Credito;Debito;Saldo\n"
+            "01/05/2026;PIX RECEBIDO ABC;;100,00;;100,00\n"
+            "02/05/2026;PIX ENVIADO XYZ;;;50,00;50,00\n"
+        )
+        trans = self._parsear(csv)
+        for t in trans:
+            assert t["categoria_sugerida"] != "Outros", \
+                f"PIX não deveria cair em 'Outros': {t['descricao']}"

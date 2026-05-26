@@ -35,13 +35,21 @@ importacao_bp = Blueprint("importacao", __name__, url_prefix="/importacao")
 # Usado para classificação automática da descrição do extrato.
 # Chave: fragmento (lowercase) da descrição. Valor: nome da categoria.
 _KEYWORDS_CATEGORIA: list[tuple[str, str]] = [
-    # Receitas
+    # Receitas — PIX recebido vira categoria Receita PIX
     ("salario",     "Salário"),
     ("salário",     "Salário"),
-    ("pagamento",   "Salário"),
     ("freelance",   "Freelance"),
     ("transferencia recebida", "Outros"),
-    ("pix recebido",           "Outros"),
+    ("pix recebido",           "Receita PIX"),
+    ("pix rec",                "Receita PIX"),
+    ("credito pix",            "Receita PIX"),
+    # Despesas PIX — separadas por nome para facilitar rastreio
+    ("pix enviado",            "Transferências PIX"),
+    ("pix env",                "Transferências PIX"),
+    ("pix efetuado",           "Transferências PIX"),
+    ("debito pix",             "Transferências PIX"),
+    ("transferencia pix",      "Transferências PIX"),
+    ("pagamento pix",          "Transferências PIX"),
     # Alimentação
     ("ifood",       "Alimentação"),
     ("rappi",       "Alimentação"),
