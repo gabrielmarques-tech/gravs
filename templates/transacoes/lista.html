@@ -173,26 +173,26 @@
 <div class="card mb-16 fade-up" id="card-busca">
   <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap">
     <input type="text" id="input-busca" class="form-control"
-           placeholder="🔍 Buscar por descrição..."
-           style="flex:1;min-width:200px"
+           placeholder="Buscar por descrição..."
+           style="flex:1;min-width:180px"
            oninput="buscarTransacoes()" />
     <select id="filtro-tipo-busca" class="form-control" style="width:140px"
             onchange="buscarTransacoes()">
       <option value="">Todos os tipos</option>
-      <option value="receita">💰 Receitas</option>
-      <option value="despesa">💸 Despesas</option>
+      <option value="receita">Receitas</option>
+      <option value="despesa">Despesas</option>
     </select>
     <select id="filtro-conta-busca" class="form-control" style="width:180px"
             onchange="buscarTransacoes()">
       <option value="">Todas as contas</option>
     </select>
     <button onclick="limparBusca()" class="btn btn-secondary btn-sm"
-            id="btn-limpar" style="display:none">✕ Limpar</button>
+            id="btn-limpar" style="display:none">Limpar</button>
   </div>
   <!-- Resultado da busca -->
-  <div id="resultado-busca" style="display:none;margin-top:14px">
-    <div id="resumo-busca" style="font-size:0.8rem;color:var(--text3);margin-bottom:10px"></div>
-    <div id="lista-busca" style="max-height:400px;overflow-y:auto;scrollbar-width:thin"></div>
+  <div id="resultado-busca" class="mt-14 hidden">
+    <div id="resumo-busca" class="text-sm text-muted mb-10"></div>
+    <div id="lista-busca" style="max-height:360px;overflow-y:auto"></div>
   </div>
 </div>
 
@@ -220,32 +220,32 @@
 <!-- Totais -->
 <div class="totais-grid mb-16 fade-up delay-1">
 
-  <div class="card total-card" style="border-color:rgba(16,185,129,0.25);background:rgba(16,185,129,0.05);padding:16px">
-    <div class="total-icon">💰</div>
+  <div class="card total-card" style="border-color:rgba(52,211,153,0.2);background:rgba(52,211,153,0.04)">
+    <div class="total-icon" style="color:var(--green2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="17" y1="7" x2="7" y2="17"/><polyline points="17 17 17 7 7 7"/></svg></div>
     <div class="total-info">
-      <div class="total-label" style="font-size:0.7rem;font-weight:500;color:var(--text3);margin-bottom:4px">Receitas</div>
-      <div class="total-valor" style="font-family:'Inter',system-ui,sans-serif;font-size:1.4rem;font-weight:600;color:var(--green2);letter-spacing:-0.03em;font-variant-numeric:tabular-nums">{{ total_receitas | real }}</div>
-      <div class="total-sub" style="font-size:0.72rem;color:var(--text3);margin-top:2px">no período</div>
+      <div class="total-label" class="text-xs text-muted mb-4 font-500">Receitas</div>
+      <div class="total-valor" class="font-600 tabular-nums text-green" style="font-size:1.4rem;letter-spacing:-0.03em">{{ total_receitas | real }}</div>
+      <div class="total-sub" class="text-xs text-muted mt-4">no período</div>
     </div>
   </div>
 
-  <div class="card total-card" style="border-color:rgba(239,68,68,0.25);background:rgba(239,68,68,0.05);padding:16px">
-    <div class="total-icon">💸</div>
+  <div class="card total-card" style="border-color:rgba(248,113,113,0.2);background:rgba(248,113,113,0.04)">
+    <div class="total-icon" style="color:var(--red2)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></div>
     <div class="total-info">
-      <div class="total-label" style="font-size:0.7rem;font-weight:500;color:var(--text3);margin-bottom:4px">Despesas</div>
-      <div class="total-valor" style="font-family:'Inter',system-ui,sans-serif;font-size:1.4rem;font-weight:600;color:var(--red2);letter-spacing:-0.03em;font-variant-numeric:tabular-nums">{{ total_despesas | real }}</div>
-      <div class="total-sub" style="font-size:0.72rem;color:var(--text3);margin-top:2px">no período</div>
+      <div class="total-label" class="text-xs text-muted mb-4 font-500">Despesas</div>
+      <div class="total-valor" class="font-600 tabular-nums text-red" style="font-size:1.4rem;letter-spacing:-0.03em">{{ total_despesas | real }}</div>
+      <div class="total-sub" class="text-xs text-muted mt-4">no período</div>
     </div>
   </div>
 
   <div class="card total-card" style="border-color:{% if saldo >= 0 %}rgba(16,185,129,0.25){% else %}rgba(239,68,68,0.25){% endif %};background:{% if saldo >= 0 %}rgba(16,185,129,0.05){% else %}rgba(239,68,68,0.05){% endif %};padding:16px">
     <div class="total-icon">{% if saldo >= 0 %}📈{% else %}📉{% endif %}</div>
     <div class="total-info">
-      <div class="total-label" style="font-size:0.7rem;font-weight:500;color:var(--text3);margin-bottom:4px">Saldo</div>
+      <div class="total-label" class="text-xs text-muted mb-4 font-500">Saldo</div>
       <div class="total-valor" style="font-family:'Inter',system-ui,sans-serif;font-size:1.4rem;font-weight:600;color:{% if saldo >= 0 %}var(--green2){% else %}var(--red2){% endif %};letter-spacing:-0.03em;font-variant-numeric:tabular-nums">
         {% if saldo < 0 %}-{% endif %}{{ saldo|abs | real }}
       </div>
-      <div class="total-sub" style="font-size:0.72rem;color:var(--text3);margin-top:2px">
+      <div class="total-sub" class="text-xs text-muted mt-4">
         {% if saldo >= 0 %}positivo ✓{% else %}negativo{% endif %}
       </div>
     </div>
@@ -256,16 +256,16 @@
 <!-- Parcelamentos -->
 {% if grupos %}
 <div class="card mb-16 fade-up">
-  <div class="card-title mb-12">💳 Parcelamentos</div>
+  <div class="card-title mb-12">Parcelamentos</div>
   <div style="display:flex;flex-direction:column;gap:8px">
     {% for grupo_uuid, info in grupos.items() %}
       <div class="d-flex justify-between align-center"
-           style="padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border);gap:10px">
+           style="padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
         <div style="min-width:0">
-          <div style="font-weight:600;color:var(--text);font-size:0.85rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
+          <div class="font-600 truncate text-base">
             {{ info.descricao }}
           </div>
-          <div style="font-size:0.72rem;color:var(--text3);margin-top:2px">
+          <div class="text-xs text-muted mt-4">
             {{ info.count }} parcela{% if info.count != 1 %}s{% endif %}
           </div>
         </div>
@@ -284,7 +284,7 @@
 
   {% if transacoes %}
 
-    <div style="font-size:0.8rem;color:var(--text3);margin-bottom:14px">
+    <div class="text-sm text-muted mb-14">
       {{ transacoes|length }} transaç{% if transacoes|length == 1 %}ão{% else %}ões{% endif %}
     </div>
 
@@ -299,12 +299,8 @@
               <span>{{ t.categoria_nome }}</span>
               <span>·</span>
               <span>{{ t.data }}</span>
-              {% if t.recorrente_uuid %}
-                <span style="color:var(--purple3)">🔁</span>
-              {% endif %}
-              {% if t.grupo_parcela %}
-                <span style="color:var(--purple3)">💳</span>
-              {% endif %}
+              {% if t.recorrente_uuid %}<span class="badge badge-purple">fixa</span>{% endif %}
+              {% if t.grupo_parcela %}<span class="badge badge-purple">parcelado</span>{% endif %}
             </div>
           </div>
           <div class="transacao-direita">
@@ -314,10 +310,14 @@
             <div class="transacao-acoes">
               <button class="btn btn-secondary btn-icon"
                       style="padding:5px 8px;font-size:0.8rem"
-                      onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')">✏</button>
+                      onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
               <button class="btn btn-danger btn-icon"
                       style="padding:5px 8px;font-size:0.8rem"
-                      onclick="deletar('{{ t.uuid }}')">🗑</button>
+                      onclick="deletar('{{ t.uuid }}')">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
             </div>
           </div>
         </div>
@@ -343,28 +343,27 @@
               <tr>
                 <td>
                   <div style="font-weight:500;color:var(--text)">{{ t.descricao }}</div>
-                  {% if t.recorrente_uuid %}
-                    <div style="font-size:0.72rem;color:var(--text3)">🔁 recorrente</div>
-                  {% endif %}
-                  {% if t.grupo_parcela %}
-                    <div style="font-size:0.72rem;color:var(--purple3)">💳 parcelado</div>
-                  {% endif %}
+                  {% if t.recorrente_uuid %}<span class="badge badge-muted" style="margin-top:3px">fixa</span>{% endif %}
+                  {% if t.grupo_parcela %}<span class="badge badge-purple" style="margin-top:3px">parcelado</span>{% endif %}
                 </td>
                 <td>{{ t.categoria_icone }} {{ t.categoria_nome }}</td>
-                <td style="white-space:nowrap">{{ t.data | replace("-", "/") if t.data else "" }}</td>
+                <td class="shrink-0">{{ t.data | replace("-", "/") if t.data else "" }}</td>
                 <td><span class="badge badge-{{ t.tipo }}">{{ t.tipo }}</span></td>
                 <td class="text-right">
-                  <div style="font-family:'Inter',system-ui,sans-serif;font-size:1rem;font-weight:600;font-variant-numeric:tabular-nums;
-                              color:{% if t.tipo == 'receita' %}var(--green2){% else %}var(--red2){% endif %}">
+                  <div class="font-600 tabular-nums" style="font-size:1rem;color:{% if t.tipo == 'receita' %}var(--green2){% else %}var(--red2){% endif %}">
                     {% if t.tipo == 'despesa' %}-{% endif %}{{ t.valor | real }}
                   </div>
                 </td>
                 <td class="text-right">
                   <div class="d-flex gap-8" style="justify-content:flex-end">
                     <button class="btn btn-secondary btn-sm btn-icon"
-                            onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')">✏</button>
+                            onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                    </button>
                     <button class="btn btn-danger btn-sm btn-icon"
-                            onclick="deletar('{{ t.uuid }}')">🗑</button>
+                            onclick="deletar('{{ t.uuid }}')">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
+                    </button>
                   </div>
                 </td>
               </tr>
@@ -376,7 +375,7 @@
 
   {% else %}
     <div class="empty-state">
-      <div class="empty-icon">💳</div>
+      <div class="empty-state-icon">—</div>
       <div style="font-size:1rem;font-weight:600">Nenhuma transação no período</div>
       <p><a href="{{ url_for('transacoes.novo') }}" style="color:var(--purple3)">Adicionar transação</a></p>
     </div>
@@ -386,16 +385,16 @@
 <!-- Modal de edição -->
 <div class="modal-backdrop" id="modal-editar" onclick="fecharFora(event)">
   <div class="modal">
-    <div class="modal-title">✏ Editar Transação</div>
+    <div class="modal-title">Editar Transação</div>
     <form method="POST" id="form-editar" action="">
 
       <div class="form-group">
         <label class="form-label">Tipo</label>
         <div class="tipo-toggle">
           <input type="radio" name="tipo" id="edit-despesa" value="despesa" />
-          <label for="edit-despesa" class="despesa">💸 Despesa</label>
+          <label for="edit-despesa" class="despesa">Despesa</label>
           <input type="radio" name="tipo" id="edit-receita" value="receita" />
-          <label for="edit-receita" class="receita">💰 Receita</label>
+          <label for="edit-receita" class="receita">Receita</label>
         </div>
       </div>
 
@@ -426,13 +425,13 @@
 
       <!-- Conta bancária — carregada via JS -->
       <div class="form-group">
-        <label class="form-label" id="label-conta-edit">💸 Pago com</label>
+        <label class="form-label" id="label-conta-edit">Pago com</label>
         <select name="conta_id" id="edit-conta" class="form-control">
           <option value="">— Selecione (opcional) —</option>
         </select>
       </div>
 
-      <div class="d-flex gap-12" style="justify-content:flex-end;margin-top:8px">
+      <div class="d-flex gap-12" class="justify-end mt-8">
         <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
         <button type="submit" class="btn btn-primary">Salvar</button>
       </div>
@@ -578,7 +577,7 @@
                 <div style="flex:1;min-width:0">
                   <div style="font-weight:600;color:var(--text);font-size:0.88rem;
                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
-                  <div style="font-size:0.72rem;color:var(--text3);margin-top:2px">
+                  <div class="text-xs text-muted mt-4">
                     ${t.categoria_nome} · ${t.data}
                     ${t.conta_nome ? '· ' + t.conta_icone + ' ' + t.conta_nome : ''}
                   </div>

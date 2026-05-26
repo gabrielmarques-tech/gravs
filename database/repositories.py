@@ -133,18 +133,20 @@ class CategoriaRepository:
     """
 
     CATEGORIAS_PADRAO: list[tuple[str, str, str, str]] = [
-        ("Salário",      "receita",  "💼", "#22c55e"),
-        ("Freelance",    "receita",  "💻", "#06b6d4"),
-        ("Outros",       "receita",  "💰", "#a855f7"),
-        ("Moradia",      "despesa",  "🏠", "#ef4444"),
-        ("Alimentação",  "despesa",  "🍕", "#f97316"),
-        ("Transporte",   "despesa",  "🚗", "#eab308"),
-        ("Saúde",        "despesa",  "❤️", "#ec4899"),
-        ("Lazer",        "despesa",  "🎮", "#8b5cf6"),
-        ("Educação",     "despesa",  "📚", "#06b6d4"),
-        ("Vestuário",    "despesa",  "👕", "#14b8a6"),
-        ("Assinaturas",  "despesa",  "📱", "#6366f1"),
-        ("Outros",       "despesa",  "💸", "#6b7280"),
+        ("Salário",           "receita",  "💼", "#22c55e"),
+        ("Freelance",         "receita",  "💻", "#06b6d4"),
+        ("Receita PIX",       "receita",  "💸", "#10b981"),
+        ("Outros",            "receita",  "💰", "#a855f7"),
+        ("Moradia",           "despesa",  "🏠", "#ef4444"),
+        ("Alimentação",       "despesa",  "🍕", "#f97316"),
+        ("Transporte",        "despesa",  "🚗", "#eab308"),
+        ("Saúde",             "despesa",  "❤️", "#ec4899"),
+        ("Lazer",             "despesa",  "🎮", "#8b5cf6"),
+        ("Educação",          "despesa",  "📚", "#06b6d4"),
+        ("Vestuário",         "despesa",  "👕", "#14b8a6"),
+        ("Assinaturas",       "despesa",  "📱", "#6366f1"),
+        ("Transferências PIX","despesa",  "🔄", "#6b7280"),
+        ("Outros",            "despesa",  "💸", "#6b7280"),
     ]
 
     def __init__(self, db: DatabaseManager) -> None:
@@ -898,6 +900,79 @@ class TransferenciaRepository:
         with self._db.get_write_conn() as conn:
             cur = conn.execute(
                 "UPDATE transferencias SET deletado=1 WHERE uuid=? AND usuario_id=?",
+                (uuid, usuario_id)
+            )
+        return cur.rowcount > 0
+
+
+class MetaRepository:
+    """
+    Repositório de metas financeiras do usuário.
+
+    Uma meta tem um valor alvo e um prazo. O progresso pode ser
+    atualizado manualmente ou calculado a partir de uma categoria
+    de transações no período.
+    """
+
+    def __init__(self, db: DatabaseManager) -> None:
+        self._db = db
+
+    def listar(self, usuario_id: int) -> list[dict]:
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT m.*, c.nome AS categoria_nome, c.icone AS categoria_icone
+                   FROM metas m
+                   LEFT JOIN categorias c ON c.id = m.categoria_id
+                   WHERE m.usuario_id = ? AND m.ativa = 1
+                   ORDER BY m.data_fim ASC NULLS LAST, m.criado_em DESC""",
+                (usuario_id,)
+            ).fetchall()
+        return _rows_to_list(rows)
+
+    def buscar_por_uuid(self, uuid: str, usuario_id: int) -> dict | None:
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM metas WHERE uuid=? AND usuario_id=? AND ativa=1",
+                (uuid, usuario_id)
+            ).fetchone()
+        return _row_to_dict(row)
+
+    def criar(
+        self,
+        uuid: str,
+        titulo: str,
+        valor_alvo: float,
+        data_fim: str | None,
+        usuario_id: int,
+        descricao: str = "",
+        categoria_id: int | None = None,
+        data_inicio: str | None = None,
+    ) -> int:
+        from datetime import date
+        inicio = data_inicio or date.today().strftime("%Y-%m-%d")
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                """INSERT INTO metas
+                   (uuid, titulo, descricao, valor_alvo, valor_atual,
+                    data_inicio, data_fim, categoria_id, usuario_id)
+                   VALUES (?,?,?,?,0,?,?,?,?)""",
+                (uuid, titulo.strip(), descricao.strip(),
+                 round(valor_alvo, 2), inicio, data_fim, categoria_id, usuario_id)
+            )
+            return cur.lastrowid
+
+    def atualizar_progresso(self, uuid: str, valor_atual: float, usuario_id: int) -> bool:
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "UPDATE metas SET valor_atual=? WHERE uuid=? AND usuario_id=?",
+                (round(valor_atual, 2), uuid, usuario_id)
+            )
+        return cur.rowcount > 0
+
+    def deletar(self, uuid: str, usuario_id: int) -> bool:
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "UPDATE metas SET ativa=0 WHERE uuid=? AND usuario_id=?",
                 (uuid, usuario_id)
             )
         return cur.rowcount > 0

@@ -49,9 +49,9 @@
         <label class="form-label">Tipo</label>
         <div class="tipo-toggle">
           <input type="radio" name="tipo" id="tipo-despesa" value="despesa" checked />
-          <label for="tipo-despesa" class="despesa">💸 Despesa</label>
+          <label for="tipo-despesa" class="despesa">Despesa</label>
           <input type="radio" name="tipo" id="tipo-receita" value="receita" />
-          <label for="tipo-receita" class="receita">💰 Receita</label>
+          <label for="tipo-receita" class="receita">Receita</label>
         </div>
       </div>
 
@@ -343,7 +343,7 @@
       const label = document.getElementById('label-conta-parc');
       if (label) {
         const tipo = document.querySelector('input[name="tipo"]:checked')?.value;
-        label.textContent = tipo === 'receita' ? '💰 Recebido em' : '💸 Cartão / Conta utilizado';
+        label.textContent = tipo === 'receita' ? 'Recebido em' : '💸 Cartão / Conta utilizado';
       }
     });
   });

@@ -92,7 +92,7 @@
   .ob-bars { display:flex; gap:6px; margin-bottom:28px; }
   .ob-bar { flex:1; height:3px; background:var(--border2); border-radius:99px; transition:background 0.3s; }
   .ob-bar.ativo { background:var(--purple2); }
-  .ob-icone { font-size:2.8rem; margin-bottom:16px; text-align:center; }
+  .ob-icone { font-size:2.8rem; margin-bottom:16px; text-align:center; display:flex; align-items:center; justify-content:center; }
   .ob-titulo { font-size:1.2rem; font-weight:600; color:var(--text); letter-spacing:-0.02em; margin-bottom:8px; text-align:center; }
   .ob-desc { font-size:0.88rem; color:var(--text2); line-height:1.6; text-align:center; margin-bottom:28px; }
   .ob-acoes { display:flex; gap:10px; }
@@ -110,16 +110,16 @@
   .meta-barra-over { background:var(--red2); }
 
   /* ── Novo layout do dashboard ── */
-  .dash-hero { padding:20px 22px;background:var(--surface2);position:relative;overflow:hidden;margin-bottom:0 }
+  .dash-hero { padding:28px 26px;background:var(--surface2);position:relative;overflow:hidden;margin-bottom:0 }
   .dash-hero-glow { position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,0.12) 0%,transparent 70%);pointer-events:none }
   .dash-label { font-size:0.68rem;color:var(--text3);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500 }
-  .dash-saldo { font-size:2rem;font-weight:700;color:var(--text);margin:0;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;line-height:1 }
+  .dash-saldo { font-size:2.4rem;font-weight:700;color:var(--text);margin:6px 0 0;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;line-height:1 }
 
   /* ── Trio de cards (Receitas / Despesas / Poupança) ── */
-  .resumo-trio { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px }
+  .resumo-trio { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px }
   .trio-card {
-    border-radius:10px;padding:14px 14px 12px;
-    display:flex;flex-direction:column;gap:2px;
+    border-radius:12px;padding:18px 16px 16px;
+    display:flex;flex-direction:column;gap:4px;
     border:1px solid var(--border);background:var(--bg3);
     position:relative;overflow:hidden;
   }
@@ -136,7 +136,7 @@
   .trio-icon-roxo    { background:rgba(159,95,255,0.12);color:var(--purple2) }
 
   .trio-label { font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3) }
-  .trio-valor { font-size:1.05rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.02em;margin-top:3px }
+  .trio-valor { font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;margin-top:5px }
   .trio-sub   { font-size:0.68rem;color:var(--text3);margin-top:1px }
 
   .trio-badge { font-size:0.65rem;font-weight:600;padding:2px 7px;border-radius:99px;width:fit-content }
@@ -146,7 +146,7 @@
 
   @media (max-width:480px) {
     .resumo-trio { grid-template-columns:1fr }
-    .trio-card { flex-direction:row;align-items:center;gap:12px;padding:12px 14px }
+    .trio-card { flex-direction:row;align-items:center;gap:14px;padding:14px 16px }
     .trio-card::before { top:0;left:0;right:auto;bottom:0;width:3px;height:auto;border-radius:3px 0 0 3px }
     .trio-icon { margin-bottom:0;flex-shrink:0 }
     .trio-sub,.trio-badge { display:none }
@@ -158,7 +158,7 @@
   }
 
   /* Layout de duas colunas desktop */
-  .dash-row { display:grid;grid-template-columns:1fr 340px;gap:12px;align-items:start }
+  .dash-row { display:grid;grid-template-columns:1fr 340px;gap:18px;align-items:start }
   .dash-col-main { min-width:0 }
   .dash-col-side { display:flex;flex-direction:column;gap:0;min-width:0 }
 
@@ -222,7 +222,7 @@
     </div>
 
     <div id="ob-p2" style="display:none">
-      <div class="ob-icone">🏦</div>
+      <div class="ob-icone"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg></div>
       <div class="ob-titulo">Cadastre sua conta bancária</div>
       <div class="ob-desc">Registre sua conta corrente, poupança ou cartão.<br><br>Assim você saberá de qual conta saiu cada gasto e o saldo de cada uma.</div>
       <div class="ob-acoes">
@@ -232,7 +232,7 @@
     </div>
 
     <div id="ob-p3" style="display:none">
-      <div class="ob-icone">💸</div>
+      <div class="ob-icone"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--text2)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
       <div class="ob-titulo">Registre sua primeira transação</div>
       <div class="ob-desc">Anote uma receita ou despesa recente.<br><br>Você pode digitar manualmente ou enviar um comprovante PNG/PDF — o app extrai as informações automaticamente.</div>
       <div class="ob-acoes">
@@ -267,14 +267,14 @@
         </div>
       {% endif %}
     </div>
-    <div style="display:flex;gap:10px;flex-shrink:0">
+    <div class="flex gap-10 shrink-0">
       <a href="{{ url_for('transacoes.novo') }}" class="btn btn-primary btn-sm">+ Nova</a>
     </div>
   </div>
 
   <!-- Mini cards receita / despesa -->
   <!-- Cards Receita / Despesa / Taxa de Poupança -->
-  <div class="resumo-trio" style="margin-top:14px">
+  <div class="resumo-trio" class="mt-14">
 
     <!-- Receitas -->
     <div class="trio-card trio-verde">
@@ -322,7 +322,7 @@
       <div class="trio-valor purple">{{ pct_poupanca }}%</div>
       <div class="trio-sub">meta: {{ meta_poupanca }}%</div>
       <!-- Barra de progresso em direção à meta -->
-      <div style="margin-top:8px">
+      <div class="mt-8">
         <div style="height:4px;background:rgba(255,255,255,0.08);border-radius:99px;overflow:hidden">
           <div style="height:100%;width:{{ [(pct_poupanca / meta_poupanca * 100)|round(0), 100]|min }}%;
                       background:{% if meta_atingida %}var(--green2){% else %}var(--purple2){% endif %};
@@ -330,10 +330,10 @@
         </div>
       </div>
       {% if meta_atingida %}
-        <div class="trio-badge trio-badge-ok" style="margin-top:6px">✓ Meta atingida!</div>
+        <div class="trio-badge trio-badge-ok" class="mt-6">✓ Meta atingida!</div>
       {% else %}
         {% set falta = meta_poupanca - pct_poupanca %}
-        <div class="trio-badge trio-badge-neutral" style="margin-top:6px">Faltam {{ falta|round(1) }}%</div>
+        <div class="trio-badge trio-badge-neutral" class="mt-6">Faltam {{ falta|round(1) }}%</div>
       {% endif %}
     </div>
     {% else %}
@@ -344,14 +344,14 @@
       <div class="trio-label">Taxa de Poupança</div>
       <div class="trio-valor purple">—</div>
       <div class="trio-sub">meta: 30%</div>
-      <div class="trio-badge trio-badge-neutral" style="margin-top:14px">Sem receitas</div>
+      <div class="trio-badge trio-badge-neutral" class="mt-14">Sem receitas</div>
     </div>
     {% endif %}
 
   </div>
 
   {% if resumo.receitas > 0 %}
-  <div style="margin-top:12px">
+  <div class="mt-12">
     <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text3);margin-bottom:4px">
       <span>Despesas: {{ [(resumo.despesas / resumo.receitas * 100)|round(1), 100]|min }}% da receita</span>
       {% if resumo.saldo > 0 %}<span style="color:var(--green2)">✓ Economizando</span>{% endif %}
@@ -366,20 +366,20 @@
 </div>
 
 <!-- Linha 1: Gastos por categoria + Saldo por conta -->
-<div class="dash-row fade-up" style="margin-top:14px">
+<div class="dash-row fade-up" style="margin-top:20px">
 
   <!-- Gastos por categoria -->
   {% if resumo.gastos_por_categoria %}
   <div class="card dash-col-main">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="card-title" style="margin-bottom:0">Gastos por categoria</div>
+    <div class="flex items-center justify-between mb-14">
+      <div class="card-title mb-0" style="margin-bottom:0">Gastos por categoria</div>
       <button onclick="abrirModalLimites()"
               style="font-size:0.72rem;color:var(--purple3);background:none;border:1px solid var(--border2);
                      cursor:pointer;font-family:var(--font-body);padding:3px 8px;border-radius:6px">
         + Limites
       </button>
     </div>
-    <div style="display:flex;flex-direction:column;gap:10px">
+    <div class="flex flex-col gap-10">
       {% set total = resumo.despesas if resumo.despesas > 0 else 1 %}
       {% for item in resumo.gastos_por_categoria %}
         {% set limite = limites.get(item.id, 0) %}
@@ -424,19 +424,19 @@
   </div>
   {% endif %}
 
-  <!-- Coluna direita: Saldo por conta + Próximos vencimentos -->
+  <!-- Coluna direita: Saldo por conta + Metas + Próximos vencimentos -->
   <div class="dash-col-side">
 
     <!-- Saldo por conta -->
     <div class="card" id="card-saldo-contas" style="display:none;margin-bottom:12px">
       <div class="card-title mb-12">Saldo por conta</div>
-      <div id="lista-saldo-contas" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="lista-saldo-contas" class="flex flex-col gap-8"></div>
     </div>
 
     <!-- Próximos vencimentos -->
     <div class="card" id="card-vencimentos" style="display:none">
       <div class="card-title mb-12">Próximos vencimentos</div>
-      <div id="lista-vencimentos" style="display:flex;flex-direction:column;gap:8px"></div>
+      <div id="lista-vencimentos" class="flex flex-col gap-8"></div>
     </div>
 
   </div>
@@ -457,24 +457,27 @@
 </div>
 
 <!-- Dicas para você -->
-<div class="card mt-16 fade-up" id="card-dicas" style="display:none;background:rgba(124,58,237,0.05);border-color:rgba(124,58,237,0.2)">
-  <div class="card-title mb-10" style="color:var(--purple3)">💡 Dicas para você</div>
-  <div id="lista-dicas" style="display:flex;flex-direction:column;gap:6px"></div>
+<div class="card fade-up" id="card-dicas" style="margin-top:20px" style="display:none;background:rgba(124,58,237,0.05);border-color:rgba(124,58,237,0.2)">
+  <div class="card-title mb-10" style="color:var(--purple3)">Dicas</div>
+  <div id="lista-dicas" class="flex flex-col gap-6"></div>
 </div>
 
 <!-- Linha 2: Últimas transações + Evolução mensal -->
-<div class="dash-row fade-up" style="margin-top:14px">
+<div class="dash-row fade-up" style="margin-top:20px">
 
   <!-- Últimas transações -->
   <div class="card dash-col-main">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-      <div class="card-title" style="margin-bottom:0">Últimas transações</div>
+    <div class="flex items-center justify-between mb-14">
+      <div class="card-title mb-0" style="margin-bottom:0">Últimas transações</div>
       <a href="{{ url_for('transacoes.todas') }}"
-         style="font-size:0.72rem;color:var(--text3);text-decoration:none;padding:3px 8px;
-                border:1px solid var(--border2);border-radius:6px">Ver todas</a>
+         class="link-muted">Ver todas</a>
     </div>
-    <div id="lista-ultimas" style="display:flex;flex-direction:column;gap:2px">
-      <div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Carregando...</div>
+    <div id="lista-ultimas" class="flex flex-col gap-4">
+      <div id="skeleton-ultimas">
+        <div class="skeleton" style="height:42px;margin-bottom:8px;border-radius:10px"></div>
+        <div class="skeleton" style="height:42px;margin-bottom:8px;border-radius:10px"></div>
+        <div class="skeleton" style="height:42px;border-radius:10px"></div>
+      </div>
     </div>
   </div>
 
@@ -482,7 +485,7 @@
   <div class="card dash-col-side">
     <div class="card-title mb-16">Evolução — 6 meses</div>
     <div id="grafico-meses" style="display:flex;align-items:flex-end;gap:6px;height:110px;padding:0 2px">
-      <div style="color:var(--text3);font-size:0.8rem;margin:auto">Carregando...</div>
+<div class="skeleton" style="width:100%;height:100%;border-radius:8px"></div>
     </div>
     <div id="grafico-labels" style="display:flex;gap:6px;margin-top:6px;padding:0 2px"></div>
   </div>
@@ -491,7 +494,7 @@
 
 <!-- Comparação mês anterior (compacto) -->
 {% if resumo.receitas_anterior > 0 or resumo.despesas_anterior > 0 %}
-<div class="card mt-16 fade-up" style="padding:10px 14px">
+<div class="card fade-up" style="margin-top:20px;padding:12px 16px">
   <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
     <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap">Mês anterior</div>
     <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.8rem;color:var(--text2)">
@@ -530,7 +533,7 @@ async function carregarLembretes() {
                   display:flex;align-items:center;gap:12px;flex-wrap:wrap">
         <div style="flex:1;min-width:0">
           <div style="font-weight:600;color:var(--text);font-size:0.9rem">
-            ${l.atrasada ? '🔴' : '🟡'} ${l.descricao}
+            ${l.atrasada ? '' : ''} ${l.descricao}
           </div>
           <div style="font-size:0.76rem;color:var(--text3);margin-top:2px">
             Vencimento: ${l.data} ·
@@ -578,7 +581,7 @@ async function carregarLembretes() {
             </div>
           </div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:8px">${items}</div>
+        <div class="flex flex-col gap-8">${items}</div>
       </div>
     `;
     container.style.display = 'block';
@@ -796,6 +799,7 @@ carregarSaldoContas();
 carregarGraficoMeses();
 carregarUltimasTransacoes();
 carregarVencimentos();
+carregarMetasDash();
 gerarDicas();
 
 // Tooltip do gráfico — abordagem direta sem variável global
@@ -981,6 +985,51 @@ async function carregarGraficoMeses() {
   } catch(e) { console.error('Gráfico:', e); }
 }
 
+// ── Metas no dashboard ────────────────────────────────────────────────────────
+async function carregarMetasDash() {
+  try {
+    const r = await fetch('/metas/api/listar');
+    if (!r.ok) return;
+    const data = await r.json();
+    if (!data.metas || data.metas.length === 0) return;
+
+    const card = document.getElementById('card-metas-dash');
+    const lista = document.getElementById('lista-metas-dash');
+    if (!card || !lista) return;
+
+    const fmtVal = v => 'R$ ' + parseFloat(v).toFixed(2).replace('.', ',');
+
+    lista.innerHTML = data.metas.slice(0, 3).map(m => {
+      const pct = Math.min(100, Math.round((m.valor_atual / m.valor_alvo) * 100));
+      const done = pct >= 100;
+      const cor = done ? 'var(--green2)' : 'var(--purple2)';
+      return `
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
+            <span style="font-size:0.82rem;font-weight:500;color:var(--text);
+                         white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+                         max-width:60%">${m.titulo}</span>
+            <span style="font-size:0.72rem;color:${cor};font-weight:600;flex-shrink:0">
+              ${done ? '✓ Concluída' : pct + '%'}
+            </span>
+          </div>
+          <div style="height:5px;background:var(--bg3);border-radius:99px;overflow:hidden">
+            <div style="height:100%;width:${pct}%;
+                        background:${done ? 'var(--green2)' : 'linear-gradient(90deg,var(--purple),var(--purple2))'};
+                        border-radius:99px;transition:width 0.8s ease"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-top:3px">
+            <span style="font-size:0.68rem;color:var(--text3)">${fmtVal(m.valor_atual)}</span>
+            <span style="font-size:0.68rem;color:var(--text3)">${fmtVal(m.valor_alvo)}</span>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    card.style.display = 'block';
+  } catch(e) { /* silencioso */ }
+}
+
 // ── Ultimas transacoes ────────────────────────────────────────────────────────
 async function carregarUltimasTransacoes() {
   try {
@@ -992,9 +1041,12 @@ async function carregarUltimasTransacoes() {
     const data = await r.json();
     const lista = document.getElementById('lista-ultimas');
     if (!lista) return;
+    // Remove skeleton quando dados chegam
+    const skel = document.getElementById('skeleton-ultimas');
+    if (skel) skel.remove();
     const trans = (data.transacoes || []).slice(0, 6);
     if (trans.length === 0) {
-      lista.innerHTML = '<div style="color:var(--text3);font-size:0.82rem;padding:8px 0">Nenhuma transacao este mes.</div>';
+      lista.innerHTML = '<div class="empty-state" style="padding:20px 0"><div class="empty-state-text">Nenhuma transação este mês.</div></div>';
       return;
     }
     const fmtVal  = v => 'R$ ' + Math.abs(v).toFixed(2).replace('.',',');

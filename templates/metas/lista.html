@@ -1,0 +1,206 @@
+{% extends "base.html" %}
+{% block title %}Metas{% endblock %}
+{% block page_title %}Metas financeiras{% endblock %}
+
+{% block extra_head %}
+<style>
+  .metas-wrap { max-width: 680px; margin: 0 auto; }
+
+  .meta-card {
+    position: relative; overflow: hidden;
+    border-radius: var(--radius);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 18px;
+    transition: border-color 0.15s;
+  }
+  .meta-card:hover { border-color: var(--border2); }
+
+  .meta-titulo { font-size: 0.95rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .meta-desc   { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
+  .meta-prazo  { font-size: 0.72rem; color: var(--text3); }
+  .meta-prazo.vencida { color: var(--red2); }
+
+  .meta-valores {
+    display: flex; align-items: baseline; gap: 6px; margin: 12px 0 8px;
+  }
+  .meta-atual { font-size: 1.3rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
+  .meta-alvo  { font-size: 0.82rem; color: var(--text3); }
+
+  .meta-barra-bg { height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
+  .meta-barra-fill {
+    height: 100%; border-radius: 99px;
+    transition: width 0.8s cubic-bezier(0.16,1,0.3,1);
+  }
+  .fill-ok   { background: linear-gradient(90deg, var(--purple), var(--purple2)); }
+  .fill-done { background: linear-gradient(90deg, var(--green2), #6ee7b7); }
+
+  .meta-pct { font-size: 0.72rem; color: var(--text3); margin-top: 5px; }
+  .meta-pct.done { color: var(--green2); font-weight: 600; }
+
+  .meta-form-inline {
+    display: flex; gap: 6px; align-items: center; margin-top: 12px;
+    padding-top: 12px; border-top: 1px solid var(--border);
+  }
+
+  /* Modal nova meta */
+  .modal-nova { max-width: 460px; }
+</style>
+{% endblock %}
+
+{% block topbar_actions %}
+  <button class="btn btn-primary btn-sm"
+          onclick="document.getElementById('modal-nova').classList.add('open')">
+    + Nova meta
+  </button>
+{% endblock %}
+
+{% block content %}
+<div class="metas-wrap">
+
+  {% if not metas %}
+  <div class="card fade-up" style="text-align:center;padding:48px 24px">
+    <div style="width:48px;height:48px;border-radius:14px;background:rgba(124,58,237,0.1);
+                border:1px solid rgba(124,58,237,0.2);display:flex;align-items:center;
+                justify-content:center;margin:0 auto 16px">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--purple2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+    </div>
+    <div class="font-600" style="font-size:1rem;color:var(--text);margin-bottom:6px">
+      Nenhuma meta criada ainda
+    </div>
+    <p class="text-sm text-sub mb-16" style="line-height:1.6;max-width:320px;margin:0 auto 16px">
+      Defina objetivos financeiros — juntar para uma viagem, quitar uma dívida, criar uma reserva.
+    </p>
+    <button class="btn btn-primary btn-sm"
+            onclick="document.getElementById('modal-nova').classList.add('open')">
+      Criar primeira meta
+    </button>
+  </div>
+
+  {% else %}
+
+  <div class="flex flex-col gap-10 fade-up">
+    {% for meta in metas %}
+      {% set pct = [(meta.valor_atual / meta.valor_alvo * 100)|round(1), 100]|min if meta.valor_alvo > 0 else 0 %}
+      {% set pct = [pct, 0]|max %}
+      {% set concluida = pct >= 100 %}
+
+      <div class="meta-card">
+
+        <!-- Header -->
+        <div class="flex items-center justify-between gap-10">
+          <div class="flex-1 min-w-0">
+            <div class="meta-titulo truncate">{{ meta.titulo }}</div>
+            {% if meta.descricao %}
+              <div class="meta-desc">{{ meta.descricao }}</div>
+            {% endif %}
+          </div>
+          <div class="flex gap-6 shrink-0">
+            {% if concluida %}
+              <span class="badge badge-green">Concluída</span>
+            {% endif %}
+            <form method="POST" action="{{ url_for('metas.deletar', uuid=meta.uuid) }}"
+                  onsubmit="return confirm('Remover esta meta?')">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-icon btn-secondary" style="padding:5px 7px"
+                      title="Remover">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- Valores e barra -->
+        <div class="meta-valores">
+          <span class="meta-atual {% if concluida %}text-green{% endif %}">
+            {{ meta.valor_atual | real }}
+          </span>
+          <span class="meta-alvo">de {{ meta.valor_alvo | real }}</span>
+        </div>
+
+        <div class="meta-barra-bg">
+          <div class="meta-barra-fill {% if concluida %}fill-done{% else %}fill-ok{% endif %}"
+               style="width:{{ pct }}%"></div>
+        </div>
+
+        <div class="flex items-center justify-between mt-4">
+          <span class="meta-pct {% if concluida %}done{% endif %}">
+            {% if concluida %}
+              Meta atingida!
+            {% else %}
+              {{ pct }}% — faltam {{ (meta.valor_alvo - meta.valor_atual) | real }}
+            {% endif %}
+          </span>
+          {% if meta.data_fim %}
+            {% set hoje = now().strftime('%Y-%m-%d') if now is defined else '' %}
+            <span class="meta-prazo {% if meta.data_fim < hoje %}vencida{% endif %}">
+              até {{ meta.data_fim[8:10] }}/{{ meta.data_fim[5:7] }}/{{ meta.data_fim[:4] }}
+            </span>
+          {% endif %}
+        </div>
+
+        <!-- Atualizar progresso -->
+        {% if not concluida %}
+        <form method="POST" action="{{ url_for('metas.atualizar_progresso', uuid=meta.uuid) }}"
+              class="meta-form-inline">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+          <label class="form-label shrink-0" style="margin:0">Atualizar para</label>
+          <input type="number" name="valor_atual" class="form-control"
+                 value="{{ meta.valor_atual }}"
+                 step="0.01" min="0" max="{{ meta.valor_alvo }}"
+                 style="width:130px;padding:6px 10px;font-size:0.85rem" />
+          <button type="submit" class="btn btn-primary btn-sm shrink-0">Salvar</button>
+        </form>
+        {% endif %}
+
+      </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+</div>
+
+<!-- Modal nova meta -->
+<div class="modal-backdrop" id="modal-nova" onclick="if(event.target===this)this.classList.remove('open')">
+  <div class="modal modal-nova">
+    <div class="modal-title">Nova meta</div>
+
+    <form method="POST" action="{{ url_for('metas.nova') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+      <div class="form-group">
+        <label class="form-label">Título</label>
+        <input type="text" name="titulo" class="form-control"
+               placeholder="Ex: Reserva de emergência" required minlength="2" maxlength="100" />
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Descrição <span class="text-muted">(opcional)</span></label>
+        <input type="text" name="descricao" class="form-control"
+               placeholder="Detalhes da meta" maxlength="200" />
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group">
+          <label class="form-label">Valor alvo (R$)</label>
+          <input type="number" name="valor_alvo" class="form-control"
+                 placeholder="5000,00" step="0.01" min="0.01" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Prazo <span class="text-muted">(opcional)</span></label>
+          <input type="date" name="data_fim" class="form-control" />
+        </div>
+      </div>
+
+      <div class="flex gap-10 mt-8">
+        <button type="button"
+                onclick="document.getElementById('modal-nova').classList.remove('open')"
+                class="btn btn-secondary flex-1">Cancelar</button>
+        <button type="submit" class="btn btn-primary" style="flex:2">Criar meta</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

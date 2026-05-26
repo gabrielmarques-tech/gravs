@@ -299,6 +299,7 @@ class DatabaseManager:
         self._add_column_if_missing(conn, "usuarios", "excluido_em", "TEXT")
         self._anonimizar_emails_excluidos(conn)
         self._criar_tabela_transferencias(conn)
+        self._migrar_categorias_pix(conn)
 
 
     def limpar_tokens_expirados(self) -> int:
@@ -394,6 +395,41 @@ class DatabaseManager:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_contas_ativo ON contas_bancarias(usuario_id, ativo)"
         )
+
+    def _migrar_categorias_pix(self, conn) -> None:
+        """
+        Migration: adiciona Transferências PIX e Receita PIX para usuários
+        que criaram conta antes dessas categorias existirem no padrão.
+        """
+        usuarios = conn.execute("SELECT id FROM usuarios WHERE ativo=1").fetchall()
+        for u in usuarios:
+            uid = u["id"]
+            # Transferências PIX
+            existe = conn.execute(
+                "SELECT 1 FROM categorias WHERE usuario_id=? AND nome='Transferências PIX'",
+                (uid,)
+            ).fetchone()
+            if not existe:
+                try:
+                    conn.execute(
+                        "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?,?,?,?,?)",
+                        ("Transferências PIX", "despesa", uid, "🔄", "#6b7280")
+                    )
+                except Exception:
+                    pass
+            # Receita PIX
+            existe2 = conn.execute(
+                "SELECT 1 FROM categorias WHERE usuario_id=? AND nome='Receita PIX'",
+                (uid,)
+            ).fetchone()
+            if not existe2:
+                try:
+                    conn.execute(
+                        "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?,?,?,?,?)",
+                        ("Receita PIX", "receita", uid, "💸", "#10b981")
+                    )
+                except Exception:
+                    pass
 
     def _criar_tabela_transferencias(self, conn) -> None:
         """

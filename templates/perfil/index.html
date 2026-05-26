@@ -1,150 +1,164 @@
 {% extends "base.html" %}
-
 {% block title %}Meu Perfil{% endblock %}
-{% block page_title %}Meu Perfil{% endblock %}
+{% block page_title %}Perfil{% endblock %}
+
+{% block extra_head %}
+<style>
+  .perfil-wrap { max-width: 560px; margin: 0 auto; display: flex; flex-direction: column; gap: 14px; }
+
+  .perfil-avatar {
+    width: 64px; height: 64px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--purple), var(--cyan));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.6rem; font-weight: 700; color: white;
+    margin: 0 auto 14px;
+    box-shadow: 0 6px 24px rgba(124,58,237,0.35);
+    flex-shrink: 0;
+  }
+
+  .perfil-nome { font-size: 1.1rem; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .perfil-email { font-size: 0.82rem; color: var(--text3); margin-top: 3px; }
+
+  .perfil-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    background: rgba(124,58,237,0.1); border: 1px solid rgba(124,58,237,0.2);
+    border-radius: 99px; padding: 3px 12px; margin-top: 10px;
+    font-size: 0.75rem; color: var(--purple3); font-weight: 600;
+  }
+
+  .section-label {
+    font-size: 0.65rem; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.1em; color: var(--text3); margin-bottom: 14px;
+  }
+
+  .info-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 9px 0; border-bottom: 1px solid var(--border);
+    font-size: 0.84rem;
+  }
+  .info-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .info-row-label { color: var(--text2); }
+  .info-row-value { color: var(--text); font-weight: 500; }
+
+  .toggle-status {
+    display: flex; align-items: center; gap: 8px;
+    padding: 5px 12px; border-radius: 99px; font-size: 0.8rem;
+  }
+  .toggle-on  { background: rgba(52,211,153,0.1);  border: 1px solid rgba(52,211,153,0.25);  color: var(--green2); }
+  .toggle-off { background: var(--surface2); border: 1px solid var(--border); color: var(--text3); }
+
+  .card-contabil { border-color: rgba(124,58,237,0.2); background: rgba(124,58,237,0.04); }
+  .card-info     { background: rgba(107,95,130,0.04); border-color: rgba(107,95,130,0.15); }
+  .card-danger   { background: rgba(239,68,68,0.03);  border-color: rgba(239,68,68,0.18); }
+  .danger-label  { font-size: 0.65rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em; color: var(--red2); margin-bottom: 8px; }
+</style>
+{% endblock %}
 
 {% block content %}
-<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:16px">
+<div class="perfil-wrap">
 
   <!-- Avatar e info -->
-  <div class="card fade-up" style="text-align:center;padding:32px 20px">
-    <div style="width:72px;height:72px;border-radius:50%;
-                background:linear-gradient(135deg,var(--purple),var(--cyan));
-                display:flex;align-items:center;justify-content:center;
-                font-family:var(--font-display);font-size:2rem;font-weight:800;
-                margin:0 auto 16px;box-shadow:0 8px 28px rgba(124,58,237,0.4)">
-      {{ current_user.nome[0].upper() }}
-    </div>
-    <div style="font-family:var(--font-display);font-size:1.2rem;font-weight:700;color:var(--text)">
-      {{ current_user.nome }}
-    </div>
-    <div style="font-size:0.85rem;color:var(--text3);margin-top:4px">
-      {{ current_user.email }}
-    </div>
+  <div class="card fade-up" style="text-align:center;padding:28px 20px">
+    <div class="perfil-avatar">{{ current_user.nome[0].upper() }}</div>
+    <div class="perfil-nome">{{ current_user.nome }}</div>
+    <div class="perfil-email">{{ current_user.email }}</div>
     {% if current_user.modo_contabil %}
-      <div style="display:inline-flex;align-items:center;gap:6px;
-                  background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.25);
-                  border-radius:99px;padding:4px 14px;margin-top:12px;
-                  font-size:0.78rem;color:var(--purple3);font-weight:600">
-        🏦 Modo Contábil Ativo
+      <div>
+        <span class="perfil-badge">Modo Contábil ativo</span>
       </div>
     {% endif %}
   </div>
 
   <!-- Alterar nome -->
   <div class="card fade-up delay-1">
-    <div class="card-title mb-16">✏ Alterar Nome</div>
+    <div class="section-label">Alterar nome</div>
     <form method="POST" action="{{ url_for('perfil.atualizar_nome') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
-        <label class="form-label">Novo nome</label>
+        <label class="form-label">Nome</label>
         <input type="text" name="nome" class="form-control"
                value="{{ current_user.nome }}"
                placeholder="Seu nome" required minlength="2" maxlength="80" />
       </div>
-      <button type="submit" class="btn btn-primary">Salvar nome</button>
+      <button type="submit" class="btn btn-primary btn-sm">Salvar</button>
     </form>
   </div>
 
   <!-- Alterar senha -->
   <div class="card fade-up delay-2">
-    <div class="card-title mb-16">🔒 Alterar Senha</div>
+    <div class="section-label">Alterar senha</div>
     <form method="POST" action="{{ url_for('perfil.atualizar_senha') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
       <div class="form-group">
         <label class="form-label">Senha atual</label>
         <input type="password" name="senha_atual" class="form-control"
-               placeholder="Digite sua senha atual" required />
+               placeholder="Digite sua senha atual" required autocomplete="current-password" />
       </div>
       <div class="form-group">
         <label class="form-label">Nova senha</label>
         <input type="password" name="nova_senha" class="form-control"
-               placeholder="Mínimo 6 caracteres" required minlength="6" />
+               placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password" />
       </div>
       <div class="form-group">
         <label class="form-label">Confirmar nova senha</label>
         <input type="password" name="confirmacao" class="form-control"
-               placeholder="Repita a nova senha" required minlength="6" />
+               placeholder="Repita a nova senha" required minlength="6" autocomplete="new-password" />
       </div>
-      <button type="submit" class="btn btn-primary">Alterar senha</button>
+      <button type="submit" class="btn btn-primary btn-sm">Alterar senha</button>
     </form>
   </div>
 
   <!-- Modo contábil -->
-  <div class="card fade-up delay-3"
-       style="border-color:rgba(124,58,237,0.2);background:rgba(124,58,237,0.05)">
-    <div class="card-title mb-12">🏦 Modo Contábil</div>
-    <div style="font-size:0.85rem;color:var(--text2);margin-bottom:16px;line-height:1.6">
-      Habilita lançamentos em partida dobrada (débito/crédito).
-      Para contadores e usuários com conhecimento contábil.
+  <div class="card fade-up delay-3 card-contabil">
+    <div class="section-label">Modo contábil</div>
+    <p class="text-sm text-sub mb-12" style="line-height:1.6">
+      Habilita lançamentos em partida dobrada (débito/crédito). Para contadores e usuários com conhecimento contábil.
+    </p>
+    <div class="flex items-center gap-12 flex-wrap">
+      <span class="toggle-status {% if current_user.modo_contabil %}toggle-on{% else %}toggle-off{% endif %}">
+        {% if current_user.modo_contabil %}Ativo{% else %}Inativo{% endif %}
+      </span>
+      <form method="POST" action="{{ url_for('perfil.toggle_contabil') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <button type="submit" class="btn btn-secondary btn-sm"
+                {% if current_user.modo_contabil %}onclick="return confirm('Desativar modo contábil?')"{% endif %}>
+          {% if current_user.modo_contabil %}Desativar{% else %}Ativar{% endif %}
+        </button>
+      </form>
     </div>
-
-    {% if current_user.modo_contabil %}
-      <!-- Já ativo — opção para desativar -->
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px;
-                    background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);
-                    border-radius:99px;padding:6px 14px">
-          <span style="color:var(--green2);font-size:0.85rem;font-weight:600">✓ Ativo</span>
-        </div>
-        <form method="POST" action="{{ url_for('perfil.toggle_contabil') }}">
-          <button type="submit" class="btn btn-secondary btn-sm"
-                  onclick="return confirm('Desativar modo contábil?')">
-            Desativar
-          </button>
-        </form>
-      </div>
-    {% else %}
-      <!-- Inativo — opção para ativar -->
-      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="display:flex;align-items:center;gap:8px;
-                    background:var(--surface2);border:1px solid var(--border);
-                    border-radius:99px;padding:6px 14px">
-          <span style="color:var(--text3);font-size:0.85rem">Inativo</span>
-        </div>
-        <form method="POST" action="{{ url_for('perfil.toggle_contabil') }}">
-          <button type="submit" class="btn btn-primary btn-sm">
-            🏦 Ativar modo contábil
-          </button>
-        </form>
-      </div>
-    {% endif %}
   </div>
 
-  <!-- Info da conta -->
-  <div class="card fade-up"
-       style="background:rgba(107,95,130,0.06);border-color:rgba(107,95,130,0.15)">
-    <div class="card-title mb-12">ℹ Informações da conta</div>
-    <div style="display:flex;flex-direction:column;gap:8px;font-size:0.85rem;color:var(--text2)">
-      <div style="display:flex;justify-content:space-between">
-        <span>E-mail</span>
-        <span style="color:var(--text)">{{ current_user.email }}</span>
+  <!-- Informações da conta -->
+  <div class="card fade-up card-info">
+    <div class="section-label">Informações da conta</div>
+    <div>
+      <div class="info-row">
+        <span class="info-row-label">E-mail</span>
+        <span class="info-row-value">{{ current_user.email }}</span>
       </div>
-      <div style="display:flex;justify-content:space-between">
-        <span>Modo contábil</span>
-        <span style="color:{% if current_user.modo_contabil %}var(--green2){% else %}var(--text3){% endif %}">
-          {{ "✓ Ativo" if current_user.modo_contabil else "Inativo" }}
+      <div class="info-row">
+        <span class="info-row-label">Modo contábil</span>
+        <span class="info-row-value {% if current_user.modo_contabil %}text-green{% else %}text-muted{% endif %}">
+          {{ "Ativo" if current_user.modo_contabil else "Inativo" }}
         </span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span>Termos de uso</span>
-        <a href="{{ url_for('publico.termos') }}"
-           style="color:var(--text3);font-size:0.8rem;text-decoration:underline">Ver termos</a>
+      <div class="info-row">
+        <span class="info-row-label">Termos de uso</span>
+        <a href="{{ url_for('publico.termos') }}" class="link-muted">Ver termos</a>
       </div>
     </div>
   </div>
 
-  <!-- Zona de perigo — Excluir conta -->
-  <div class="card fade-up"
-       style="background:rgba(239,68,68,0.04);border-color:rgba(239,68,68,0.2)">
-    <div class="card-title mb-4" style="color:var(--red2)">⚠ Zona de perigo</div>
-    <p style="font-size:0.82rem;color:var(--text2);margin-bottom:16px;line-height:1.6">
+  <!-- Zona de perigo -->
+  <div class="card fade-up card-danger">
+    <div class="danger-label">Zona de perigo</div>
+    <p class="text-sm text-sub mb-14" style="line-height:1.6">
       A exclusão da conta é <strong style="color:var(--text)">irreversível</strong>.
       Todos os seus dados financeiros serão removidos permanentemente.
-      Recomendamos exportar seus dados antes de prosseguir.
     </p>
     <button onclick="document.getElementById('modal-excluir').classList.add('open')"
-            class="btn btn-sm"
-            style="background:transparent;color:var(--red2);border:1px solid rgba(239,68,68,0.4)">
-      🗑 Excluir minha conta
+            class="btn btn-danger btn-sm">
+      Excluir minha conta
     </button>
   </div>
 
@@ -152,27 +166,25 @@
 
 <!-- Modal de confirmação de exclusão -->
 <div class="modal-backdrop" id="modal-excluir">
-  <div class="modal" style="max-width:420px">
-    <div class="modal-title" style="color:var(--red2)">⚠ Excluir conta</div>
-    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:20px;line-height:1.6">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-title" style="color:var(--red2)">Excluir conta</div>
+    <p class="text-sm text-sub mb-16" style="line-height:1.6">
       Essa ação é <strong style="color:var(--text)">permanente e irreversível</strong>.
-      Para confirmar, digite sua senha atual abaixo.
+      Digite sua senha para confirmar.
     </p>
     <form method="POST" action="{{ url_for('perfil.excluir_conta') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-      <div class="form-group" style="margin-bottom:16px">
-        <label class="form-label">Sua senha atual</label>
+      <div class="form-group mb-16">
+        <label class="form-label">Senha atual</label>
         <input type="password" name="senha_confirmacao" class="form-control"
-               placeholder="Digite sua senha para confirmar" required autocomplete="current-password" />
+               placeholder="Digite sua senha" required autocomplete="current-password" />
       </div>
-      <div style="display:flex;gap:10px">
+      <div class="flex gap-10">
         <button type="button"
                 onclick="document.getElementById('modal-excluir').classList.remove('open')"
-                class="btn btn-secondary" style="flex:1">Cancelar</button>
-        <button type="submit" class="btn btn-sm" style="flex:1;
-                background:rgba(239,68,68,0.15);color:var(--red2);
-                border:1px solid rgba(239,68,68,0.4)">
-          Sim, excluir minha conta
+                class="btn btn-secondary flex-1">Cancelar</button>
+        <button type="submit" class="btn btn-danger flex-1">
+          Excluir conta
         </button>
       </div>
     </form>

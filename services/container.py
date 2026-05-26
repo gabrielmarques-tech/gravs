@@ -66,6 +66,7 @@ class ServiceContainer:
         self.saldo_conta_repo = SaldoContaRepository(self.db)
         self.limites_repo = LimiteCategoriaRepository(self.db)
         self.transferencias_repo = TransferenciaRepository(self.db)
+        self.metas_repo = MetaRepository(self.db)
 
         # ── Utilitários ───────────────────────────────────────────────────────
         self.calendario = CalendarioUtil()

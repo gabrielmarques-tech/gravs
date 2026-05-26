@@ -2355,3 +2355,134 @@ class TestImportacaoMethod:
     def test_confirmar_sem_dados_nao_retorna_405(self, client, usuario_logado):
         r = client.post("/importacao/confirmar", data={}, follow_redirects=True)
         assert r.status_code != 405
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Metas Financeiras
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestMetaRepositorio:
+    """Testa o repositório de metas diretamente."""
+
+    def test_criar_meta(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        id_meta = container.metas_repo.criar(
+            uuid="meta-uuid-1",
+            titulo="Reserva de emergência",
+            valor_alvo=5000.0,
+            data_fim="2026-12-31",
+            usuario_id=uid,
+        )
+        assert id_meta > 0
+
+    def test_listar_metas(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        container.metas_repo.criar("m1", "Meta A", 1000.0, None, uid)
+        container.metas_repo.criar("m2", "Meta B", 2000.0, None, uid)
+
+        metas = container.metas_repo.listar(uid)
+        titulos = [m["titulo"] for m in metas]
+        assert "Meta A" in titulos
+        assert "Meta B" in titulos
+
+    def test_atualizar_progresso(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        container.metas_repo.criar("prog-uuid", "Viagem", 3000.0, None, uid)
+
+        ok = container.metas_repo.atualizar_progresso("prog-uuid", 1500.0, uid)
+        assert ok
+
+        metas = container.metas_repo.listar(uid)
+        meta = next(m for m in metas if m["uuid"] == "prog-uuid")
+        assert meta["valor_atual"] == 1500.0
+
+    def test_deletar_meta(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        container.metas_repo.criar("del-meta", "Deletar", 500.0, None, uid)
+
+        ok = container.metas_repo.deletar("del-meta", uid)
+        assert ok
+
+        metas = container.metas_repo.listar(uid)
+        assert not any(m["uuid"] == "del-meta" for m in metas)
+
+    def test_isolamento_entre_usuarios(self, container, usuario_criado):
+        uid1 = usuario_criado["id"]
+        uid2, _ = container.auth.registrar("meta_u2@t.com", "senha123", "U2")
+
+        container.metas_repo.criar("iso-1", "Minha meta", 1000.0, None, uid1)
+        container.metas_repo.criar("iso-2", "Meta dele", 2000.0, None, uid2)
+
+        metas1 = container.metas_repo.listar(uid1)
+        assert len(metas1) == 1
+        assert metas1[0]["titulo"] == "Minha meta"
+
+
+class TestMetasHTTP:
+    """Testa rotas HTTP de metas."""
+
+    def test_pagina_metas_carrega(self, client, usuario_logado):
+        r = client.get("/metas/")
+        assert r.status_code == 200
+
+    def test_metas_requer_login(self, client):
+        r = client.get("/metas/", follow_redirects=False)
+        assert r.status_code == 302
+        assert "login" in r.headers["Location"].lower()
+
+    def test_criar_meta_via_post(self, client, usuario_logado, container):
+        r = client.post("/metas/nova", data={
+            "titulo": "Juntar para viagem",
+            "valor_alvo": "3000.00",
+            "data_fim": "2026-12-31",
+            "descricao": "Viagem de fim de ano",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+        metas = container.metas_repo.listar(usuario_logado["id"])
+        assert any(m["titulo"] == "Juntar para viagem" for m in metas)
+
+    def test_titulo_vazio_rejeitado(self, client, usuario_logado):
+        r = client.post("/metas/nova", data={
+            "titulo": "",
+            "valor_alvo": "1000",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_valor_zero_rejeitado(self, client, usuario_logado):
+        r = client.post("/metas/nova", data={
+            "titulo": "Meta inválida",
+            "valor_alvo": "0",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_atualizar_progresso_via_post(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        container.metas_repo.criar("http-prog", "Meta HTTP", 2000.0, None, uid)
+
+        r = client.post("/metas/progresso/http-prog", data={
+            "valor_atual": "800.00",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+        metas = container.metas_repo.listar(uid)
+        meta = next(m for m in metas if m["uuid"] == "http-prog")
+        assert meta["valor_atual"] == 800.0
+
+    def test_api_listar_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/metas/api/listar")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "metas" in data
+        assert "count" in data
+
+    def test_deletar_meta_via_post(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        container.metas_repo.criar("del-http", "Deletar HTTP", 500.0, None, uid)
+
+        r = client.post("/metas/deletar/del-http", follow_redirects=False)
+        assert r.status_code == 302
+
+        metas = container.metas_repo.listar(uid)
+        assert not any(m["uuid"] == "del-http" for m in metas)

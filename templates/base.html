@@ -24,7 +24,7 @@
 
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Syne:wght@400;500;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700&display=swap" rel="stylesheet" />
 
   <style>
     /* ── Tema escuro (padrão) ── */
@@ -147,7 +147,15 @@
       line-height: 1.6;
       font-size: 15px;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
     }
+
+    /* Seleção de texto com cor do app */
+    ::selection { background: rgba(124,58,237,0.2); color: var(--text); }
+
+    /* Focus acessível */
+    :focus-visible { outline: 2px solid var(--purple2); outline-offset: 2px; }
 
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg2); }
@@ -391,6 +399,7 @@
 
     .card:hover {
       border-color: var(--border2);
+      transition: border-color 0.2s ease;
     }
 
 
@@ -419,12 +428,132 @@
     .form-label { display: block; font-size: 0.78rem; font-weight: 500; color: var(--text2); margin-bottom: 6px; }
     .form-control { width: 100%; padding: 9px 12px; background: var(--bg3); border: 0.5px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--font-body); font-size: 0.88rem; transition: border-color 0.15s, box-shadow 0.15s; outline: none; -webkit-appearance: none; }
     .form-control:focus { border-color: var(--purple); box-shadow: 0 0 0 3px rgba(124,58,237,0.12); outline: none; }
+    :focus-visible { outline: 2px solid var(--purple2); outline-offset: 2px; }
     .form-control::placeholder { color: var(--text3); }
     select.form-control { cursor: pointer; }
     .form-control option { background: var(--bg3); color: var(--text); }
 
     /* ── Flash ── */
     /* ── Flash messages — centro inferior, fundo sólido escuro ── */
+    /* ── Utilitários de espaçamento — eliminam inline styles repetidos ── */
+    .mt-4  { margin-top: 4px; }
+    .mt-6  { margin-top: 6px; }
+    .mt-8  { margin-top: 8px; }
+    .mt-10 { margin-top: 10px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-14 { margin-top: 14px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-20 { margin-top: 20px; }
+    .mt-24 { margin-top: 24px; }
+    .mb-4  { margin-bottom: 4px; }
+    .mb-6  { margin-bottom: 6px; }
+    .mb-8  { margin-bottom: 8px; }
+    .mb-10 { margin-bottom: 10px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-14 { margin-bottom: 14px; }
+    .mb-16 { margin-bottom: 16px; }
+    .mb-20 { margin-bottom: 20px; }
+
+    /* ── Utilitários de flex ── */
+    .flex         { display: flex; }
+    .flex-col     { flex-direction: column; }
+    .items-center { align-items: center; }
+    .items-start  { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .justify-end  { justify-content: flex-end; }
+    .flex-wrap    { flex-wrap: wrap; }
+    .gap-4   { gap: 4px; }
+    .gap-6   { gap: 6px; }
+    .gap-8   { gap: 8px; }
+    .gap-10  { gap: 10px; }
+    .gap-12  { gap: 12px; }
+    .gap-14  { gap: 14px; }
+    .gap-16  { gap: 16px; }
+    .flex-1  { flex: 1; }
+    .shrink-0 { flex-shrink: 0; }
+    .min-w-0 { min-width: 0; }
+
+    /* ── Utilitários de texto ── */
+    .text-xs   { font-size: 0.7rem; }
+    .text-sm   { font-size: 0.82rem; }
+    .text-base { font-size: 0.88rem; }
+    .text-lg   { font-size: 1rem; }
+    .text-muted  { color: var(--text3); }
+    .text-sub    { color: var(--text2); }
+    .text-green  { color: var(--green2); }
+    .text-red    { color: var(--red2); }
+    .text-purple { color: var(--purple2); }
+    .green { color: var(--green2); }
+    .red   { color: var(--red2); }
+    .purple { color: var(--purple2); }
+    .font-500 { font-weight: 500; }
+    .font-600 { font-weight: 600; }
+    .font-700 { font-weight: 700; }
+    .uppercase    { text-transform: uppercase; }
+    .tracking-wide { letter-spacing: 0.08em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Utilitários de layout ── */
+    .w-full   { width: 100%; }
+    .hidden   { display: none; }
+    .relative { position: relative; }
+    .overflow-hidden { overflow: hidden; }
+
+    /* ── Badge / Pill ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 0.65rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 99px;
+      white-space: nowrap;
+    }
+    .badge-green   { background: rgba(52,211,153,0.12); color: var(--green2); }
+    .badge-receita { background: rgba(52,211,153,0.1); color: var(--green2); }
+    .badge-despesa { background: rgba(248,113,113,0.1); color: var(--red2); }
+    .badge-red    { background: rgba(248,113,113,0.12); color: var(--red2); }
+    .badge-purple { background: rgba(159,95,255,0.12); color: var(--purple2); }
+    .badge-gold   { background: rgba(251,191,36,0.12); color: var(--gold2); }
+    .badge-muted  { background: rgba(107,95,130,0.15); color: var(--text3); }
+
+    /* ── Divisor ── */
+    .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+    /* ── Seção de lista (itens com borda) ── */
+    .list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 40px 20px;
+      color: var(--text3); text-align: center; gap: 8px;
+    }
+    .empty-state-icon { font-size: 2rem; opacity: 0.5; }
+    .empty-state-text { font-size: 0.85rem; }
+
+    /* ── Link sutil ── */
+    .link-muted {
+      font-size: 0.72rem; color: var(--text3); text-decoration: none;
+      padding: 3px 8px; border: 1px solid var(--border2);
+      border-radius: 6px; transition: all 0.15s;
+    }
+    .link-muted:hover { color: var(--text2); border-color: var(--border3); }
+
+    /* ── Skeleton loading ── */
+    @keyframes shimmer {
+      0%   { background-position: -200% center; }
+      100% { background-position: 200% center; }
+    }
+    .skeleton {
+      background: linear-gradient(90deg, var(--bg3) 25%, var(--surface2) 50%, var(--bg3) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: var(--radius-sm);
+    }
+
     .flash-container {
       position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
       z-index: 9999; display: flex; flex-direction: column; gap: 8px;
@@ -562,7 +691,113 @@
       .btn { padding: 9px 14px; font-size: 0.84rem; }
       .btn-sm { padding: 6px 12px; font-size: 0.78rem; }
 
-      .flash-container { bottom: 84px; left: 5%; right: 5%; width: 90%; max-width: 100%; transform: none; }
+      /* ── Utilitários de espaçamento — eliminam inline styles repetidos ── */
+    .mt-4  { margin-top: 4px; }
+    .mt-6  { margin-top: 6px; }
+    .mt-8  { margin-top: 8px; }
+    .mt-10 { margin-top: 10px; }
+    .mt-12 { margin-top: 12px; }
+    .mt-14 { margin-top: 14px; }
+    .mt-16 { margin-top: 16px; }
+    .mt-20 { margin-top: 20px; }
+    .mt-24 { margin-top: 24px; }
+    .mb-4  { margin-bottom: 4px; }
+    .mb-6  { margin-bottom: 6px; }
+    .mb-8  { margin-bottom: 8px; }
+    .mb-10 { margin-bottom: 10px; }
+    .mb-12 { margin-bottom: 12px; }
+    .mb-14 { margin-bottom: 14px; }
+    .mb-16 { margin-bottom: 16px; }
+    .mb-20 { margin-bottom: 20px; }
+
+    /* ── Utilitários de flex ── */
+    .flex         { display: flex; }
+    .flex-col     { flex-direction: column; }
+    .items-center { align-items: center; }
+    .items-start  { align-items: flex-start; }
+    .justify-between { justify-content: space-between; }
+    .justify-end  { justify-content: flex-end; }
+    .flex-wrap    { flex-wrap: wrap; }
+    .gap-4   { gap: 4px; }
+    .gap-6   { gap: 6px; }
+    .gap-8   { gap: 8px; }
+    .gap-10  { gap: 10px; }
+    .gap-12  { gap: 12px; }
+    .gap-14  { gap: 14px; }
+    .gap-16  { gap: 16px; }
+    .flex-1  { flex: 1; }
+    .shrink-0 { flex-shrink: 0; }
+    .min-w-0 { min-width: 0; }
+
+    /* ── Utilitários de texto ── */
+    .text-xs   { font-size: 0.7rem; }
+    .text-sm   { font-size: 0.82rem; }
+    .text-base { font-size: 0.88rem; }
+    .text-lg   { font-size: 1rem; }
+    .text-muted  { color: var(--text3); }
+    .text-sub    { color: var(--text2); }
+    .text-green  { color: var(--green2); }
+    .text-red    { color: var(--red2); }
+    .text-purple { color: var(--purple2); }
+    .green { color: var(--green2); }
+    .red   { color: var(--red2); }
+    .purple { color: var(--purple2); }
+    .font-500 { font-weight: 500; }
+    .font-600 { font-weight: 600; }
+    .font-700 { font-weight: 700; }
+    .uppercase    { text-transform: uppercase; }
+    .tracking-wide { letter-spacing: 0.08em; }
+    .tabular-nums { font-variant-numeric: tabular-nums; }
+    .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    /* ── Utilitários de layout ── */
+    .w-full   { width: 100%; }
+    .hidden   { display: none; }
+    .relative { position: relative; }
+    .overflow-hidden { overflow: hidden; }
+
+    /* ── Badge / Pill ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      font-size: 0.65rem; font-weight: 600;
+      padding: 2px 8px; border-radius: 99px;
+      white-space: nowrap;
+    }
+    .badge-green   { background: rgba(52,211,153,0.12); color: var(--green2); }
+    .badge-receita { background: rgba(52,211,153,0.1); color: var(--green2); }
+    .badge-despesa { background: rgba(248,113,113,0.1); color: var(--red2); }
+    .badge-red    { background: rgba(248,113,113,0.12); color: var(--red2); }
+    .badge-purple { background: rgba(159,95,255,0.12); color: var(--purple2); }
+    .badge-gold   { background: rgba(251,191,36,0.12); color: var(--gold2); }
+    .badge-muted  { background: rgba(107,95,130,0.15); color: var(--text3); }
+
+    /* ── Divisor ── */
+    .divider { height: 1px; background: var(--border); margin: 12px 0; }
+
+    /* ── Seção de lista (itens com borda) ── */
+    .list-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 0; border-bottom: 1px solid var(--border);
+    }
+    .list-item:last-child { border-bottom: none; padding-bottom: 0; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; padding: 40px 20px;
+      color: var(--text3); text-align: center; gap: 8px;
+    }
+    .empty-state-icon { font-size: 2rem; opacity: 0.5; }
+    .empty-state-text { font-size: 0.85rem; }
+
+    /* ── Link sutil ── */
+    .link-muted {
+      font-size: 0.72rem; color: var(--text3); text-decoration: none;
+      padding: 3px 8px; border: 1px solid var(--border2);
+      border-radius: 6px; transition: all 0.15s;
+    }
+    .link-muted:hover { color: var(--text2); border-color: var(--border3); }
+    .flash-container { bottom: 84px; left: 5%; right: 5%; width: 90%; max-width: 100%; transform: none; }
     }
 
     @media (max-width: 480px) {
@@ -583,7 +818,7 @@
     <div class="flash-container" id="flashes">
       {% for category, message in messages %}
         <div class="flash flash-{{ category }}">
-          {% if category == 'erro' %}⚠{% elif category == 'sucesso' %}✓{% else %}ℹ{% endif %}
+          {% if category == 'erro' %}!{% elif category == 'sucesso' %}✓{% else %}i{% endif %}
           {{ message }}
         </div>
       {% endfor %}
@@ -609,7 +844,7 @@
     <div class="sidebar-logo">
       <img src="/static/icon-192.png" alt="Gravs" width="32" height="32"
            style="border-radius:8px;flex-shrink:0;object-fit:contain" />
-      <span style="font-family:'Syne',sans-serif;font-size:1.25rem;font-weight:800;letter-spacing:-0.03em;color:var(--text)">Gravs</span>
+      <span style="font-family:'Inter',system-ui,sans-serif;font-size:1.25rem;font-weight:800;letter-spacing:-0.03em;color:var(--text)">Gravs</span>
     </div>
 
     <nav class="sidebar-nav">
@@ -658,6 +893,10 @@
          class="nav-link {% if request.blueprint == 'transferencias' %}active{% endif %}">
         <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/></svg></div>Transferências
       </a>
+      <a href="{{ url_for('metas.lista') }}"
+         class="nav-link {% if request.blueprint == 'metas' %}active{% endif %}">
+        <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>Metas
+      </a>
       <a href="{{ url_for('perfil.index') }}"
          class="nav-link {% if request.blueprint == 'perfil' %}active{% endif %}">
         <div class="nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>Meu Perfil
@@ -673,11 +912,11 @@
           <button id="tab-fixas" onclick="setTab('fixas')"
                   style="font-size:0.65rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
                          padding:4px 10px;border-radius:6px;border:none;cursor:pointer;transition:all 0.2s;
-                         background:rgba(124,58,237,0.25);color:var(--purple3)">🔁 Fixas</button>
+                         background:rgba(124,58,237,0.25);color:var(--purple3)">Fixas</button>
           <button id="tab-avulsas" onclick="setTab('avulsas')"
                   style="font-size:0.65rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;
                          padding:4px 10px;border-radius:6px;border:none;cursor:pointer;transition:all 0.2s;
-                         background:transparent;color:var(--text3)">💳 Avulsas</button>
+                         background:transparent;color:var(--text3)">Avulsas</button>
         </div>
         <div style="width:30px;height:3px;background:var(--border);border-radius:99px;overflow:hidden">
           <div id="widget-timer-bar"
@@ -713,7 +952,11 @@
         <div class="user-name">{% if current_user.is_authenticated %}{{ current_user.nome }}{% endif %}</div>
         <div class="user-email">{% if current_user.is_authenticated %}{{ current_user.email }}{% endif %}</div>
       </div>
-      <a href="{{ url_for('perfil.index') }}" class="logout-btn" title="Meu perfil" style="color:var(--text3);font-size:0.85rem">⚙</a>
+      <a href="{{ url_for('perfil.index') }}" class="logout-btn" title="Meu perfil" aria-label="Perfil">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/>
+            </svg>
+          </a>
       <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Sair">⏻</a>
     </div>
 
@@ -732,11 +975,14 @@
         {% block topbar_actions %}{% endblock %}
         <!-- Botão alternar tema -->
         <button onclick="alternarTema()" id="btn-tema"
-                title="Alternar tema"
-                style="background:var(--surface2);border:1px solid var(--border2);
-                       border-radius:8px;padding:7px 10px;cursor:pointer;
-                       font-size:1rem;transition:all 0.2s;color:var(--text2)">
-          🌙
+                title="Alternar tema" aria-label="Alternar tema claro/escuro"
+                class="btn btn-secondary btn-icon">
+          <svg id="tema-svg-escuro" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+          <svg id="tema-svg-claro" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="display:none">
+            <circle cx="12" cy="12" r="4"/><line x1="12" y1="2" x2="12" y2="4"/><line x1="12" y1="20" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="6.34" y2="6.34"/><line x1="17.66" y1="17.66" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="4" y2="12"/><line x1="20" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="6.34" y2="17.66"/><line x1="17.66" y1="6.34" x2="19.07" y2="4.93"/>
+          </svg>
         </button>
       </div>
     </div>
@@ -768,6 +1014,11 @@
          class="bottom-nav-item {% if request.blueprint == 'recorrentes' %}active{% endif %}">
         <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><polyline points="21 3 21 8 16 8"/></svg></div>
         <div class="bottom-nav-label">Fixas</div>
+      </a>
+      <a href="{{ url_for('metas.lista') }}"
+         class="bottom-nav-item {% if request.blueprint == 'metas' %}active{% endif %}">
+        <div class="bottom-nav-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+        <div class="bottom-nav-label">Metas</div>
       </a>
       <a href="{{ url_for('transacoes.parcelados') }}"
          class="bottom-nav-item {% if request.endpoint == 'transacoes.parcelados' %}active{% endif %}">
@@ -831,7 +1082,10 @@
   function aplicarTema(tema) {
     document.documentElement.setAttribute('data-tema', tema);
     const btn = document.getElementById('btn-tema');
-    if (btn) btn.textContent = tema === 'claro' ? '☀️' : '🌙';
+    const svgE = document.getElementById('tema-svg-escuro');
+    const svgC = document.getElementById('tema-svg-claro');
+    if (svgE) svgE.style.display = tema === 'claro' ? 'none' : 'block';
+    if (svgC) svgC.style.display = tema === 'claro' ? 'block' : 'none';
   }
 
   function alternarTema() {
@@ -940,13 +1194,13 @@
       return;
     }
 
-    const icones = { lancado: '✓', passado: '🔴', agendado: '📅' };
+    const icones = { lancado: '✓', passado: '!', agendado: '○' };
 
     lista.innerHTML = fixas.slice(0, 6).map(f => {
       // Verde para receita, vermelho para despesa — independente do status
       const corValor = f.tipo === 'receita' ? 'var(--green2)' : 'var(--red2)';
       const sinal    = f.tipo === 'receita' ? '+' : '-';
-      const icone    = icones[f.status] || '📅';
+      const icone    = icones[f.status] || '○';
       const corTexto = f.status === 'lancado' ? 'var(--text3)' : 'var(--text)';
 
       // Formata data: "08/05 Seg"
@@ -1006,7 +1260,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;gap:4px">
           <div style="font-size:0.74rem;font-weight:500;min-width:0;
                       white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text)">
-            ${t.icone || '💳'} ${t.descricao}
+            ${t.icone || '·'} ${t.descricao}
           </div>
           <div style="font-size:0.72rem;font-weight:700;flex-shrink:0;color:${corValor}">
             ${sinal}R$ ${Number(t.valor).toFixed(2).replace('.',',')}
@@ -1049,6 +1303,12 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     setTimeout(carregarWidget, 500);
+    // Sincroniza ícones de tema com estado atual
+    const temaAtual = localStorage.getItem('gravs-tema') || 'escuro';
+    const svgE = document.getElementById('tema-svg-escuro');
+    const svgC = document.getElementById('tema-svg-claro');
+    if (svgE) svgE.style.display = temaAtual === 'claro' ? 'none' : 'block';
+    if (svgC) svgC.style.display = temaAtual === 'claro' ? 'block' : 'none';
   });
 </script>
 </body>

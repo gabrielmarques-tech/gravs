@@ -76,7 +76,7 @@
 <!-- Despesas -->
 <div class="card fade-up mb-16">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div class="card-title" style="margin-bottom:0;color:var(--red2)">💸 Despesas</div>
+    <div class="card-title" style="margin-bottom:0;color:var(--red2)"> Despesas</div>
     <button class="btn btn-sm btn-secondary" onclick="abrirModal('despesa')">+ Nova</button>
   </div>
   {% if despesas %}
@@ -88,13 +88,13 @@
         <div class="cat-info">
           <div class="cat-nome">{{ c.nome }}</div>
         </div>
-        <div style="display:flex;gap:6px">
+        <div class="flex gap-6">
           <button class="btn btn-sm btn-secondary btn-icon"
                   onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'despesa')"
                   title="Editar">✏️</button>
           <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
                 onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
-            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir">🗑</button>
+            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </form>
         </div>
       </div>
@@ -109,7 +109,7 @@
 <!-- Receitas -->
 <div class="card fade-up delay-1">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-    <div class="card-title" style="margin-bottom:0;color:var(--green2)">💰 Receitas</div>
+    <div class="card-title" style="margin-bottom:0;color:var(--green2)"> Receitas</div>
     <button class="btn btn-sm btn-secondary" onclick="abrirModal('receita')">+ Nova</button>
   </div>
   {% if receitas %}
@@ -121,13 +121,13 @@
         <div class="cat-info">
           <div class="cat-nome">{{ c.nome }}</div>
         </div>
-        <div style="display:flex;gap:6px">
+        <div class="flex gap-6">
           <button class="btn btn-sm btn-secondary btn-icon"
                   onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'receita')"
                   title="Editar">✏️</button>
           <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
                 onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
-            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir">🗑</button>
+            <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </form>
         </div>
       </div>
@@ -176,7 +176,7 @@
 
       <div class="form-group">
         <label class="form-label">Cor</label>
-        <div style="display:flex;align-items:center;gap:10px">
+        <div class="flex items-center gap-10">
           <input type="color" name="cor" id="input-cor" value="#7c3aed"
                  style="width:44px;height:36px;border:none;border-radius:8px;
                         cursor:pointer;background:none;padding:0" />

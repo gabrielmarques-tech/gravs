@@ -1,38 +1,45 @@
-# ── Banco de dados — NUNCA sobe para o GitHub ────────────────────────────────
-*.db
-*.db-shm
-*.db-wal
-
-# ── Segredos — NUNCA sobem para o GitHub ─────────────────────────────────────
-.env.secret
-.env
-*.env
-
-# ── Python ────────────────────────────────────────────────────────────────────
+# Python
 __pycache__/
-*.py[cod]
-*$py.class
+*.pyc
 *.pyo
-.pytest_cache/
-.coverage
-htmlcov/
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
 
-# ── Ambiente virtual ──────────────────────────────────────────────────────────
+# Ambientes virtuais
 venv/
 env/
 .venv/
+.env/
 
-# ── Backups e ZIPs ────────────────────────────────────────────────────────────
-*.zip
-backups/
+# Banco de dados (NUNCA commitar)
+*.db
+*.sqlite
+*.sqlite3
 
-# ── Sistema operacional ───────────────────────────────────────────────────────
-.DS_Store
-Thumbs.db
-desktop.ini
+# Segredos (NUNCA commitar)
+.env.secret
+.env.local
+.env.production
 
-# ── IDEs ─────────────────────────────────────────────────────────────────────
+# Testes
+.pytest_cache/
+.coverage
+htmlcov/
+*.bak
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/

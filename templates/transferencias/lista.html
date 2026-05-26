@@ -1,32 +1,28 @@
 {% extends "base.html" %}
 {% block title %}Transferências{% endblock %}
-{% block page_title %}Transferências entre contas{% endblock %}
+{% block page_title %}Transferências{% endblock %}
 
 {% block content %}
 <div style="max-width:700px;margin:0 auto">
 
   <!-- Header -->
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px">
-    <div style="font-size:0.82rem;color:var(--text2)">
-      Movimentações internas — não afetam receitas nem despesas.
-    </div>
-    <a href="{{ url_for('transferencias.nova') }}" class="btn btn-primary btn-sm">
-      + Nova transferência
-    </a>
+  <div class="flex items-center justify-between mb-14 flex-wrap gap-10">
+    <p class="text-sm text-sub">Movimentações internas — não afetam receitas nem despesas.</p>
+    <a href="{{ url_for('transferencias.nova') }}" class="btn btn-primary btn-sm">+ Nova</a>
   </div>
 
   <!-- Filtro de período -->
-  <div class="card fade-up" style="padding:12px 16px;margin-bottom:14px">
-    <form method="GET" style="display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap">
+  <div class="card fade-up mb-14" style="padding:12px 16px">
+    <form method="GET" class="flex gap-10 items-end flex-wrap">
       <div>
-        <label class="form-label" style="font-size:0.75rem">De</label>
+        <label class="form-label">De</label>
         <input type="date" name="inicio" value="{{ filtro_inicio }}"
-               class="form-control" style="width:140px;font-size:0.85rem" />
+               class="form-control" style="width:140px" />
       </div>
       <div>
-        <label class="form-label" style="font-size:0.75rem">Até</label>
+        <label class="form-label">Até</label>
         <input type="date" name="fim" value="{{ filtro_fim }}"
-               class="form-control" style="width:140px;font-size:0.85rem" />
+               class="form-control" style="width:140px" />
       </div>
       <button type="submit" class="btn btn-secondary btn-sm">Filtrar</button>
     </form>
@@ -35,74 +31,59 @@
   <!-- Lista -->
   <div class="card fade-up" style="padding:0;overflow:hidden">
     {% if transferencias %}
-      <table style="width:100%;border-collapse:collapse;font-size:0.85rem">
-        <thead>
-          <tr style="background:var(--bg3);border-bottom:1px solid var(--border2)">
-            <th style="padding:10px 14px;text-align:left;color:var(--text2);font-weight:600">Data</th>
-            <th style="padding:10px 14px;text-align:left;color:var(--text2);font-weight:600">Descrição</th>
-            <th style="padding:10px 14px;text-align:left;color:var(--text2);font-weight:600">Origem → Destino</th>
-            <th style="padding:10px 14px;text-align:right;color:var(--text2);font-weight:600">Valor</th>
-            <th style="padding:10px 14px;text-align:center;color:var(--text2);font-weight:600;width:40px"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for t in transferencias %}
-          <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:10px 14px;color:var(--text3)">
-              {{ t.data[8:10] }}/{{ t.data[5:7] }}/{{ t.data[:4] }}
-            </td>
-            <td style="padding:10px 14px;color:var(--text)">{{ t.descricao }}</td>
-            <td style="padding:10px 14px;color:var(--text2)">
-              <span>{{ t.conta_origem_icone }} {{ t.conta_origem_nome }}</span>
-              <span style="color:var(--purple2);margin:0 6px">→</span>
-              <span>{{ t.conta_destino_icone }} {{ t.conta_destino_nome }}</span>
-            </td>
-            <td style="padding:10px 14px;text-align:right;font-weight:700;
-                       color:var(--purple2);font-variant-numeric:tabular-nums">
-              {{ t.valor | real }}
-            </td>
-            <td style="padding:10px 14px;text-align:center">
-              <form method="POST" action="{{ url_for('transferencias.deletar', uuid=t.uuid) }}"
-                    onsubmit="return confirm('Remover esta transferência?')">
-                <button type="submit"
-                        style="background:none;border:none;cursor:pointer;
-                               color:var(--text3);font-size:0.9rem;padding:2px 6px"
-                        title="Remover">✕</button>
-              </form>
-            </td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
+      {% for t in transferencias %}
+      <div class="list-item" style="padding:12px 16px">
+        <div class="flex-1 min-w-0">
+          <div class="text-base font-500 truncate">{{ t.descricao }}</div>
+          <div class="text-xs text-muted mt-4">
+            {{ t.data[8:10] }}/{{ t.data[5:7] }}/{{ t.data[:4] }} ·
+            {{ t.conta_origem_icone }} {{ t.conta_origem_nome }}
+            <span style="color:var(--purple2);margin:0 4px">→</span>
+            {{ t.conta_destino_icone }} {{ t.conta_destino_nome }}
+          </div>
+        </div>
+        <div class="flex items-center gap-10 shrink-0">
+          <span class="font-700 tabular-nums" style="color:var(--purple2)">
+            {{ t.valor | real }}
+          </span>
+          <form method="POST" action="{{ url_for('transferencias.deletar', uuid=t.uuid) }}"
+                onsubmit="return confirm('Remover esta transferência?')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-icon btn-secondary" title="Remover"
+                    style="padding:5px 8px;color:var(--text3)">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+      {% endfor %}
 
       <!-- Total -->
-      <div style="padding:12px 14px;border-top:1px solid var(--border2);
-                  display:flex;justify-content:flex-end;gap:6px;align-items:center">
-        <span style="font-size:0.8rem;color:var(--text3)">Total movimentado:</span>
-        <span style="font-weight:700;color:var(--purple2);font-variant-numeric:tabular-nums">
+      <div class="flex justify-end items-center gap-6" style="padding:12px 16px;border-top:1px solid var(--border2)">
+        <span class="text-xs text-muted">Total movimentado</span>
+        <span class="font-700 tabular-nums" style="color:var(--purple2)">
           {{ transferencias | sum(attribute='valor') | real }}
         </span>
       </div>
 
     {% else %}
-      <div style="padding:40px;text-align:center;color:var(--text3)">
-        <div style="font-size:2rem;margin-bottom:8px">🔄</div>
-        <div>Nenhuma transferência no período.</div>
-        <a href="{{ url_for('transferencias.nova') }}"
-           style="color:var(--purple2);font-size:0.85rem;margin-top:8px;display:inline-block">
-          Registrar primeira transferência →
+      <div class="empty-state">
+        <div class="empty-state-icon">↔</div>
+        <div class="empty-state-text">Nenhuma transferência no período.</div>
+        <a href="{{ url_for('transferencias.nova') }}" class="link-muted mt-8">
+          Registrar transferência →
         </a>
       </div>
     {% endif %}
   </div>
 
   <!-- Explicação -->
-  <div style="margin-top:14px;padding:12px 16px;background:rgba(124,58,237,0.05);
-              border:1px solid rgba(124,58,237,0.15);border-radius:10px;font-size:0.8rem;color:var(--text2)">
-    <strong style="color:var(--text)">Como funcionam as transferências?</strong><br>
-    Ao pagar a fatura do cartão, registre uma transferência da sua conta corrente para o cartão.
-    O saldo do cartão sobe (fica menos negativo) e o da corrente cai — sem criar nova despesa.
-    As despesas já foram registradas quando você fez as compras no cartão.
+  <div class="card mt-14" style="background:rgba(124,58,237,0.04);border-color:rgba(124,58,237,0.15);padding:12px 16px">
+    <p class="text-sm text-sub" style="line-height:1.6">
+      <strong style="color:var(--text)">Como funcionam?</strong>
+      Ao pagar fatura do cartão, registre uma transferência da corrente para o cartão.
+      O saldo redistribui entre contas sem criar nova despesa.
+    </p>
   </div>
 
 </div>

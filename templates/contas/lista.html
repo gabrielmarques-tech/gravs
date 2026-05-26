@@ -81,7 +81,7 @@
           <form method="POST" action="{{ url_for('contas.deletar', conta_id=c.id) }}"
                 onsubmit="return confirm('Remover {{ c.nome|e }}?')">
             <button type="submit" class="btn btn-danger btn-sm btn-icon"
-                    title="Remover">🗑</button>
+                    title="Remover"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </form>
         </div>
       {% endfor %}
@@ -134,7 +134,7 @@
       </div>
 
       <!-- Sugestões rápidas -->
-      <div style="margin-bottom:16px">
+      <div class="mb-16">
         <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">Sugestões:</div>
         <div style="display:flex;flex-wrap:wrap;gap:6px">
           <span onclick="usarSugestao('Nubank', 'cartao')" class="sugestao">💳 Nubank</span>
