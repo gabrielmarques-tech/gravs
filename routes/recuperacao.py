@@ -36,9 +36,8 @@ recuperacao_bp = Blueprint("recuperacao", __name__, url_prefix="/recuperar")
 #   EMAIL_REMETENTE=seu@gmail.com
 #   EMAIL_SENHA_APP=xxxx xxxx xxxx xxxx  (senha de app do Google)
 import os
-EMAIL_REMETENTE    = os.environ.get("EMAIL_REMETENTE", "")
-EMAIL_SENHA_APP    = os.environ.get("EMAIL_SENHA_APP", "")
-EMAIL_NOME         = "Gravs — Controle Financeiro"
+EMAIL_NOME = "Gravs — Controle Financeiro"
+# EMAIL_REMETENTE e EMAIL_SENHA_APP lidas em tempo de execução na função
 TOKEN_EXPIRA_HORAS = 1
 
 
@@ -48,7 +47,9 @@ def enviar_email_recuperacao(destinatario: str, nome: str, link: str) -> bool:
 
     Retorna True se enviado com sucesso, False se falhou.
     """
-    # Se email não configurado, loga aviso e retorna False
+    # Lê em tempo de execução para pegar valor correto após wsgi.py carregar .env.secret
+    EMAIL_REMETENTE = os.environ.get("EMAIL_REMETENTE", "")
+    EMAIL_SENHA_APP = os.environ.get("EMAIL_SENHA_APP", "")
     if not EMAIL_REMETENTE or not EMAIL_SENHA_APP:
         logger.warning("Email de recuperação não configurado. Defina EMAIL_REMETENTE e EMAIL_SENHA_APP no .env.secret")
         return False

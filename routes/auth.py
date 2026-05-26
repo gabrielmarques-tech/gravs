@@ -27,8 +27,8 @@ logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint("auth", __name__, url_prefix="/auth")
 
-EMAIL_REMETENTE = os.environ.get("EMAIL_REMETENTE", "")
-EMAIL_SENHA_APP = os.environ.get("EMAIL_SENHA_APP", "")
+# EMAIL_REMETENTE e EMAIL_SENHA_APP são lidas em tempo de execução
+# dentro de _enviar_codigo_verificacao para pegar o valor correto do ambiente
 
 
 def _gerar_codigo_6_digitos() -> str:
@@ -38,6 +38,9 @@ def _gerar_codigo_6_digitos() -> str:
 
 def _enviar_codigo_verificacao(destinatario: str, nome: str, codigo: str) -> bool:
     """Envia email com código de verificação de 6 dígitos."""
+    # Lê em tempo de execução — garante pegar o valor após wsgi.py carregar .env.secret
+    EMAIL_REMETENTE = os.environ.get("EMAIL_REMETENTE", "")
+    EMAIL_SENHA_APP = os.environ.get("EMAIL_SENHA_APP", "")
     if not EMAIL_REMETENTE or not EMAIL_SENHA_APP:
         logger.warning("Email não configurado — verificação pulada em dev")
         return False
