@@ -206,10 +206,16 @@ def _parsear_csv_bradesco(conteudo: str) -> list[dict]:
 
 # ── Rotas ──────────────────────────────────────────────────────────────────────
 
-@importacao_bp.route("/")
+@importacao_bp.route("/", methods=["GET", "POST"])
 @login_required
 def index():
-    """Página inicial de importação — instruções e upload."""
+    """Página inicial de importação — instruções e upload.
+    
+    Aceita POST para redirecionar corretamente quando o browser
+    repete a requisição após erro de upload.
+    """
+    if request.method == "POST":
+        return redirect(url_for("importacao.upload"))
     return render_template("importacao/index.html")
 
 

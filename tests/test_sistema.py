@@ -2166,3 +2166,172 @@ class TestCSRFRecuperacaoSenha:
                         data={"email": "recup@t.com"},
                         follow_redirects=True)
         assert r.status_code == 200
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Categorias
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestCategoriasHTTP:
+    """Testa CRUD de categorias via HTTP."""
+
+    def test_pagina_categorias_carrega(self, client, usuario_logado):
+        r = client.get("/categorias/")
+        assert r.status_code == 200
+
+    def test_criar_categoria(self, client, usuario_logado, container):
+        r = client.post("/categorias/nova", data={
+            "nome": "Academia",
+            "icone": "🏋️",
+            "tipo": "despesa",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+        cats = container.categorias_repo.listar_por_usuario(usuario_logado["id"])
+        nomes = [c["nome"] for c in cats]
+        assert "Academia" in nomes
+
+    def test_categoria_requer_login(self, client):
+        r = client.get("/categorias/", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_api_categorias_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/categorias/api/listar")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "categorias" in data
+
+    def test_deletar_categoria(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"]
+
+        r = client.post(f"/categorias/deletar/{cat_id}", follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_isolamento_categorias_entre_usuarios(self, container):
+        uid1, _ = container.auth.registrar("cat_u1@t.com", "senha123", "U1")
+        uid2, _ = container.auth.registrar("cat_u2@t.com", "senha123", "U2")
+
+        cats1 = container.categorias_repo.listar_por_usuario(uid1)
+        cats2 = container.categorias_repo.listar_por_usuario(uid2)
+
+        ids1 = {c["id"] for c in cats1}
+        ids2 = {c["id"] for c in cats2}
+        assert ids1.isdisjoint(ids2), "Categorias de usuários diferentes não devem se misturar"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Contas Bancárias
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestContasHTTP:
+    """Testa CRUD de contas bancárias via HTTP."""
+
+    def test_pagina_contas_carrega(self, client, usuario_logado):
+        r = client.get("/contas/")
+        assert r.status_code == 200
+
+    def test_criar_conta(self, client, usuario_logado, container):
+        r = client.post("/contas/adicionar", data={
+            "nome": "Nubank",
+            "tipo": "cartao",
+            "icone": "💳",
+        }, follow_redirects=True)
+        assert r.status_code == 200
+
+        contas = container.contas_repo.listar(usuario_logado["id"])
+        nomes = [c["nome"] for c in contas]
+        assert "Nubank" in nomes
+
+    def test_contas_requer_login(self, client):
+        r = client.get("/contas/", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_api_contas_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/contas/api/listar")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "contas" in data
+
+    def test_deletar_conta(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        conta_id, _ = container.contas_repo.adicionar("Del Conta", "conta", uid)
+        r = client.post(f"/contas/deletar/{conta_id}", follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_isolamento_contas_entre_usuarios(self, container):
+        uid1, _ = container.auth.registrar("contas_u1@t.com", "senha123", "U1")
+        uid2, _ = container.auth.registrar("contas_u2@t.com", "senha123", "U2")
+
+        container.contas_repo.adicionar("Corrente U1", "conta", uid1)
+        container.contas_repo.adicionar("Corrente U2", "conta", uid2)
+
+        contas1 = container.contas_repo.listar(uid1)
+        contas2 = container.contas_repo.listar(uid2)
+
+        nomes1 = {c["nome"] for c in contas1}
+        nomes2 = {c["nome"] for c in contas2}
+        assert "Corrente U1" in nomes1
+        assert "Corrente U1" not in nomes2
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Exportação Excel
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestExportacaoExcel:
+    """Testa exportação de transações para Excel."""
+
+    def test_download_excel_retorna_arquivo(self, client, usuario_logado, container, categoria_despesa):
+        uid = usuario_logado["id"]
+        container.transacoes.adicionar(
+            "Compra teste", 100.0, "despesa", categoria_despesa["id"], uid, "2026-05-01"
+        )
+        r = client.get("/contabil/exportar/download")
+        assert r.status_code == 200
+        assert b"xlsx" in r.content_type.encode() or \
+               b"spreadsheet" in r.content_type.encode() or \
+               r.content_type == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+    def test_exportar_requer_login(self, client):
+        r = client.get("/contabil/exportar/download", follow_redirects=False)
+        assert r.status_code == 302
+
+    def test_pagina_exportar_carrega(self, client, usuario_logado):
+        r = client.get("/contabil/exportar")
+        assert r.status_code == 200
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Importação — Method Not Allowed (fix 405)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestImportacaoMethod:
+    """
+    Testa que a rota de importação não retorna 405.
+    Problema reportado: ao importar CSV de 60 dias retornava
+    Method Not Allowed porque a rota index não aceitava POST.
+    """
+
+    def test_index_aceita_get(self, client, usuario_logado):
+        r = client.get("/importacao/")
+        assert r.status_code == 200
+
+    def test_index_aceita_post_redireciona(self, client, usuario_logado):
+        """POST na raiz deve redirecionar para upload, nunca retornar 405."""
+        r = client.post("/importacao/", follow_redirects=False)
+        assert r.status_code in (301, 302, 303), \
+            f"Esperado redirecionamento, recebeu {r.status_code}"
+
+    def test_upload_sem_arquivo_nao_retorna_405(self, client, usuario_logado):
+        r = client.post("/importacao/upload",
+                        data={}, content_type="multipart/form-data",
+                        follow_redirects=True)
+        assert r.status_code != 405
+
+    def test_confirmar_sem_dados_nao_retorna_405(self, client, usuario_logado):
+        r = client.post("/importacao/confirmar", data={}, follow_redirects=True)
+        assert r.status_code != 405
