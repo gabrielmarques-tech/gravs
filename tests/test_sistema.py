@@ -2121,3 +2121,48 @@ class TestCSRFVerificacaoEmail:
         r = client.get("/auth/cadastro")
         assert r.status_code == 200
         assert b"csrf_token" in r.data
+
+
+class TestCSRFRecuperacaoSenha:
+    """
+    Testa que os forms de recuperação de senha têm CSRF token.
+    Evita Bad Request 400 ao submeter esqueci a senha.
+    Blueprint usa prefixo /recuperar/
+    """
+
+    def test_form_solicitar_tem_csrf(self, client):
+        """Tela de solicitar recuperação deve ter csrf_token."""
+        r = client.get("/recuperar/")
+        assert r.status_code == 200
+        assert b"csrf_token" in r.data
+
+    def test_form_redefinir_tem_csrf(self, client):
+        """Tela de redefinir senha deve ter csrf_token."""
+        r = client.get("/recuperar/token-invalido")
+        if r.status_code == 200:
+            assert b"csrf_token" in r.data
+
+    def test_post_solicitar_sem_csrf_retorna_400(self, app, container):
+        """POST sem CSRF em solicitar deve retornar 400 com CSRF ativo."""
+        app.config["WTF_CSRF_ENABLED"] = True
+        app.config["WTF_CSRF_CHECK_DEFAULT"] = True
+        with app.test_client() as c:
+            r = c.post("/recuperar/", data={"email": "teste@t.com"})
+            assert r.status_code == 400
+        app.config["WTF_CSRF_ENABLED"] = False
+        app.config["WTF_CSRF_CHECK_DEFAULT"] = False
+
+    def test_post_solicitar_com_email_invalido(self, client):
+        """Solicitar com email inexistente deve retornar sem erro de servidor."""
+        r = client.post("/recuperar/",
+                        data={"email": "naoexiste@t.com"},
+                        follow_redirects=True)
+        assert r.status_code == 200
+
+    def test_post_solicitar_com_email_valido(self, client, container):
+        """Solicitar com email válido deve funcionar sem erro."""
+        container.auth.registrar("recup@t.com", "senha123", "Recup")
+        r = client.post("/recuperar/",
+                        data={"email": "recup@t.com"},
+                        follow_redirects=True)
+        assert r.status_code == 200
