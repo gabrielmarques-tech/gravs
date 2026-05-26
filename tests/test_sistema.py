@@ -1810,3 +1810,257 @@ class TestClassificacaoPIX:
         for t in trans:
             assert t["categoria_sugerida"] != "Outros", \
                 f"PIX não deveria cair em 'Outros': {t['descricao']}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Transferências entre Contas
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestTransferenciaRepositorio:
+    """Testa o repositório de transferências diretamente."""
+
+    def _contas(self, container, usuario_id):
+        corrente_id, _ = container.contas_repo.adicionar("Corrente", "conta", usuario_id)
+        cartao_id, _   = container.contas_repo.adicionar("Cartão", "cartao", usuario_id)
+        return corrente_id, cartao_id
+
+    def test_inserir_transferencia(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        corrente_id, cartao_id = self._contas(container, uid)
+
+        id_transf = container.transferencias_repo.inserir(
+            uuid="test-uuid-1",
+            descricao="Pagar fatura",
+            valor=500.0,
+            conta_origem_id=corrente_id,
+            conta_destino_id=cartao_id,
+            data="2026-05-01",
+            usuario_id=uid,
+        )
+        assert id_transf > 0
+
+    def test_listar_por_periodo(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        corrente_id, cartao_id = self._contas(container, uid)
+
+        container.transferencias_repo.inserir(
+            "t1", "Fatura maio", 300.0, corrente_id, cartao_id, "2026-05-10", uid
+        )
+        container.transferencias_repo.inserir(
+            "t2", "Fatura abril", 200.0, corrente_id, cartao_id, "2026-04-10", uid
+        )
+
+        resultado = container.transferencias_repo.listar_por_periodo(
+            "2026-05-01", "2026-05-31", uid
+        )
+        assert len(resultado) == 1
+        assert resultado[0]["descricao"] == "Fatura maio"
+
+    def test_deletar_logico(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        corrente_id, cartao_id = self._contas(container, uid)
+
+        container.transferencias_repo.inserir(
+            "del-uuid", "Deletar", 100.0, corrente_id, cartao_id, "2026-05-01", uid
+        )
+        ok = container.transferencias_repo.deletar_logico("del-uuid", uid)
+        assert ok
+
+        resultado = container.transferencias_repo.listar_por_periodo(
+            "2026-05-01", "2026-05-31", uid
+        )
+        assert len(resultado) == 0
+
+    def test_isolamento_entre_usuarios(self, container, usuario_criado):
+        """Usuário não vê transferências de outro usuário."""
+        uid1 = usuario_criado["id"]
+        uid2, _ = container.auth.registrar("outro@t.com", "senha123", "Outro")
+
+        c1, c2 = self._contas(container, uid1)
+        c3, c4 = self._contas(container, uid2)
+
+        container.transferencias_repo.inserir(
+            "iso-1", "Minha", 100.0, c1, c2, "2026-05-01", uid1
+        )
+        container.transferencias_repo.inserir(
+            "iso-2", "Dele", 200.0, c3, c4, "2026-05-01", uid2
+        )
+
+        resultado_u1 = container.transferencias_repo.listar_por_periodo(
+            "2026-05-01", "2026-05-31", uid1
+        )
+        assert len(resultado_u1) == 1
+        assert resultado_u1[0]["descricao"] == "Minha"
+
+
+class TestSaldoComTransferencias:
+    """
+    Testa que o saldo por conta considera transferências corretamente.
+
+    Cenário principal: pagar fatura do cartão não cria nova despesa,
+    apenas redistribui saldo entre conta corrente e cartão.
+    """
+
+    def test_saldo_inicial_zerado(self, container, usuario_criado):
+        uid = usuario_criado["id"]
+        saldos = container.saldo_conta_repo.saldos_por_conta(uid)
+        for s in saldos:
+            assert s["saldo"] == 0.0
+
+    def test_transferencia_redistribui_saldo(self, container, usuario_criado, categoria_receita, categoria_despesa):
+        uid = usuario_criado["id"]
+
+        corrente_id, _ = container.contas_repo.adicionar("Corrente", "conta", uid)
+        cartao_id, _   = container.contas_repo.adicionar("Cartão", "cartao", uid)
+
+        # Salário entra na corrente
+        container.transacoes.adicionar(
+            "Salário", 3000.0, "receita", categoria_receita["id"], uid,
+            "2026-05-01", conta_id=corrente_id
+        )
+        # Compra no cartão
+        container.transacoes.adicionar(
+            "Compra iFood", 100.0, "despesa", categoria_despesa["id"], uid,
+            "2026-05-05", conta_id=cartao_id
+        )
+
+        # Antes de pagar: corrente=3000, cartão=-100
+        saldos = {s["id"]: s["saldo"] for s in container.saldo_conta_repo.saldos_por_conta(uid)}
+        assert saldos[corrente_id] == 3000.0
+        assert saldos[cartao_id] == -100.0
+
+        # Paga fatura: transfere 100 da corrente para o cartão
+        container.transferencias_repo.inserir(
+            "fatura-1", "Pagar fatura cartão", 100.0,
+            corrente_id, cartao_id, "2026-05-10", uid
+        )
+
+        # Depois: corrente=2900, cartão=0
+        saldos = {s["id"]: s["saldo"] for s in container.saldo_conta_repo.saldos_por_conta(uid)}
+        assert saldos[corrente_id] == 2900.0
+        assert saldos[cartao_id] == 0.0
+
+    def test_transferencia_nao_afeta_total_despesas(self, container, usuario_criado, categoria_receita, categoria_despesa):
+        """Transferência não deve aparecer no total de despesas do mês."""
+        uid = usuario_criado["id"]
+
+        corrente_id, _ = container.contas_repo.adicionar("Corrente", "conta", uid)
+        poupanca_id, _ = container.contas_repo.adicionar("Poupança", "poupanca", uid)
+
+        container.transacoes.adicionar(
+            "Salário", 5000.0, "receita", categoria_receita["id"], uid, "2026-05-01"
+        )
+        container.transacoes.adicionar(
+            "Aluguel", 1000.0, "despesa", categoria_despesa["id"], uid, "2026-05-05"
+        )
+
+        # Transfere 2000 para poupança
+        container.transferencias_repo.inserir(
+            "poupanca-1", "Guardar poupança", 2000.0,
+            corrente_id, poupanca_id, "2026-05-15", uid
+        )
+
+        # Total de despesas deve ser 1000 (não 3000)
+        receitas, despesas, saldo = container.transacoes_repo.resumo_mes(2026, 5, uid)
+        assert despesas == 1000.0
+        assert receitas == 5000.0
+        assert saldo == 4000.0
+
+    def test_multiplos_cartoes_saldo_independente(self, container, usuario_criado, categoria_despesa):
+        uid = usuario_criado["id"]
+
+        corrente_id, _ = container.contas_repo.adicionar("Corrente", "conta", uid)
+        nubank_id, _   = container.contas_repo.adicionar("Nubank", "cartao", uid)
+        inter_id, _    = container.contas_repo.adicionar("Inter", "cartao", uid)
+
+        # Compras em cartões diferentes
+        container.transacoes.adicionar(
+            "Compra Nubank", 500.0, "despesa", categoria_despesa["id"], uid,
+            "2026-05-01", conta_id=nubank_id
+        )
+        container.transacoes.adicionar(
+            "Compra Inter", 300.0, "despesa", categoria_despesa["id"], uid,
+            "2026-05-02", conta_id=inter_id
+        )
+
+        # Paga só o Nubank
+        container.transferencias_repo.inserir(
+            "paga-nubank", "Pagar Nubank", 500.0,
+            corrente_id, nubank_id, "2026-05-10", uid
+        )
+
+        saldos = {s["id"]: s["saldo"] for s in container.saldo_conta_repo.saldos_por_conta(uid)}
+        assert saldos[nubank_id] == 0.0      # pago
+        assert saldos[inter_id]  == -300.0   # ainda deve
+
+
+class TestTransferenciaHTTP:
+    """Testa as rotas HTTP de transferências."""
+
+    def test_pagina_nova_carrega(self, client, usuario_logado):
+        r = client.get("/transferencias/nova")
+        assert r.status_code == 200
+
+    def test_lista_carrega(self, client, usuario_logado):
+        r = client.get("/transferencias/")
+        assert r.status_code == 200
+
+    def test_nova_requer_login(self, client):
+        r = client.get("/transferencias/nova", follow_redirects=False)
+        assert r.status_code == 302
+        assert "login" in r.headers["Location"].lower()
+
+    def test_criar_transferencia_valida(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        c1, _ = container.contas_repo.adicionar("Corrente HTTP", "conta", uid)
+        c2, _ = container.contas_repo.adicionar("Poupança HTTP", "poupanca", uid)
+
+        r = client.post("/transferencias/nova", data={
+            "valor": "250.00",
+            "conta_origem_id": str(c1),
+            "conta_destino_id": str(c2),
+            "descricao": "Guardar poupança",
+            "data": "2026-05-15",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+        trans = container.transferencias_repo.listar_por_periodo(
+            "2026-05-01", "2026-05-31", uid
+        )
+        assert len(trans) == 1
+        assert trans[0]["valor"] == 250.0
+
+    def test_mesma_conta_rejeitada(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        c1, _ = container.contas_repo.adicionar("Conta Única", "conta", uid)
+
+        r = client.post("/transferencias/nova", data={
+            "valor": "100.00",
+            "conta_origem_id": str(c1),
+            "conta_destino_id": str(c1),
+            "descricao": "Inválida",
+            "data": "2026-05-01",
+        })
+        assert r.status_code == 422
+
+    def test_valor_zero_rejeitado(self, client, usuario_logado, container):
+        uid = usuario_logado["id"]
+        c1, _ = container.contas_repo.adicionar("C1", "conta", uid)
+        c2, _ = container.contas_repo.adicionar("C2", "conta", uid)
+
+        r = client.post("/transferencias/nova", data={
+            "valor": "0",
+            "conta_origem_id": str(c1),
+            "conta_destino_id": str(c2),
+            "descricao": "Zero",
+            "data": "2026-05-01",
+        })
+        assert r.status_code == 422
+
+    def test_api_listar_retorna_json(self, client, usuario_logado):
+        import json
+        r = client.get("/transferencias/api/listar")
+        assert r.status_code == 200
+        data = json.loads(r.data)
+        assert "transferencias" in data
+        assert "count" in data

@@ -47,6 +47,7 @@ from routes.perfil import perfil_bp
 from routes.recuperacao import recuperacao_bp
 from routes.importacao import importacao_bp
 from routes.publico import publico_bp
+from routes.transferencias import transferencias_bp
 from services.container import ServiceContainer
 from utils.formatters import formatar_real
 
@@ -129,6 +130,7 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     app.register_blueprint(recuperacao_bp)
     app.register_blueprint(importacao_bp)
     app.register_blueprint(publico_bp)
+    app.register_blueprint(transferencias_bp)
 
     # ── Headers de segurança HTTP ────────────────────────────────────────────
     _registrar_security_headers(app)

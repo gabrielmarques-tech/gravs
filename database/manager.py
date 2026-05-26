@@ -1,5 +1,21 @@
 """
 database/manager.py — Gerenciador central de banco de dados.
+
+Por que separar isso do resto?
+--------------------------------
+No código original, a classe `Banco` ficava misturada com as entidades em
+`financeiro.py`. Isso viola o Princípio de Responsabilidade Única (SRP):
+Banco gerencia conexão e schema; entidades gerenciam dados. Separar permite
+trocar o banco (SQLite → PostgreSQL) sem tocar nas entidades.
+
+Padrão usado: Connection Pool via context manager.
+O `@contextmanager` garante que a conexão SEMPRE seja fechada e o
+rollback SEMPRE aconteça em caso de erro — sem vazar conexões.
+
+Por que WAL mode?
+------------------
+WAL (Write-Ahead Logging) permite leituras concorrentes enquanto uma escrita
+acontece. Fundamental para apps web com múltiplas requisições simultâneas.
 """
 
 import logging
@@ -10,10 +26,21 @@ from typing import Generator
 
 logger = logging.getLogger(__name__)
 
+# Lock global para serializar escritas concorrentes ao SQLite.
+# O SQLite suporta múltiplos leitores simultâneos, mas apenas um escritor.
+# O lock no nível Python evita o erro "database is locked" em condições de corrida.
 _write_lock = threading.Lock()
 
 
 class DatabaseManager:
+    """
+    Responsável exclusivamente por:
+    - Fornecer conexões configuradas
+    - Inicializar o schema (CREATE TABLE IF NOT EXISTS)
+    - Executar migrations futuras
+
+    NÃO contém lógica de negócio. NÃO conhece entidades.
+    """
 
     def __init__(self, db_path: str = "financas.db") -> None:
         self.db_path = db_path
@@ -21,6 +48,16 @@ class DatabaseManager:
 
     @contextmanager
     def get_conn(self) -> Generator[sqlite3.Connection, None, None]:
+        """
+        Context manager que entrega uma conexão configurada.
+
+        Configurações aplicadas:
+        - journal_mode=WAL: leituras concorrentes sem bloquear escritas
+        - foreign_keys=ON: integridade referencial real (FK enforcement)
+        - synchronous=NORMAL: equilíbrio entre durabilidade e performance
+        - busy_timeout=5000: aguarda 5s antes de lançar "database is locked"
+        - row_factory=sqlite3.Row: permite acesso por nome (row['campo'])
+        """
         conn = sqlite3.connect(
             self.db_path,
             timeout=20.0,
@@ -30,10 +67,11 @@ class DatabaseManager:
         conn.execute("PRAGMA foreign_keys = ON")
         conn.execute("PRAGMA synchronous = NORMAL")
         conn.execute("PRAGMA busy_timeout = 5000")
-        conn.execute("PRAGMA cache_size = -8000")
-        conn.execute("PRAGMA temp_store = MEMORY")
-        conn.execute("PRAGMA mmap_size = 268435456")
+        conn.execute("PRAGMA cache_size = -8000")   # 8MB de cache em memória
+        conn.execute("PRAGMA temp_store = MEMORY")  # tabelas temporárias em RAM
+        conn.execute("PRAGMA mmap_size = 268435456") # 256MB memory-mapped I/O
         conn.row_factory = sqlite3.Row
+
         try:
             yield conn
             conn.commit()
@@ -45,11 +83,35 @@ class DatabaseManager:
 
     @contextmanager
     def get_write_conn(self) -> Generator[sqlite3.Connection, None, None]:
+        """
+        Context manager para operações de escrita com lock thread-safe.
+
+        Por que lock separado para escrita?
+        -------------------------------------
+        SQLite tem lock no nível de arquivo. Em aplicações web com múltiplas
+        threads, duas escritas simultâneas causam "database is locked". O lock
+        do Python garante serialização no nível da aplicação, antes de chegar
+        ao banco.
+        """
         with _write_lock:
             with self.get_conn() as conn:
                 yield conn
 
     def init_schema(self) -> None:
+        """
+        Cria todas as tabelas e índices caso não existam.
+
+        Por que `CREATE TABLE IF NOT EXISTS`?
+        ----------------------------------------
+        Idempotente: pode ser chamado múltiplas vezes sem erro.
+        Essencial para o startup do servidor e para os testes.
+
+        Por que índices explícitos?
+        ----------------------------
+        SQLite não cria índices automaticamente em FK columns.
+        Queries como `WHERE usuario_id = ?` sem índice fazem full-table-scan,
+        que piora exponencialmente com o crescimento dos dados.
+        """
         with _write_lock:
             with self.get_conn() as conn:
                 self._criar_tabela_usuarios(conn)
@@ -61,6 +123,8 @@ class DatabaseManager:
                 self._aplicar_migrations(conn)
         self._initialized = True
         logger.info("Schema inicializado com sucesso: %s", self.db_path)
+
+    # ── Criação de tabelas ────────────────────────────────────────────────────
 
     def _criar_tabela_usuarios(self, conn: sqlite3.Connection) -> None:
         conn.execute("""
@@ -113,11 +177,21 @@ class DatabaseManager:
                 FOREIGN KEY (usuario_id)   REFERENCES usuarios(id) ON DELETE CASCADE
             )
         """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_trans_user_data ON transacoes(usuario_id, data DESC)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_trans_user_tipo ON transacoes(usuario_id, tipo)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_trans_deletado ON transacoes(deletado)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_trans_uuid ON transacoes(uuid)")
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_trans_grupo ON transacoes(grupo_parcela)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_user_data ON transacoes(usuario_id, data DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_user_tipo ON transacoes(usuario_id, tipo)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_deletado ON transacoes(deletado)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_uuid ON transacoes(uuid)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_trans_grupo ON transacoes(grupo_parcela)"
+        )
 
     def _criar_tabela_recorrentes(self, conn: sqlite3.Connection) -> None:
         conn.execute("""
@@ -144,6 +218,15 @@ class DatabaseManager:
         )
 
     def _criar_tabela_metas(self, conn: sqlite3.Connection) -> None:
+        """
+        Tabela de metas financeiras.
+
+        Por que estava ausente no código original?
+        --------------------------------------------
+        O sistema mencionava metas como funcionalidade, mas não havia schema.
+        Isso é dívida técnica: funcionalidade prometida sem estrutura de dados.
+        Criamos agora para não ter breaking change futuro.
+        """
         conn.execute("""
             CREATE TABLE IF NOT EXISTS metas (
                 id           INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -162,9 +245,12 @@ class DatabaseManager:
                 FOREIGN KEY (categoria_id) REFERENCES categorias(id)
             )
         """)
-        conn.execute("CREATE INDEX IF NOT EXISTS idx_metas_user ON metas(usuario_id, ativa)")
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_metas_user ON metas(usuario_id, ativa)"
+        )
 
     def _criar_tabela_notificacoes(self, conn: sqlite3.Connection) -> None:
+        """Notificações futuras (alertas de vencimento, metas próximas, etc.)."""
         conn.execute("""
             CREATE TABLE IF NOT EXISTS notificacoes (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -184,6 +270,18 @@ class DatabaseManager:
         )
 
     def _aplicar_migrations(self, conn: sqlite3.Connection) -> None:
+        """
+        Ponto de extensão para migrations futuras.
+
+        Por que não usar Alembic agora?
+        ---------------------------------
+        Para SQLite simples, migrations manuais são suficientes.
+        Quando migrar para PostgreSQL, substitua este método por
+        `flask db upgrade` com Flask-Migrate + Alembic.
+
+        Padrão: adicionar colunas ausentes sem recriar tabelas.
+        """
+        # Exemplo: adicionar coluna grupo_parcela se a tabela for antiga
         self._add_column_if_missing(conn, "transacoes", "grupo_parcela", "TEXT")
         self._add_column_if_missing(conn, "usuarios", "ativo", "INTEGER DEFAULT 1")
         self._add_column_if_missing(conn, "usuarios", "modo_contabil", "INTEGER DEFAULT 0")
@@ -200,8 +298,15 @@ class DatabaseManager:
         self._add_column_if_missing(conn, "usuarios", "aceite_termos_em", "TEXT")
         self._add_column_if_missing(conn, "usuarios", "excluido_em", "TEXT")
         self._anonimizar_emails_excluidos(conn)
+        self._criar_tabela_transferencias(conn)
+
 
     def limpar_tokens_expirados(self) -> int:
+        """
+        Remove tokens de recuperação expirados ou já usados.
+        Chamar periodicamente para não acumular lixo no banco.
+        Retorna quantos tokens foram removidos.
+        """
         from datetime import datetime
         agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         with self.get_write_conn() as conn:
@@ -230,6 +335,7 @@ class DatabaseManager:
         )
 
     def _criar_tabela_tokens_recuperacao(self, conn) -> None:
+        """Cria tabela de tokens para recuperação de senha."""
         conn.execute("""
             CREATE TABLE IF NOT EXISTS tokens_recuperacao (
                 id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -263,6 +369,7 @@ class DatabaseManager:
         )
 
     def _criar_tabela_contas_bancarias(self, conn) -> None:
+        """Cria tabela de contas bancarias e cartoes se nao existir."""
         conn.execute("""
             CREATE TABLE IF NOT EXISTS contas_bancarias (
                 id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -279,17 +386,63 @@ class DatabaseManager:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_contas_usuario ON contas_bancarias(usuario_id)"
         )
+        # Índice para busca por recorrente_uuid (lançamentos automáticos)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_trans_recorrente ON transacoes(recorrente_uuid) WHERE recorrente_uuid IS NOT NULL"
         )
+        # Índice para contas bancárias ativas
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_contas_ativo ON contas_bancarias(usuario_id, ativo)"
         )
 
+    def _criar_tabela_transferencias(self, conn) -> None:
+        """
+        Transferências entre contas do próprio usuário.
+
+        Uma transferência NÃO é receita nem despesa — é movimentação interna.
+        Exemplos: pagar fatura do cartão, PIX entre contas próprias,
+        transferir da corrente para poupança.
+
+        Modelo: debita conta_origem e credita conta_destino pelo mesmo valor.
+        O saldo total do usuário não muda — apenas redistribui entre contas.
+        """
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS transferencias (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid            TEXT    UNIQUE NOT NULL,
+                descricao       TEXT    NOT NULL,
+                valor           REAL    NOT NULL CHECK(valor > 0),
+                conta_origem_id INTEGER NOT NULL,
+                conta_destino_id INTEGER NOT NULL,
+                data            TEXT    NOT NULL,
+                usuario_id      INTEGER NOT NULL,
+                criado_em       TEXT    DEFAULT CURRENT_TIMESTAMP,
+                deletado        INTEGER DEFAULT 0 CHECK(deletado IN (0,1)),
+                CHECK(conta_origem_id != conta_destino_id),
+                FOREIGN KEY (conta_origem_id)  REFERENCES contas_bancarias(id),
+                FOREIGN KEY (conta_destino_id) REFERENCES contas_bancarias(id),
+                FOREIGN KEY (usuario_id)       REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transf_user ON transferencias(usuario_id, data DESC)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_transf_uuid ON transferencias(uuid)"
+        )
+
     def _anonimizar_emails_excluidos(self, conn: sqlite3.Connection) -> None:
         """
-        Migration de segurança — anonimiza emails de contas excluídas
-        que ainda têm email real (bug pré-v6). Idempotente.
+        Migration de segurança — roda automaticamente no startup.
+
+        Problema: contas excluídas antes do fix v6 tinham ativo=0
+        mas mantinham o email real na tabela, bloqueando novo cadastro
+        com o mesmo endereço (violação da constraint UNIQUE).
+
+        Solução: anonimiza todos os emails de contas inativas que ainda
+        não foram anonimizados (não contêm "@excluido.gravs").
+
+        Idempotente: pode rodar múltiplas vezes sem efeito colateral.
         """
         import time
         try:
@@ -298,6 +451,7 @@ class DatabaseManager:
                    WHERE ativo = 0
                    AND email NOT LIKE '%@excluido.gravs'"""
             ).fetchall()
+
             for row in rows:
                 uid = row[0]
                 email_anonimo = f"deleted_{uid}_{int(time.time())}@excluido.gravs"
@@ -306,6 +460,7 @@ class DatabaseManager:
                     (email_anonimo, uid)
                 )
                 logger.info("Migration: email anonimizado para usuario_id=%d", uid)
+
             if rows:
                 logger.info(
                     "Migration _anonimizar_emails_excluidos: %d conta(s) corrigida(s)",
@@ -318,6 +473,7 @@ class DatabaseManager:
     def _add_column_if_missing(
         conn: sqlite3.Connection, table: str, column: str, definition: str
     ) -> None:
+        """Adiciona coluna à tabela apenas se ela ainda não existir."""
         try:
             columns = [
                 row[1]
@@ -332,7 +488,14 @@ class DatabaseManager:
             logger.warning("Migration falhou (%s.%s): %s", table, column, exc)
 
     def drop_all(self) -> None:
-        """Destrói todas as tabelas. USE APENAS EM TESTES."""
+        """
+        Destrói todas as tabelas. USE APENAS EM TESTES.
+
+        Por que existir este método?
+        ------------------------------
+        Testes de integração precisam de um banco limpo a cada execução.
+        Em produção, este método jamais deve ser chamado.
+        """
         with _write_lock:
             with self.get_conn() as conn:
                 conn.execute("PRAGMA foreign_keys = OFF")
@@ -343,4 +506,4 @@ class DatabaseManager:
                     conn.execute(f"DROP TABLE IF EXISTS {table}")
                 conn.execute("PRAGMA foreign_keys = ON")
         self._initialized = False
-        logger.warning("Todas as tabelas foram removidas.")
+        logger.warning("Todas as tabelas foram removidas.")# Método adicionado para migração — adiciona colunas novas sem quebrar banco existente

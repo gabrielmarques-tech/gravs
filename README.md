@@ -6,17 +6,10 @@
 
   > *"Você sabe quanto ganhou esse mês. Mas sabe onde foi parar cada centavo?"*
 
-<<<<<<< HEAD
   ![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square&logo=python)
   ![Flask](https://img.shields.io/badge/Flask-3.x-black?style=flat-square&logo=flask)
   ![SQLite](https://img.shields.io/badge/SQLite-WAL-blue?style=flat-square&logo=sqlite)
-  ![Tests](https://img.shields.io/badge/Testes-170%20passing-green?style=flat-square)
-=======
-  ![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat-square&logo=python)
-  ![Flask](https://img.shields.io/badge/Flask-3.x-black?style=flat-square&logo=flask)
-  ![SQLite](https://img.shields.io/badge/SQLite-WAL-blue?style=flat-square&logo=sqlite)
-  ![Tests](https://img.shields.io/badge/Testes-76%20passing-green?style=flat-square)
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
+  ![Tests](https://img.shields.io/badge/Testes-211%20passing-green?style=flat-square)
   ![License](https://img.shields.io/badge/Licença-Privada-red?style=flat-square)
 
 </div>
@@ -57,59 +50,47 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 
 ### Controle completo
 - **Transações avulsas** — registre receitas e despesas com categoria, data e conta bancária
-<<<<<<< HEAD
 - **Contas fixas** — cadastre salário, aluguel, assinaturas e receba lembretes automáticos de vencimento
 - **Compras parceladas** — acompanhe o progresso de cada parcelamento com barra visual
 - **Contas bancárias e cartões** — saiba de qual conta saiu cada gasto
-- **Importação de extrato CSV** — importe o extrato do Bradesco e o app classifica automaticamente cada lançamento (receita/despesa/categoria), com tela de revisão antes de confirmar
+- **Transferências entre contas** — mova dinheiro entre suas contas sem criar despesa ou receita. Use para pagar fatura do cartão, PIX entre contas próprias ou guardar na poupança. O saldo de cada conta é recalculado automaticamente
+- **Importação de extrato CSV** — importe o extrato do Bradesco e o app classifica automaticamente cada lançamento (receita/despesa/categoria), com tela de revisão antes de confirmar. PIX recebido e PIX enviado são separados em categorias distintas
 
 ### Dashboard inteligente
 - **Hero com saldo do mês** e comparação percentual com o mês anterior
 - **3 cards harmônicos** — Receitas, Despesas e Taxa de Poupança com meta de 30% e indicador de meta atingida
 - **Gastos por categoria** com barras de progresso e limites configuráveis por categoria
-- **Saldo por conta bancária** atualizado em tempo real
+- **Saldo por conta bancária** atualizado em tempo real, considerando transferências
 - **Próximos vencimentos** — contas fixas que vencem nos próximos 10 dias
 - **Dicas automáticas** geradas com base nos seus dados reais do mês
 - **Últimas transações** do mês com ícone e categoria
 - **Evolução dos últimos 6 meses** com gráfico de barras interativo
-=======
-- **Leitura de comprovante** — envie um PNG ou PDF e o app extrai valor, descrição e data automaticamente
-- **Contas fixas** — cadastre salário, aluguel, assinaturas e receba lembretes automáticos de vencimento
-- **Compras parceladas** — acompanhe o progresso de cada parcelamento com barra visual
-- **Contas bancárias e cartões** — saiba de qual conta saiu cada gasto
 
-### Dashboard inteligente
-- Resumo do mês: receitas, despesas e saldo
-- Card de economia com percentual guardado
-- Gráfico de evolução dos últimos 6 meses (com tooltip interativo no PC e celular)
-- Saldo atual por conta bancária
-- Gastos por categoria com barras de progresso
-- Lembretes de contas que vencem hoje
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
+### Cartão de crédito sem duplicidade
+- Registre cada compra no cartão como despesa (na conta do cartão)
+- Ao pagar a fatura, use **Transferências** — o saldo do cartão sobe, o da corrente cai, sem criar nova despesa
+- Suporta múltiplos cartões pagos pelo mesmo banco
 
 ### Busca e filtros
 - Busca em tempo real por descrição
 - Filtro por tipo (receita/despesa) e por conta bancária
-<<<<<<< HEAD
 - Filtro por período com atalhos (mês, trimestre, ano)
-=======
-- Filtro por período com atalhos
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 
 ### Exportação e contabilidade
 - Exportar transações para Excel com totais e cores
 - Modo contábil com lançamentos em partida dobrada (débito/crédito)
 
-<<<<<<< HEAD
 ### Segurança
 - **Proteção CSRF** em todos os formulários e chamadas fetch/AJAX (Flask-WTF)
+- **HSTS** — força HTTPS por 1 ano após a primeira visita
+- **Content-Security-Policy** — bloqueia scripts e estilos de origens não autorizadas
 - **Rate limiting** no login — 5 tentativas por minuto por IP
 - **Hash bcrypt** nas senhas via Werkzeug
 - **Isolamento total por usuario_id** — cada usuário vê só os próprios dados
 - **Headers de segurança HTTP** em todas as respostas
 - **Cookies seguros** em produção (HttpOnly, SameSite, Secure)
 - **SQL 100% parametrizado** — sem SQL injection
-- **Logs de auditoria** em ações sensíveis (login, exclusão de conta, mudança de senha)
+- **Logs de auditoria** com emails anonimizados em ações sensíveis
 
 ### Conta e LGPD
 - **Verificação de email** por código de 6 dígitos no cadastro (expira em 15 minutos)
@@ -119,28 +100,12 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 - **Reuso de email** — após excluir a conta, o mesmo email pode ser usado para criar uma nova
 - Recuperação de senha por email com token de expiração de 1 hora
 
-=======
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 ### Experiência
 - Tema claro e escuro com um clique
 - Totalmente responsivo — funciona igual no celular e no computador
 - Instalável como app (PWA) na tela inicial do celular
-<<<<<<< HEAD
 - Favicon e ícone do app em todas as abas do browser
 - Widget na sidebar com resumo de fixas e lançamentos recentes
-=======
-- Widget na sidebar com resumo de fixas e lançamentos recentes
-- Recuperação de senha por email
-
-### Segurança
-- Cada usuário vê só os próprios dados (isolamento total por usuario_id)
-- Hash bcrypt nas senhas
-- Rate limiting no login (5 tentativas por minuto por IP)
-- Recuperação de senha com tokens de expiração de 1 hora
-- Headers de segurança HTTP em todas as respostas
-- Cookies seguros (HttpOnly, SameSite, Secure em produção)
-- SQL 100% parametrizado — sem SQL injection
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 
 ---
 
@@ -148,7 +113,6 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 
 | Camada | Tecnologia |
 |--------|-----------|
-<<<<<<< HEAD
 | Backend | Python 3.11+ + Flask 3.x |
 | Autenticação | Flask-Login + Werkzeug (bcrypt) |
 | Segurança | Flask-WTF (CSRF) + Flask-Limiter |
@@ -157,17 +121,7 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 | Tipografia | Inter + Syne (Google Fonts) |
 | Excel | openpyxl |
 | Email | Gmail SMTP (verificação + recuperação de senha) |
-| Testes | pytest — 170 testes automatizados |
-=======
-| Backend | Python 3.11 + Flask 3.x |
-| Autenticação | Flask-Login + Werkzeug (bcrypt) |
-| Banco de dados | SQLite com WAL mode + índices otimizados |
-| Frontend | HTML5 + CSS3 + JavaScript puro |
-| OCR | Tesseract.js (roda no browser, sem servidor) |
-| Tipografia | Inter + Syne (Google Fonts) |
-| Excel | openpyxl |
-| Testes | pytest — 76 testes automatizados |
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
+| Testes | pytest — 211 testes automatizados |
 | Deploy | PythonAnywhere |
 
 ---
@@ -177,11 +131,7 @@ A maioria das pessoas chega ao fim do mês sem entender onde o dinheiro foi para
 ```
 gravs/
 ├── app.py                    # Application Factory (create_app)
-<<<<<<< HEAD
 ├── config.py                 # Configurações por ambiente (dev/test/prod)
-=======
-├── config.py                 # Configurações por ambiente
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 ├── wsgi.py                   # Entry point para produção
 │
 ├── database/
@@ -193,7 +143,6 @@ gravs/
 │   ├── auth_service.py       # Autenticação e registro
 │   ├── transacao_service.py  # Lógica de transações e parcelamentos
 │   ├── recorrente_service.py # Lógica de contas fixas e lembretes
-<<<<<<< HEAD
 │   ├── dashboard_service.py  # Agregação de dados para o dashboard
 │   └── email_service.py      # Envio de emails
 │
@@ -202,6 +151,7 @@ gravs/
 │   ├── dashboard.py          # Dashboard e APIs de dados
 │   ├── transacoes.py         # CRUD de transações
 │   ├── recorrentes.py        # Contas fixas
+│   ├── transferencias.py     # Transferências entre contas
 │   ├── importacao.py         # Importação de extrato CSV (Bradesco)
 │   ├── perfil.py             # Perfil, senha, exclusão de conta
 │   ├── publico.py            # Termos de uso e política de privacidade
@@ -211,28 +161,16 @@ gravs/
 │   ├── base.html             # Layout base com CSRF global e tema
 │   ├── auth/                 # Login, cadastro, verificação de email
 │   ├── dashboard/            # Dashboard com layout de duas colunas
+│   ├── transferencias/       # Nova transferência e histórico
 │   ├── importacao/           # Upload e revisão de CSV
 │   └── publico/              # Termos e privacidade
 │
 ├── static/                   # Ícones PWA + favicon + manifest.json
 ├── utils/                    # Formatadores, validadores, calendário BR
-└── tests/                    # 170 testes automatizados
+└── tests/                    # 211 testes automatizados
 ```
 
 **Padrões adotados:** Application Factory · Repository Pattern · Service Container · Blueprints · Soft Delete · Migrations automáticas · CSRF global via interceptor JS
-=======
-│   └── dashboard_service.py  # Agregação de dados para o dashboard
-│
-├── routes/                   # Blueprints Flask por domínio
-├── templates/                # Jinja2 — mobile-first
-├── static/                   # Ícones PWA + manifest.json
-├── utils/                    # Formatadores, validadores, calendário BR
-├── docs/                     # Screenshots do projeto
-└── tests/                    # 76 testes automatizados
-```
-
-**Padrões adotados:** Application Factory · Repository Pattern · Service Container · Blueprints · Soft Delete · Migrations automáticas
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 
 ---
 
@@ -244,7 +182,6 @@ cd gravs
 pip install -r requirements.txt
 cp .env.secret.example .env.secret
 # Edite o .env.secret com seus valores
-<<<<<<< HEAD
 
 # Windows
 set FLASK_ENV=development
@@ -252,34 +189,21 @@ flask --app app run --debug
 
 # Linux/Mac
 FLASK_ENV=development flask --app app run --debug
-=======
-flask --app app:create_app run --debug
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 ```
 
 Acesse `http://127.0.0.1:5000`
 
-<<<<<<< HEAD
 > **Nota:** sem `EMAIL_REMETENTE` configurado, o app funciona normalmente em desenvolvimento — a verificação de email é automática e o código aparece no log do terminal.
 
-=======
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 ---
 
 ## 🧪 Testes
 
 ```bash
-<<<<<<< HEAD
 python -m pytest tests/ -v
 ```
 
-**170 testes** cobrindo autenticação, verificação de email, LGPD, transações, parcelamentos, recorrentes, importação CSV, exclusão de conta, migrations, dashboard e APIs.
-=======
-python -m pytest tests/test_sistema.py -v
-```
-
-76 testes cobrindo autenticação, transações, parcelamentos, recorrentes, isolamento entre usuários, contas bancárias, busca e soft delete.
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
+**211 testes** cobrindo autenticação, verificação de email, LGPD, transações, parcelamentos, recorrentes, transferências entre contas, importação CSV, exclusão de conta, migrations, dashboard e APIs.
 
 ---
 
@@ -287,24 +211,16 @@ python -m pytest tests/test_sistema.py -v
 
 | Variável | Descrição |
 |----------|-----------|
-<<<<<<< HEAD
 | `SECRET_KEY` | Chave secreta do Flask (obrigatório em produção) |
 | `DATABASE_URL` | Caminho do banco SQLite |
 | `EMAIL_REMETENTE` | Gmail para envio de emails |
 | `EMAIL_SENHA_APP` | Senha de app do Google |
 | `FLASK_ENV` | `development`, `testing` ou `production` |
-=======
-| `SECRET_KEY` | Chave secreta do Flask |
-| `DATABASE_URL` | Caminho do banco SQLite |
-| `EMAIL_REMETENTE` | Gmail para recuperação de senha |
-| `EMAIL_SENHA_APP` | Senha de app do Google |
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
 
 Consulte `.env.secret.example` para o modelo completo.
 
 ---
 
-<<<<<<< HEAD
 ## 📧 Configurar email (Gmail)
 
 1. Acesse [myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
@@ -320,11 +236,22 @@ Usado para verificação de conta, recuperação de senha e resumo mensal (dia 2
 
 ---
 
+## 💳 Como usar cartão de crédito corretamente
+
+```
+1. Compra no cartão → lança como Despesa na conta "Cartão Nubank"
+   Saldo Nubank: -R$ 500
+
+2. Paga a fatura → Nova Transferência: Corrente → Cartão Nubank, R$ 500
+   Saldo Corrente: -R$ 500
+   Saldo Nubank:    R$ 0
+   Despesas do mês: sem alteração (já contadas na compra)
+```
+
+Funciona com múltiplos cartões pagos pelo mesmo banco.
+
+---
+
 <div align="center">
   <sub>Feito com dedicação para quem quer saber para onde o dinheiro vai.</sub>
 </div>
-=======
-<div align="center">
-  <sub>Feito com dedicação para quem quer saber para onde o dinheiro vai.</sub>
-</div>
->>>>>>> f2c4f05e26940959df235b12f882d62ea29304ca
