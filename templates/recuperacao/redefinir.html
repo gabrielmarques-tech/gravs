@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Nova senha · Gravs</title>
+  <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32.png" />
+  <link rel="apple-touch-icon" href="/static/icon-192.png" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
   <style>
@@ -43,7 +46,7 @@
     .auth-subtitle { font-size: 13px; color: var(--text2); margin-bottom: 28px; line-height: 1.5; }
     .form-group { margin-bottom: 14px; }
     label { display: block; font-size: 12px; font-weight: 500; color: var(--text2); margin-bottom: 5px; }
-    input[type="text"], input[type="email"], input[type="password"] {
+    input[type="password"] {
       width: 100%; padding: 9px 12px;
       background: rgba(255,255,255,0.04);
       border: 0.5px solid var(--border2);
@@ -52,13 +55,11 @@
       font-size: 14px; transition: border-color 0.15s, box-shadow 0.15s;
       outline: none; -webkit-appearance: none;
     }
-    input[type="text"]:focus, input[type="email"]:focus, input[type="password"]:focus {
+    input[type="password"]:focus {
       border-color: rgba(255,255,255,0.3); box-shadow: var(--focus);
     }
     input::placeholder { color: var(--text3); }
     .hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
-    .forgot-link { display: block; text-align: right; font-size: 12px; color: var(--text3); text-decoration: none; margin-top: 5px; transition: color 0.15s; }
-    .forgot-link:hover { color: var(--text2); }
     .btn-submit {
       width: 100%; padding: 10px; margin-top: 8px;
       background: var(--text); border: none; border-radius: 8px;
@@ -68,11 +69,6 @@
     }
     .btn-submit:hover { opacity: 0.88; }
     .btn-submit:active { transform: scale(0.99); }
-    .contabil-box { border: 0.5px solid var(--border2); border-radius: 8px; padding: 12px 14px; background: rgba(255,255,255,0.03); }
-    .contabil-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin: 0; }
-    .contabil-label input[type="checkbox"] { width: 16px; height: 16px; margin-top: 2px; cursor: pointer; accent-color: var(--text); flex-shrink: 0; }
-    .contabil-titulo { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
-    .contabil-desc { font-size: 12px; color: var(--text3); line-height: 1.5; }
     .auth-footer { text-align: center; font-size: 13px; color: var(--text2); margin-top: 20px; }
     .auth-footer a { color: var(--text); font-weight: 500; text-decoration: none; border-bottom: 0.5px solid var(--border2); }
     .auth-footer a:hover { border-color: var(--text); }
@@ -84,25 +80,26 @@
   </style>
 </head>
 <body>
-<div class="bg-orbs">
-  <div class="orb orb-1"></div>
-  <div class="orb orb-2"></div>
-</div>
 
 <div class="auth-card">
-      <div class="auth-logo">
-    <svg width="32" height="32" viewBox="0 0 28 28" fill="none">
-    <path d="M14 4C14 4 22 8.5 22 14C22 18.4183 18.4183 22 14 22C9.58172 22 6 18.4183 6 14C6 11.2 7.4 9.2 9.5 7.8" stroke="#f1eeff" stroke-width="1.6" stroke-linecap="round" fill="none"/>
-    <path d="M14 10C14 10 17.5 11.8 17.5 14C17.5 15.933 15.933 17.5 14 17.5C12.067 17.5 10.5 15.933 10.5 14C10.5 12.8 11.1 11.9 12 11.3" stroke="#f1eeff" stroke-width="1.4" stroke-linecap="round" fill="none"/>
-    <circle cx="14" cy="14" r="1.8" fill="#f1eeff"/>
-  </svg>
-    <span class="logo-text">Gravs</span>
-  </div>
-    <div class="logo-text">Gravs</div>
+
+  <div class="auth-logo" style="flex-direction:column;align-items:center;gap:14px;margin-bottom:28px">
+    <img src="/static/icon-192.png" alt="Gravs"
+         style="width:72px;height:72px;border-radius:18px;object-fit:contain;
+                box-shadow:0 8px 32px rgba(124,58,237,0.35)" />
+    <div style="text-align:center">
+      <div class="logo-text" style="font-size:28px;font-weight:800;letter-spacing:-0.04em;
+                                     font-family:'Inter',system-ui,sans-serif">Gravs</div>
+      <div style="font-size:13px;color:var(--text3);margin-top:3px;letter-spacing:0.01em">
+        Controle financeiro simples e direto
+      </div>
+    </div>
   </div>
 
-  <h1>Nova senha</h1>
-  <p class="subtitle">Olá, <strong>{{ nome }}</strong>! Defina sua nova senha abaixo.</p>
+  <h1 style="font-size:17px;margin-bottom:4px">Nova senha</h1>
+  <p class="auth-subtitle" style="margin-bottom:22px">
+    Olá, <strong>{{ nome }}</strong>! Defina sua nova senha abaixo.
+  </p>
 
   {% with messages = get_flashed_messages(with_categories=true) %}
     {% if messages %}
@@ -129,6 +126,11 @@
     </div>
     <button type="submit" class="btn-submit">Salvar nova senha →</button>
   </form>
+
+  <div class="auth-footer">
+    Lembrou a senha? <a href="{{ url_for('auth.login') }}">Entrar</a>
+  </div>
+
 </div>
 </body>
 </html>
