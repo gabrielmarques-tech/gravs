@@ -10,11 +10,25 @@
     <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px">
       <div>
         <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--text)">
-          📋 {{ total }} lançamento(s) detectado(s)
+          {{ total }} lançamento(s) detectado(s)
         </div>
         <div style="font-size:var(--text-sm);color:var(--text2);margin-top:4px">
           Revise, ajuste as categorias e desmarque o que não quiser importar.
         </div>
+        {% if conta_selecionada %}
+        <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+                    background:rgba(139,92,246,0.1);border:1px solid rgba(139,92,246,0.2);
+                    border-radius:99px;padding:3px 12px;font-size:var(--text-xs);color:var(--purple2);font-weight:600">
+          {{ conta_selecionada.icone }} {{ conta_selecionada.nome }}
+          <span style="color:var(--text3);font-weight:400">— todas as transações</span>
+        </div>
+        {% else %}
+        <div style="display:inline-flex;align-items:center;gap:6px;margin-top:8px;
+                    background:var(--bg3);border:1px solid var(--border);
+                    border-radius:99px;padding:3px 12px;font-size:var(--text-xs);color:var(--text3)">
+          Sem conta vinculada
+        </div>
+        {% endif %}
       </div>
       <div style="display:flex;gap:16px;font-size:var(--text-sm);flex-wrap:wrap">
         <span style="color:var(--green2);font-weight:600">↑ R$ {{ "%.2f"|format(total_receitas) }}</span>
@@ -24,14 +38,22 @@
   </div>
 
   <!-- Controles rápidos -->
-  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+  <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center">
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(true)">Marcar todos</button>
-    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(false)">✗ Desmarcar todos</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(false)">Desmarcar todos</button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('receita')">Só receitas</button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('despesa')">Só despesas</button>
+    <div style="margin-left:auto;display:flex;gap:6px">
+      <button type="button" class="btn btn-secondary btn-sm" onclick="window.scrollTo({top:0,behavior:'smooth'})"
+              title="Ir para o topo" aria-label="Ir para o topo">↑ Topo</button>
+      <button type="button" class="btn btn-secondary btn-sm" onclick="window.scrollTo({top:document.body.scrollHeight,behavior:'smooth'})"
+              title="Ir para o botão Confirmar" aria-label="Ir para o fim">↓ Confirmar</button>
+    </div>
   </div>
 
   <form method="POST" action="{{ url_for('importacao.confirmar') }}" id="form-revisao">
+    <!-- Conta vinculada globalmente -->
+    <input type="hidden" name="conta_id_global" value="{{ conta_id_selecionada or '' }}">
 
     <!-- CARDS — funciona em qualquer tamanho de tela -->
     <div style="display:flex;flex-direction:column;gap:10px">
@@ -83,6 +105,25 @@
             </option>
             {% endfor %}
           </select>
+
+          <!-- Conta individual (sobrescreve a conta geral) -->
+          {% if contas %}
+          <select name="conta_id_linha"
+                  style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
+                         color:var(--text);padding:5px 8px;font-size:var(--text-sm);min-width:0;flex:1"
+                  title="Conta desta transação">
+            <option value="{{ conta_id_selecionada or '' }}">
+              {% if conta_selecionada %}{{ conta_selecionada.icone }} {{ conta_selecionada.nome }}{% else %}— Conta —{% endif %}
+            </option>
+            {% for c in contas %}
+              {% if not conta_selecionada or c.id != conta_id_selecionada %}
+              <option value="{{ c.id }}">{{ c.icone }} {{ c.nome }}</option>
+              {% endif %}
+            {% endfor %}
+          </select>
+          {% else %}
+          <input type="hidden" name="conta_id_linha" value="">
+          {% endif %}
         </div>
 
       </div>

@@ -220,7 +220,10 @@ def index():
     """
     if request.method == "POST":
         return redirect(url_for("importacao.upload"))
-    return render_template("importacao/index.html")
+
+    svc = get_services()
+    contas = svc.contas_repo.listar(current_user.id)
+    return render_template("importacao/index.html", contas=contas)
 
 
 @importacao_bp.route("/upload", methods=["POST"])
@@ -260,9 +263,20 @@ def upload():
             )
             return redirect(url_for("importacao.index"))
 
-        # Busca categorias do usuário para mostrar no select de revisão
+        # Busca categorias e contas do usuário para a tela de revisão
         svc = get_services()
         categorias = svc.categorias_repo.listar_por_usuario(current_user.id)
+        contas     = svc.contas_repo.listar(current_user.id)
+
+        # Conta selecionada na tela de upload (opcional)
+        conta_id_raw = request.form.get("conta_id", "")
+        conta_id = int(conta_id_raw) if conta_id_raw.isdigit() else None
+
+        # Validar que a conta pertence ao usuário
+        if conta_id:
+            ids_validos = {c["id"] for c in contas}
+            if conta_id not in ids_validos:
+                conta_id = None
 
         # Monta mapa nome→id para facilitar o template
         cat_map = {c["nome"]: c["id"] for c in categorias}
@@ -276,10 +290,16 @@ def upload():
             current_user.id, len(transacoes)
         )
 
+        # Conta selecionada (nome para exibição)
+        conta_selecionada = next((c for c in contas if c["id"] == conta_id), None)
+
         return render_template(
             "importacao/revisao.html",
             transacoes=transacoes,
             categorias=categorias,
+            contas=contas,
+            conta_id_selecionada=conta_id,
+            conta_selecionada=conta_selecionada,
             total=len(transacoes),
             total_receitas=sum(t["valor"] for t in transacoes if t["tipo"] == "receita"),
             total_despesas=sum(t["valor"] for t in transacoes if t["tipo"] == "despesa"),
@@ -309,6 +329,17 @@ def confirmar():
     ignoradas  = 0
     erros      = 0
 
+    # Conta vinculada (campo oculto da tela de revisão)
+    conta_id_raw = request.form.get("conta_id_global", "")
+    conta_id_global = int(conta_id_raw) if conta_id_raw.isdigit() else None
+
+    # Validar que a conta pertence ao usuário
+    if conta_id_global:
+        svc_check = get_services()
+        contas_uid = {c["id"] for c in svc_check.contas_repo.listar(uid)}
+        if conta_id_global not in contas_uid:
+            conta_id_global = None
+
     # O form envia listas paralelas
     indices     = request.form.getlist("idx")
     incluirs    = request.form.getlist("incluir")
@@ -317,6 +348,8 @@ def confirmar():
     valores_raw = request.form.getlist("valor")
     tipos       = request.form.getlist("tipo")
     cat_ids     = request.form.getlist("categoria_id")
+    # Conta por linha (pode ser sobrescrita individualmente no futuro)
+    conta_ids   = request.form.getlist("conta_id_linha")
 
     # Conjunto dos índices marcados como "incluir"
     incluir_set = set(incluirs)
@@ -335,6 +368,20 @@ def confirmar():
                 ignoradas += 1
                 continue
 
+            # Conta: usar a da linha se definida, senão a global do extrato
+            # Ambas validadas contra as contas do usuário para segurança
+            contas_validas = getattr(confirmar, '_contas_cache', None)
+            if contas_validas is None:
+                contas_validas = {c["id"] for c in svc.contas_repo.listar(uid)}
+                confirmar._contas_cache = contas_validas
+
+            conta_raw  = conta_ids[i] if i < len(conta_ids) else ""
+            conta_linha = int(conta_raw) if conta_raw.isdigit() else None
+            if conta_linha and conta_linha not in contas_validas:
+                conta_linha = None
+
+            conta_id = conta_linha if conta_linha else conta_id_global
+
             svc.transacoes.adicionar(
                 descricao=descricoes[i][:200],
                 valor=valor,
@@ -342,6 +389,7 @@ def confirmar():
                 categoria_id=cat_id,
                 usuario_id=uid,
                 data=datas[i],
+                conta_id=conta_id,
             )
             importadas += 1
 

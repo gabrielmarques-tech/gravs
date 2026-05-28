@@ -25,11 +25,14 @@ A maioria das pessoas termina o mês sem saber onde o dinheiro foi parar. O Grav
 ### Dashboard
 ![Dashboard do Gravs](docs/dashboard.png)
 
-### Nova Transação
-![Nova Transação](docs/nova_transacao.png)
+### Menu lateral
+![Menu](docs/menu.png)
 
-### Transações com Filtro
-![Transações](docs/transacoes_filtro.png)
+### Transações
+![Lista de transações](docs/transacoes.png)
+
+### Login
+![Tela de login](docs/tela_login.png)
 
 ---
 

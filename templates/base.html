@@ -174,7 +174,7 @@
     }
 
     [data-tema="claro"] ::-webkit-scrollbar-track {
-      background: var(--bg3);
+      background: transparent;
     }
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -226,8 +226,16 @@
 
     ::-webkit-scrollbar { width: 3px; }
     ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: var(--border3); border-radius: 99px; }
+    ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
     ::-webkit-scrollbar-thumb:hover { background: var(--text3); }
+
+    /* Widgets da sidebar — scrollbar discreta */
+    #widget-fixas::-webkit-scrollbar,
+    #widget-avulsas::-webkit-scrollbar { width: 2px; }
+    #widget-fixas::-webkit-scrollbar-track,
+    #widget-avulsas::-webkit-scrollbar-track { background: transparent; }
+    #widget-fixas::-webkit-scrollbar-thumb,
+    #widget-avulsas::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
 
     /* ── Layout principal ── */
     .app-layout { display: flex; min-height: 100vh; }
@@ -1046,7 +1054,7 @@
       </div>
 
       <!-- Painel Fixas -->
-      <div id="widget-fixas" style="height:180px;overflow-y:auto;scrollbar-width:thin">
+      <div id="widget-fixas" style="height:180px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent">
         <div id="fixas-lista" style="display:flex;flex-direction:column;gap:5px">
           <div style="font-size:var(--text-sm);color:var(--text3);text-align:center;padding:16px 0">
             <div style="margin-bottom:6px;font-size:1.2rem">⏳</div>
@@ -1056,7 +1064,7 @@
       </div>
 
       <!-- Painel Avulsas -->
-      <div id="widget-avulsas" style="height:180px;overflow-y:auto;scrollbar-width:thin;display:none">
+      <div id="widget-avulsas" style="height:180px;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;display:none">
         <div id="avulsas-lista" style="display:flex;flex-direction:column;gap:5px">
           <div style="font-size:var(--text-sm);color:var(--text3);text-align:center;padding:16px 0">
             <div style="margin-bottom:6px;font-size:1.2rem">⏳</div>

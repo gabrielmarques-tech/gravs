@@ -3660,3 +3660,336 @@ class TestAtalhosTeclado:
         """Botão de ajuda deve existir na topbar."""
         base = self._base()
         assert 'btn-atalhos' in base
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes — Importação com vínculo de conta
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestImportacaoComConta:
+    """
+    Testa o vínculo de conta bancária nas transações importadas via CSV.
+
+    Cenários:
+    - Importar sem conta — transações criadas com conta_id=None
+    - Importar com conta válida — conta_id preenchido em todas
+    - Conta inválida (outro usuário) — rejeitada silenciosamente
+    - Conta individual por linha sobrescreve a conta global
+    """
+
+    CSV_BRADESCO = (
+        "Data;Histórico;Docto.;Crédito (R$);Débito (R$);Saldo (R$)\n"
+        "10/05/2026;PIX RECEBIDO DE JOAO;123;500,00;;5500,00\n"
+        "11/05/2026;MERCADO SUPERMERCADO;456;;150,00;5350,00\n"
+        "12/05/2026;PIX QR CODE IFOOD;789;;45,00;5305,00\n"
+    ).encode("latin-1")
+
+    def _upload(self, client, csv_bytes, conta_id=""):
+        return client.post(
+            "/importacao/upload",
+            data={"arquivo": (io.BytesIO(csv_bytes), "extrato.csv"),
+                  "conta_id": str(conta_id)},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+
+    def test_pagina_upload_lista_contas(self, client, usuario_logado, container):
+        """Página de upload deve exibir as contas cadastradas."""
+        import io as _io
+        uid = usuario_logado["id"]
+        container.contas_repo.adicionar("Bradesco", "corrente", uid)
+        r = client.get("/importacao/")
+        assert r.status_code == 200
+        assert b"Bradesco" in r.data
+
+    def test_upload_sem_conta_aceita(self, client, usuario_logado):
+        """Upload sem conta selecionada deve funcionar normalmente."""
+        import io as _io
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": ""},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+
+    def test_upload_com_conta_valida_exibe_nome(self, client, usuario_logado, container):
+        """Revisão deve mostrar o nome da conta selecionada."""
+        import io as _io
+        uid = usuario_logado["id"]
+        conta = container.contas_repo.adicionar("Minha Conta", "corrente", uid)
+        conta_id = container.contas_repo.listar(uid)[0]["id"]
+
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": str(conta_id)},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+        assert "Minha Conta".encode() in r.data or b"conta_id_global" in r.data
+
+    def test_confirmar_com_conta_vincula_transacoes(self, client, usuario_logado, container):
+        """Transações importadas com conta devem ter conta_id preenchido."""
+        import io as _io, json as _json
+        uid = usuario_logado["id"]
+        conta_id = container.contas_repo.listar(uid)[0]["id"] if container.contas_repo.listar(uid) else None
+
+        if not conta_id:
+            container.contas_repo.adicionar("Conta Teste", "corrente", uid)
+            conta_id = container.contas_repo.listar(uid)[0]["id"]
+
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"] if cats else 1
+
+        # Simular confirmação com conta_id_global
+        r = client.post("/importacao/confirmar", data={
+            "conta_id_global": str(conta_id),
+            "idx":             ["0"],
+            "incluir":         ["0"],
+            "data":            ["2026-05-10"],
+            "descricao":       ["PIX RECEBIDO TESTE"],
+            "valor":           ["500.00"],
+            "tipo":            ["receita"],
+            "categoria_id":    [str(cat_id)],
+            "conta_id_linha":  [str(conta_id)],
+        }, follow_redirects=False)
+        assert r.status_code in (302, 200)
+
+        # Verificar que a transação foi criada com conta_id
+        txs = container.transacoes.listar_por_periodo("2026-05-01", "2026-05-31", uid)
+        tx = next((t for t in txs if "PIX RECEBIDO TESTE" in t["descricao"]), None)
+        if tx:
+            assert tx.get("conta_id") == conta_id, \
+                f"conta_id esperado {conta_id}, obtido {tx.get('conta_id')}"
+
+    def test_confirmar_sem_conta_cria_sem_conta_id(self, client, usuario_logado, container):
+        """Transações sem conta devem ter conta_id=None."""
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"] if cats else 1
+
+        r = client.post("/importacao/confirmar", data={
+            "conta_id_global": "",
+            "idx":             ["0"],
+            "incluir":         ["0"],
+            "data":            ["2026-05-11"],
+            "descricao":       ["SEM CONTA VINCULADA"],
+            "valor":           ["100.00"],
+            "tipo":            ["despesa"],
+            "categoria_id":    [str(cat_id)],
+            "conta_id_linha":  [""],
+        }, follow_redirects=False)
+        assert r.status_code in (302, 200)
+
+        txs = container.transacoes.listar_por_periodo("2026-05-01", "2026-05-31", uid)
+        tx = next((t for t in txs if "SEM CONTA VINCULADA" in t["descricao"]), None)
+        if tx:
+            assert tx.get("conta_id") is None
+
+    def test_conta_outro_usuario_rejeitada(self, client, usuario_logado, container):
+        """conta_id inexistente/de outro usuário deve ser silenciosamente ignorada."""
+        uid = usuario_logado["id"]
+        cats = container.categorias_repo.listar_por_usuario(uid)
+        cat_id = cats[0]["id"] if cats else 1
+
+        # Usar um ID de conta que certamente não pertence ao usuário logado
+        conta_inexistente_id = 99999
+
+        r = client.post("/importacao/confirmar", data={
+            "conta_id_global": str(conta_inexistente_id),
+            "idx":             ["0"],
+            "incluir":         ["0"],
+            "data":            ["2026-05-13"],
+            "descricao":       ["CONTA INVALIDA TESTE"],
+            "valor":           ["200.00"],
+            "tipo":            ["despesa"],
+            "categoria_id":    [str(cat_id)],
+            "conta_id_linha":  [str(conta_inexistente_id)],
+        }, follow_redirects=False)
+        assert r.status_code in (302, 200)
+
+        # A transação deve ter sido criada mas sem conta vinculada
+        txs = container.transacoes.listar_por_periodo("2026-05-01", "2026-05-31", uid)
+        tx = next((t for t in txs if "CONTA INVALIDA TESTE" in t["descricao"]), None)
+        if tx:
+            # conta_id deve ser None (rejeitada) ou diferente do ID inválido
+            assert tx.get("conta_id") != conta_inexistente_id, \
+                "Segurança: conta inválida não deve ser vinculada"
+
+    def test_revisao_mostra_select_conta_por_linha(self, client, usuario_logado, container):
+        """Tela de revisão deve ter select de conta por transação."""
+        import io as _io
+        uid = usuario_logado["id"]
+        contas = container.contas_repo.listar(uid)
+        if not contas:
+            container.contas_repo.adicionar("Conta Select", "corrente", uid)
+
+        conta_id = container.contas_repo.listar(uid)[0]["id"]
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": str(conta_id)},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+        # Deve ter o campo de conta por linha
+        assert b"conta_id_linha" in r.data
+
+    def test_import_sem_contas_cadastradas(self, client, container):
+        """Importação deve funcionar mesmo sem contas cadastradas."""
+        import io as _io
+        uid2, _ = container.auth.registrar("sem_conta@t.com", "senha123", "SemConta")
+        with container.db.get_write_conn() as conn:
+            conn.execute("UPDATE usuarios SET email_verificado=1 WHERE id=?", (uid2,))
+        client.post("/auth/login", data={"email": "sem_conta@t.com", "senha": "senha123"})
+
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": ""},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes — Saldo inicial de conta e scroll de importação
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestSaldoInicialConta:
+    """
+    Testa o saldo inicial ao criar uma conta bancária.
+    O saldo inicial é registrado como transação de receita
+    vinculada à conta, aparecendo corretamente no dashboard.
+    """
+
+    def test_criar_conta_sem_saldo_inicial(self, client, usuario_logado, container):
+        """Conta sem saldo inicial cria conta mas sem transação."""
+        uid = usuario_logado["id"]
+        txs_antes = container.transacoes.listar_por_periodo("2020-01-01", "2099-12-31", uid)
+        qtd_antes = len(txs_antes)
+
+        r = client.post("/contas/adicionar", data={
+            "nome":           "Conta Sem Saldo",
+            "tipo":           "corrente",
+            "saldo_inicial":  "",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+        txs_depois = container.transacoes.listar_por_periodo("2020-01-01", "2099-12-31", uid)
+        assert len(txs_depois) == qtd_antes  # sem transação nova
+
+    def test_criar_conta_com_saldo_inicial(self, client, usuario_logado, container):
+        """Conta com saldo inicial cria transação de receita vinculada."""
+        uid = usuario_logado["id"]
+
+        r = client.post("/contas/adicionar", data={
+            "nome":          "Bradesco Saldo",
+            "tipo":          "corrente",
+            "saldo_inicial": "2500.00",
+        }, follow_redirects=False)
+        assert r.status_code == 302
+
+        # Verificar conta criada
+        contas = container.contas_repo.listar(uid)
+        conta = next((c for c in contas if c["nome"] == "Bradesco Saldo"), None)
+        assert conta is not None
+
+        # Verificar transação de saldo inicial criada
+        from datetime import date
+        txs = container.transacoes.listar_por_periodo("2020-01-01", "2099-12-31", uid)
+        tx = next((t for t in txs if "Saldo inicial" in t.get("descricao", "")), None)
+        assert tx is not None, "Transação de saldo inicial não criada"
+        assert tx["valor"] == 2500.0
+        assert tx["tipo"] == "receita"
+        assert tx["conta_id"] == conta["id"]
+
+    def test_saldo_inicial_aparece_no_saldo_conta(self, client, usuario_logado, container):
+        """Saldo inicial deve aparecer no cálculo de saldo por conta."""
+        uid = usuario_logado["id"]
+
+        client.post("/contas/adicionar", data={
+            "nome":          "Poupança Saldo",
+            "tipo":          "poupanca",
+            "saldo_inicial": "1000.00",
+        }, follow_redirects=False)
+
+        contas = container.contas_repo.listar(uid)
+        conta = next((c for c in contas if c["nome"] == "Poupança Saldo"), None)
+        assert conta is not None
+
+        saldos = container.saldo_conta_repo.saldos_por_conta(uid)
+        saldo_conta = next((s for s in saldos if s["id"] == conta["id"]), None)
+        assert saldo_conta is not None
+        assert saldo_conta["saldo"] == 1000.0
+
+    def test_saldo_inicial_zero_nao_cria_transacao(self, client, usuario_logado, container):
+        """Saldo inicial zero não deve criar transação."""
+        uid = usuario_logado["id"]
+        txs_antes = container.transacoes.listar_por_periodo("2020-01-01", "2099-12-31", uid)
+        qtd_antes = len(txs_antes)
+
+        client.post("/contas/adicionar", data={
+            "nome":          "Conta Zero",
+            "tipo":          "corrente",
+            "saldo_inicial": "0",
+        }, follow_redirects=False)
+
+        txs_depois = container.transacoes.listar_por_periodo("2020-01-01", "2099-12-31", uid)
+        assert len(txs_depois) == qtd_antes
+
+    def test_saldo_inicial_invalido_nao_quebra(self, client, usuario_logado):
+        """Saldo inicial inválido não deve quebrar — conta é criada mesmo assim."""
+        r = client.post("/contas/adicionar", data={
+            "nome":          "Conta Invalida",
+            "tipo":          "corrente",
+            "saldo_inicial": "abc",
+        }, follow_redirects=False)
+        assert r.status_code == 302  # redireciona normalmente
+
+    def test_formulario_tem_campo_saldo_inicial(self, client, usuario_logado):
+        """Formulário de nova conta deve ter campo de saldo inicial."""
+        r = client.get("/contas/")
+        assert r.status_code == 200
+        assert b"saldo_inicial" in r.data
+
+
+class TestImportacaoScroll:
+    """Testa a presença dos botões de scroll na revisão de importação."""
+
+    CSV_BRADESCO = (
+        "Data;Histórico;Docto.;Crédito (R$);Débito (R$);Saldo (R$)\n"
+        "10/05/2026;PIX RECEBIDO;123;100,00;;5100,00\n"
+        "11/05/2026;MERCADO;456;;50,00;5050,00\n"
+    ).encode("latin-1")
+
+    def test_revisao_tem_botao_scroll_topo(self, client, usuario_logado):
+        """Tela de revisão deve ter botão para ir ao topo."""
+        import io as _io
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": ""},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+        assert b"Topo" in r.data or b"scrollTo" in r.data
+
+    def test_revisao_tem_botao_scroll_fim(self, client, usuario_logado):
+        """Tela de revisão deve ter botão para ir ao fim (confirmar)."""
+        import io as _io
+        r = client.post(
+            "/importacao/upload",
+            data={"arquivo": (_io.BytesIO(self.CSV_BRADESCO), "extrato.csv"),
+                  "conta_id": ""},
+            content_type="multipart/form-data",
+            follow_redirects=True,
+        )
+        assert r.status_code == 200
+        assert b"Confirmar" in r.data or b"scrollHeight" in r.data

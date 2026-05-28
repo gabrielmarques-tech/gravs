@@ -44,6 +44,32 @@
 
     <!-- Upload -->
     <form method="POST" action="{{ url_for('importacao.upload') }}" enctype="multipart/form-data">
+
+      <!-- Seleção de conta bancária -->
+      <div class="form-group">
+        <label class="form-label">Vincular à conta</label>
+        {% if contas %}
+        <select name="conta_id" class="form-control">
+          <option value="">— Sem vínculo com conta —</option>
+          {% for conta in contas %}
+          <option value="{{ conta.id }}">{{ conta.icone }} {{ conta.nome }}</option>
+          {% endfor %}
+        </select>
+        <div style="font-size:var(--text-xs);color:var(--text3);margin-top:5px">
+          Todas as transações importadas serão vinculadas a esta conta.
+          Você pode alterar individualmente na revisão.
+        </div>
+        {% else %}
+        <div style="background:rgba(217,119,6,0.08);border:1px solid rgba(217,119,6,0.25);
+                    border-radius:8px;padding:10px 14px;font-size:var(--text-sm);color:var(--gold2)">
+          Nenhuma conta cadastrada. As transações serão importadas sem vínculo de conta.
+          <a href="{{ url_for('contas.lista') }}" style="color:var(--gold2);font-weight:600;margin-left:4px">
+            Cadastrar conta →
+          </a>
+        </div>
+        {% endif %}
+      </div>
+
       <div class="form-group">
         <label class="form-label">Arquivo CSV do Bradesco</label>
         <div id="drop-zone" style="border:2px dashed var(--border2);border-radius:12px;

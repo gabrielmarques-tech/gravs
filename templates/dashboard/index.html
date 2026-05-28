@@ -85,10 +85,47 @@
     max-width: 440px;
     animation: slideUp 0.3s cubic-bezier(0.16,1,0.3,1);
   }
+  /* ── Filtros do gráfico ── */
+  .btn-grafico {
+    font-size: var(--text-xs); font-weight: 600;
+    padding: 3px 8px; border-radius: 6px;
+    border: 1px solid var(--border2); background: transparent;
+    color: var(--text3); cursor: pointer; font-family: var(--font-body);
+    transition: all 0.12s ease;
+  }
+  .btn-grafico:hover { color: var(--text2); border-color: var(--purple2); }
+  .btn-grafico.ativo {
+    background: rgba(139,92,246,0.12);
+    border-color: rgba(139,92,246,0.35);
+    color: var(--purple2);
+  }
+
+  /* Pontos do gráfico — hover brilha */
+  .g-ponto { transition: r 0.15s ease, opacity 0.15s ease; }
+  .g-ponto:hover { opacity: 0.85; }
+
   @keyframes slideUp {
     from { opacity:0; transform:translateY(20px) scale(0.97); }
     to   { opacity:1; transform:translateY(0) scale(1); }
   }
+
+  /* ── Scrollbar dos cards ── */
+  #lista-saldo-contas::-webkit-scrollbar,
+  #lista-vencimentos::-webkit-scrollbar,
+  #lista-metas-dash::-webkit-scrollbar,
+  .cat-scroll::-webkit-scrollbar { width: 3px; }
+  #lista-saldo-contas::-webkit-scrollbar-track,
+  #lista-vencimentos::-webkit-scrollbar-track,
+  #lista-metas-dash::-webkit-scrollbar-track,
+  .cat-scroll::-webkit-scrollbar-track { background: transparent !important; }
+  #lista-saldo-contas::-webkit-scrollbar-thumb,
+  #lista-vencimentos::-webkit-scrollbar-thumb,
+  #lista-metas-dash::-webkit-scrollbar-thumb,
+  .cat-scroll::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+  #lista-saldo-contas::-webkit-scrollbar-thumb:hover,
+  #lista-vencimentos::-webkit-scrollbar-thumb:hover,
+  #lista-metas-dash::-webkit-scrollbar-thumb:hover,
+  .cat-scroll::-webkit-scrollbar-thumb:hover { background: var(--text3); }
   .ob-bars { display:flex; gap:6px; margin-bottom:28px; }
   .ob-bar { flex:1; height:3px; background:var(--border2); border-radius:99px; transition:background 0.3s; }
   .ob-bar.ativo { background:var(--purple2); }
@@ -163,7 +200,7 @@
   /* Layout de duas colunas desktop */
   .dash-row { display:grid;grid-template-columns:1fr 320px;gap:16px;align-items:start }
   .dash-row-stretch { align-items:stretch }
-  .dash-row-stretch .dash-col-main > .card { height:100%; }
+  .dash-row-stretch .dash-col-main > .card { height:100%;display:flex;flex-direction:column; }
   .dash-col-main { min-width:0 }
   .dash-col-side { display:flex;flex-direction:column;gap:12px;min-width:0 }
 
@@ -384,7 +421,7 @@
         + Limites
       </button>
     </div>
-    <div class="flex flex-col gap-10">
+    <div class="flex flex-col gap-10" class="cat-scroll" style="max-height:280px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;padding-right:4px">
       {% set total = resumo.despesas if resumo.despesas > 0 else 1 %}
       {% for item in resumo.gastos_por_categoria %}
         {% set limite = limites.get(item.id, 0) %}
@@ -426,6 +463,42 @@
         </div>
       {% endfor %}
     </div>
+
+    <!-- Gráfico de evolução -->
+    <div style="margin-top:16px;padding-top:14px;border-top:1px solid var(--border);flex:1;display:flex;flex-direction:column">
+      <!-- Cabeçalho: título + filtros -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:6px">
+        <div class="card-title" style="margin-bottom:0" id="grafico-titulo">Evolução</div>
+        <!-- Filtros de período -->
+        <div style="display:flex;gap:4px" id="grafico-filtros">
+          <button onclick="trocarFiltroGrafico('12m')" id="btn-12m"
+                  class="btn-grafico ativo" title="12 meses">12m</button>
+          <button onclick="trocarFiltroGrafico('6m')"  id="btn-6m"
+                  class="btn-grafico" title="6 meses">6m</button>
+          <button onclick="trocarFiltroGrafico('mes')" id="btn-mes"
+                  class="btn-grafico" title="Dias deste mês">mês</button>
+          <button onclick="trocarFiltroGrafico('sem')" id="btn-sem"
+                  class="btn-grafico" title="Esta semana">sem</button>
+        </div>
+      </div>
+      <!-- Legenda -->
+      <div id="grafico-legenda" style="display:none;gap:14px;margin-bottom:8px">
+        <span style="display:flex;align-items:center;gap:5px;font-size:var(--text-xs);color:var(--text2)">
+          <svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="var(--green2)" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Receitas
+        </span>
+        <span style="display:flex;align-items:center;gap:5px;font-size:var(--text-xs);color:var(--text2)">
+          <svg width="16" height="3"><line x1="0" y1="1.5" x2="16" y2="1.5" stroke="var(--red2)" stroke-width="2.5" stroke-linecap="round"/></svg>
+          Despesas
+        </span>
+      </div>
+      <!-- Gráfico -->
+      <div id="grafico-meses" style="width:100%;height:110px;min-height:90px;position:relative">
+        <div class="skeleton" style="width:100%;height:100%;border-radius:8px"></div>
+      </div>
+      <div id="grafico-labels" style="display:flex;margin-top:5px;padding:0 2px"></div>
+    </div>
+
   </div>
   {% endif %}
 
@@ -435,13 +508,13 @@
     <!-- Saldo por conta -->
     <div class="card" id="card-saldo-contas" style="display:none">
       <div class="card-title mb-12">Saldo por conta</div>
-      <div id="lista-saldo-contas" class="flex flex-col gap-8"></div>
+      <div id="lista-saldo-contas" class="flex flex-col gap-8" style="max-height:220px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;padding-right:4px"></div>
     </div>
 
     <!-- Próximos vencimentos -->
     <div class="card" id="card-vencimentos" style="display:none">
       <div class="card-title mb-12">Próximos vencimentos</div>
-      <div id="lista-vencimentos" class="flex flex-col gap-8"></div>
+      <div id="lista-vencimentos" class="flex flex-col gap-8" style="max-height:200px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;padding-right:4px"></div>
     </div>
 
     <!-- Metas financeiras -->
@@ -450,7 +523,7 @@
         <div class="card-title" style="margin-bottom:0">Metas</div>
         <a href="/metas/" class="link-muted">Ver todas</a>
       </div>
-      <div id="lista-metas-dash" class="flex flex-col gap-10"></div>
+      <div id="lista-metas-dash" class="flex flex-col gap-10" style="max-height:200px;overflow-y:auto;overflow-x:hidden;scrollbar-width:thin;scrollbar-color:var(--border2) transparent;padding-right:4px"></div>
     </div>
 
   </div>
@@ -476,11 +549,11 @@
   <div id="lista-dicas" class="flex flex-col gap-6"></div>
 </div>
 
-<!-- Linha 2: Últimas transações + Evolução mensal -->
-<div class="dash-row fade-up" style="margin-top:20px">
+<!-- Linha 2: Últimas transações -->
+<div class="fade-up" style="margin-top:20px">
 
   <!-- Últimas transações -->
-  <div class="card dash-col-main">
+  <div class="card">
     <div class="flex items-center justify-between mb-14">
       <div class="card-title mb-0" style="margin-bottom:0">Últimas transações</div>
       <a href="{{ url_for('transacoes.todas') }}"
@@ -495,14 +568,7 @@
     </div>
   </div>
 
-  <!-- Evolução mensal -->
-  <div class="card dash-col-side">
-    <div class="card-title mb-16">Evolução — 6 meses</div>
-    <div id="grafico-meses" style="display:flex;align-items:flex-end;gap:6px;height:110px;padding:0 2px">
-<div class="skeleton" style="width:100%;height:100%;border-radius:8px"></div>
-    </div>
-    <div id="grafico-labels" style="display:flex;gap:6px;margin-top:6px;padding:0 2px"></div>
-  </div>
+
 
 </div>
 
@@ -810,6 +876,7 @@ function fecharModalLimites() {
 
 carregarLembretes();
 carregarSaldoContas();
+window._filtroGrafico = '12m'; // padrão: 12 meses
 carregarGraficoMeses();
 // Carrega dados críticos imediatamente
 carregarUltimasTransacoes();
@@ -920,89 +987,226 @@ async function carregarSaldoContas() {
   } catch(e) {}
 }
 
-// ── Gráfico de barras dos últimos 6 meses ────────────────────────────────────
+// ── Gráfico de linha — filtros e renderização ────────────────────────────────
+
+// Filtro ativo: '12m' | '6m' | 'mes' | 'sem'
+window._filtroGrafico = '12m';
+
+function trocarFiltroGrafico(filtro) {
+  window._filtroGrafico = filtro;
+  // Atualizar botões
+  ['12m','6m','mes','sem'].forEach(f => {
+    const btn = document.getElementById('btn-' + f);
+    if (btn) btn.classList.toggle('ativo', f === filtro);
+  });
+  carregarGraficoMeses();
+}
+
 async function carregarGraficoMeses() {
   try {
-    const meses = [];
-    const hoje = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
-      meses.push({
-        ano: d.getFullYear(),
-        mes: d.getMonth() + 1,
-        label: d.toLocaleString('pt-BR', {month: 'short'}).replace('.',''),
-      });
+    const filtro = window._filtroGrafico || '12m';
+    const hoje   = new Date();
+    let dados    = [];
+
+    // ── Título dinâmico ──────────────────────────────────────────────────────
+    const titulos = { '12m': 'Evolução — 12 meses', '6m': 'Evolução — 6 meses',
+                      'mes': 'Gastos por dia — este mês', 'sem': 'Esta semana' };
+    const titulo = document.getElementById('grafico-titulo');
+    if (titulo) titulo.textContent = titulos[filtro] || 'Evolução';
+
+    // ── Montar períodos por filtro ───────────────────────────────────────────
+    if (filtro === '12m' || filtro === '6m') {
+      const n = filtro === '12m' ? 12 : 6;
+      const periodos = [];
+      for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+        periodos.push({
+          ano:   d.getFullYear(),
+          mes:   d.getMonth() + 1,
+          label: d.toLocaleString('pt-BR', {month: 'short'}).replace('.',''),
+        });
+      }
+      dados = await Promise.all(periodos.map(async p => {
+        const ini = `${p.ano}-${String(p.mes).padStart(2,'0')}-01`;
+        const fim = new Date(p.ano, p.mes, 0).toISOString().split('T')[0];
+        const r   = await fetch(`/api/buscar?inicio=${ini}&fim=${fim}`);
+        if (!r.ok) return { ...p, receitas: 0, despesas: 0 };
+        const d   = await r.json();
+        return { ...p, receitas: d.total_receitas, despesas: d.total_despesas };
+      }));
+
+    } else if (filtro === 'mes') {
+      // Dias do mês atual — agrupa transações por dia
+      const ano = hoje.getFullYear();
+      const mes = hoje.getMonth() + 1;
+      const ini = `${ano}-${String(mes).padStart(2,'0')}-01`;
+      const fim = new Date(ano, mes, 0).toISOString().split('T')[0];
+      const r   = await fetch(`/api/buscar?inicio=${ini}&fim=${fim}`);
+      if (r.ok) {
+        const json = await r.json();
+        // Agrupar por dia
+        const porDia = {};
+        (json.transacoes || []).forEach(t => {
+          const dia = parseInt(t.data.split('-')[2]);
+          if (!porDia[dia]) porDia[dia] = { receitas: 0, despesas: 0 };
+          if (t.tipo === 'receita') porDia[dia].receitas += t.valor;
+          else                      porDia[dia].despesas += t.valor;
+        });
+        const ultimoDia = new Date(ano, mes, 0).getDate();
+        // Mostrar cada 2 dias se mês cheio para não poluir
+        const passo = ultimoDia > 20 ? 2 : 1;
+        for (let d = 1; d <= Math.min(ultimoDia, hoje.getDate()); d++) {
+          if (d === 1 || d % passo === 0 || d === hoje.getDate()) {
+            dados.push({
+              label:    String(d),
+              ano:      ano,
+              receitas: porDia[d]?.receitas || 0,
+              despesas: porDia[d]?.despesas || 0,
+            });
+          }
+        }
+      }
+
+    } else if (filtro === 'sem') {
+      // Dias da semana atual (seg–dom)
+      const diaSem = hoje.getDay(); // 0=dom
+      const inicioSem = new Date(hoje);
+      inicioSem.setDate(hoje.getDate() - (diaSem === 0 ? 6 : diaSem - 1));
+      const nomes = ['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(inicioSem);
+        d.setDate(inicioSem.getDate() + i);
+        if (d > hoje) break;
+        const iso = d.toISOString().split('T')[0];
+        const r   = await fetch(`/api/buscar?inicio=${iso}&fim=${iso}`);
+        const json = r.ok ? await r.json() : {};
+        dados.push({
+          label:    nomes[i],
+          ano:      d.getFullYear(),
+          receitas: json.total_receitas || 0,
+          despesas: json.total_despesas || 0,
+        });
+      }
     }
 
-    // Busca dados de cada mês
-    const dados = await Promise.all(meses.map(async m => {
-      const ini = `${m.ano}-${String(m.mes).padStart(2,'0')}-01`;
-      const fim = new Date(m.ano, m.mes, 0).toISOString().split('T')[0];
-      const r = await fetch(`/api/buscar?inicio=${ini}&fim=${fim}`);
-      if (!r.ok) return { ...m, receitas: 0, despesas: 0 };
-      const d = await r.json();
-      return { ...m, receitas: d.total_receitas, despesas: d.total_despesas };
-    }));
-
-    const maxVal = Math.max(...dados.map(d => Math.max(d.receitas, d.despesas)), 1);
-    const grafico = document.getElementById('grafico-meses');
-    const labels  = document.getElementById('grafico-labels');
-    if (!grafico || !labels) return;
-
-    // Guarda dados para o tooltip
     window.graficoData = dados;
 
-    // Monta as barras via innerHTML
-    grafico.innerHTML = dados.map((d, i) => {
-      const altR = Math.round((d.receitas / maxVal) * 100);
-      const altD = Math.round((d.despesas / maxVal) * 100);
-      return `
-        <div data-rec="${d.receitas}" data-des="${d.despesas}" data-ano="${d.ano}" data-label="${d.label}"
-             style="flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;height:100%;cursor:pointer"
-             onmouseenter="mostrarTooltipGrafico(event,${d.receitas},${d.despesas},${d.ano},'${d.label}')"
-             onmouseleave="esconderTooltipGrafico()">
-          <div style="width:100%;display:flex;align-items:flex-end;gap:2px;height:100%">
-            <div style="flex:1;background:rgba(52,211,153,1);border-radius:4px 4px 0 0;
-                        height:${altR}%;min-height:${d.receitas > 0 ? 3 : 0}px;
-                        transition:height 0.6s ease,opacity 0.15s"></div>
-            <div style="flex:1;background:rgba(248,113,113,1);border-radius:4px 4px 0 0;
-                        height:${altD}%;min-height:${d.despesas > 0 ? 3 : 0}px;
-                        transition:height 0.6s ease,opacity 0.15s"></div>
-          </div>
-        </div>`;
+    const grafico = document.getElementById('grafico-meses');
+    const labels  = document.getElementById('grafico-labels');
+    const legenda = document.getElementById('grafico-legenda');
+    if (!grafico || !labels) return;
+
+    const W = grafico.clientWidth  || 320;
+    const H = 100;
+    const P = { top: 8, right: 8, bottom: 4, left: 8 };
+    const iW = W - P.left - P.right;
+    const iH = H - P.top  - P.bottom;
+    const N  = dados.length;
+
+    const maxVal = Math.max(...dados.flatMap(d => [d.receitas, d.despesas]), 1);
+    const toX    = i => P.left + (N > 1 ? (i / (N - 1)) * iW : iW / 2);
+    const toY    = v => P.top  + iH - (v / maxVal) * iH;
+
+    const ptsR = dados.map((d, i) => `${toX(i).toFixed(1)},${toY(d.receitas).toFixed(1)}`).join(' ');
+    const ptsD = dados.map((d, i) => `${toX(i).toFixed(1)},${toY(d.despesas).toFixed(1)}`).join(' ');
+
+    const base = (H - P.bottom).toFixed(1);
+    const areaR = `${P.left},${base} ${ptsR} ${(W - P.right).toFixed(1)},${base}`;
+    const areaD = `${P.left},${base} ${ptsD} ${(W - P.right).toFixed(1)},${base}`;
+
+    const grades = [0.25, 0.5, 0.75].map(p => {
+      const y = (P.top + iH * (1 - p)).toFixed(1);
+      return `<line x1="${P.left}" y1="${y}" x2="${W - P.right}" y2="${y}" stroke="var(--border)" stroke-width="1" stroke-dasharray="3,3"/>`;
     }).join('');
 
-    // Suporte a toque no mobile — toca na barra para ver o tooltip
-    grafico.querySelectorAll('[data-rec]').forEach(function(el) {
-      el.addEventListener('touchstart', function(e) {
-        e.preventDefault();
-        var rec   = parseFloat(el.dataset.rec);
-        var des   = parseFloat(el.dataset.des);
-        var ano   = parseInt(el.dataset.ano);
-        var label = el.dataset.label;
-        // Cria evento sintético com currentTarget para reutilizar a função
-        mostrarTooltipGrafico({ currentTarget: el }, rec, des, ano, label);
-        clearTimeout(window._ttTimer);
-        window._ttTimer = setTimeout(esconderTooltipGrafico, 3000);
-      }, { passive: false });
-    });
-
-
-    labels.style.cssText = 'display:flex;gap:8px;margin-top:6px;padding:0 4px';
-    labels.innerHTML = dados.map(d =>
-      `<div style="flex:1;text-align:center;font-size:0.68rem;color:var(--text3);text-transform:capitalize">${d.label}</div>`
+    // Não mostrar pontos individuais se tiver muitos dados (>15)
+    const showDots = dados.length <= 15;
+    const circlesR = !showDots ? '' : dados.map((d, i) =>
+      `<circle cx="${toX(i).toFixed(1)}" cy="${toY(d.receitas).toFixed(1)}" r="4"
+               fill="var(--green2)" stroke="var(--surface)" stroke-width="2"
+               class="g-ponto g-ponto-r" data-idx="${i}"
+               style="filter:drop-shadow(0 0 0 rgba(16,185,129,0))"/>`
     ).join('');
 
-    // Legenda
-    const legenda = document.createElement('div');
-    legenda.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:var(--text-xs);color:var(--text3)';
-    legenda.innerHTML = `
-      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(52,211,153,0.7);border-radius:2px;margin-right:4px"></span>Receitas</span>
-      <span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Despesas</span>`;
-    labels.after(legenda);
+    const circlesD = !showDots ? '' : dados.map((d, i) =>
+      `<circle cx="${toX(i).toFixed(1)}" cy="${toY(d.despesas).toFixed(1)}" r="4"
+               fill="var(--red2)" stroke="var(--surface)" stroke-width="2"
+               class="g-ponto g-ponto-d" data-idx="${i}"
+               style="filter:drop-shadow(0 0 0 rgba(239,68,68,0))"/>`
+    ).join('');
+
+    // Área invisível sobre cada coluna para capturar hover mesmo sem ponto
+    const hitAreas = dados.map((d, i) => {
+      const x = toX(i);
+      return `<rect x="${(x - iW/(N*2)).toFixed(1)}" y="${P.top}" 
+                    width="${(iW/N).toFixed(1)}" height="${iH}"
+                    fill="transparent" class="g-hit" data-idx="${i}"/>`;
+    }).join('');
+
+    grafico.innerHTML = `
+      <svg width="100%" height="${H}" viewBox="0 0 ${W} ${H}" style="overflow:visible;display:block">
+        ${grades}
+        <polygon points="${areaR}" fill="rgba(16,185,129,0.08)"/>
+        <polygon points="${areaD}" fill="rgba(239,68,68,0.08)"/>
+        <polyline points="${ptsR}" fill="none" stroke="var(--green2)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        <polyline points="${ptsD}" fill="none" stroke="var(--red2)"   stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        ${hitAreas}${circlesR}${circlesD}
+      </svg>`;
+
+    // Labels dos meses
+    labels.innerHTML = dados.map(d =>
+      `<div style="flex:1;text-align:center;font-size:var(--text-xs);color:var(--text3)">${d.label}</div>`
+    ).join('');
+
+    // Mostrar legenda
+    if (legenda) legenda.style.display = 'flex';
+
+    // Tooltip — hover nas áreas invisíveis (melhor UX que só nos pontos)
+    const ativarPonto = (idx, ativo) => {
+      // Brilhar os pontos do mesmo idx
+      grafico.querySelectorAll('.g-ponto').forEach(p => {
+        if (parseInt(p.dataset.idx) === idx) {
+          p.setAttribute('r', ativo ? '5.5' : '4');
+          const corBase = p.classList.contains('g-ponto-r')
+            ? 'rgba(16,185,129,0.6)' : 'rgba(239,68,68,0.6)';
+          p.style.filter = ativo
+            ? `drop-shadow(0 0 4px ${corBase})`
+            : 'none';
+        }
+      });
+    };
+
+    grafico.querySelectorAll('.g-hit').forEach(el => {
+      const bind = (e) => {
+        const i = parseInt(el.dataset.idx);
+        const d = dados[i];
+        if (!d) return;
+        ativarPonto(i, true);
+        mostrarTooltipGrafico(
+          e.type === 'touchstart' ? {currentTarget: el} : e,
+          d.receitas, d.despesas, d.ano, d.label
+        );
+        if (e.type === 'touchstart') {
+          e.preventDefault();
+          clearTimeout(window._ttTimer);
+          window._ttTimer = setTimeout(() => {
+            esconderTooltipGrafico();
+            ativarPonto(i, false);
+          }, 3000);
+        }
+      };
+      const unbind = (e) => {
+        ativarPonto(parseInt(el.dataset.idx), false);
+        esconderTooltipGrafico();
+      };
+      el.addEventListener('mouseenter', bind);
+      el.addEventListener('mouseleave', unbind);
+      el.addEventListener('touchstart', bind, { passive: false });
+    });
 
   } catch(e) { console.error('Gráfico:', e); }
 }
+
 
 // ── Metas no dashboard ────────────────────────────────────────────────────────
 async function carregarMetasDash() {

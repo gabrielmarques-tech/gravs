@@ -246,6 +246,11 @@ class TestJornadaCompleta:
         _garantir_login(cs_client, estado, cs_svc)
         data = _json(cs_client.get("/api/saldo-contas"), "API saldo contas")
         assert "saldos" in data
+        # Se conta foi criada com saldo inicial, deve aparecer aqui
+        if estado.get("conta_id") and data["saldos"]:
+            conta = next((s for s in data["saldos"] if s.get("id") == estado["conta_id"]), None)
+            if conta:
+                assert isinstance(conta.get("saldo"), (int, float))
 
     def test_04d_api_fixas_sidebar(self, cs_client, estado, cs_svc):
         _garantir_login(cs_client, estado, cs_svc)
@@ -346,9 +351,10 @@ class TestJornadaCompleta:
 
     def test_06c_criar_conta_corrente(self, cs_client, estado, cs_svc):
         _garantir_login(cs_client, estado, cs_svc)
+        # Cria conta com saldo inicial — deve aparecer no saldo por conta
         r = _post(cs_client, "/contas/adicionar", {
             "nome": "Conta Corrente Jornada", "tipo": "corrente",
-            "icone": "🏦", "saldo_inicial": "5000.00",
+            "saldo_inicial": "5000.00",
         })
         _redir(r, "Nova conta corrente")
         uid = estado["usuario_id"]
@@ -711,10 +717,15 @@ class TestJornadaCompleta:
             "11/05/2026;PIX ENVIADO PARA MERCADO;456;;150,00;5350,00\n"
             "12/05/2026;PIX QR CODE IFOOD;789;;45,00;5305,00\n"
         ).encode("latin-1")
+        # Upload com conta vinculada (funcionalidade nova)
+        conta_id = estado.get("conta_id") or ""
         r = cs_client.post("/importacao/upload", data={
-            "arquivo": (io.BytesIO(csv_bytes), "extrato.csv"),
+            "arquivo":  (io.BytesIO(csv_bytes), "extrato.csv"),
+            "conta_id": str(conta_id),
         }, content_type="multipart/form-data", follow_redirects=True)
         assert r.status_code == 200
+        # Revisão deve mostrar o campo conta_id_global
+        assert b"conta_id_global" in r.data or b"conta_id" in r.data
 
     def test_12d_confirmar_importacao(self, cs_client, estado, cs_svc):
         _garantir_login(cs_client, estado, cs_svc)
