@@ -47,9 +47,9 @@
             {{ t.valor | real }}
           </span>
           <form method="POST" action="{{ url_for('transferencias.deletar', uuid=t.uuid) }}"
-                onsubmit="return confirm('Remover esta transferência?')">
+                data-confirm="Remover transferência|Esta transferência será removida permanentemente." data-confirm-ok="Remover">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-icon btn-secondary" title="Remover"
+            <button type="submit" class="btn btn-icon btn-secondary" title="Remover" aria-label="Remover item"
                     style="padding:5px 8px;color:var(--text3)">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
             </button>

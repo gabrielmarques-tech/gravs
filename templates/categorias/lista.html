@@ -27,7 +27,7 @@
   }
 
   .cat-info { flex: 1; min-width: 0; }
-  .cat-nome { font-weight: 600; color: var(--text); font-size: 0.88rem; }
+  .cat-nome { font-weight: 600; color: var(--text); font-size: var(--text-base); }
 
   .icone-grid {
     display: grid;
@@ -60,7 +60,7 @@
 
 {% if request.args.get('erro') == 'tem_transacoes' %}
 <div class="card mb-16" style="background:rgba(239,68,68,0.08);border-color:rgba(239,68,68,0.3)">
-  <div style="font-size:0.88rem;color:var(--red2)">
+  <div style="font-size:var(--text-base);color:var(--red2)">
     ⚠ Não é possível excluir uma categoria que possui transações vinculadas.
   </div>
 </div>
@@ -68,7 +68,7 @@
 
 <!-- Info -->
 <div class="card mb-16 fade-up" style="background:rgba(124,58,237,0.06);border-color:rgba(124,58,237,0.2)">
-  <div style="font-size:0.88rem;color:var(--text2);line-height:1.6">
+  <div style="font-size:var(--text-base);color:var(--text2);line-height:1.6">
     🗂 Organize seus gastos e receitas com categorias personalizadas. Você pode criar novas, editar o ícone e a cor, ou excluir as que não usa.
   </div>
 </div>
@@ -93,7 +93,7 @@
                   onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'despesa')"
                   title="Editar">✏️</button>
           <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
-                onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
+                data-confirm="Excluir categoria|A categoria '{{ c.nome|e }}' será removida permanentemente." data-confirm-ok="Excluir">
             <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </form>
         </div>
@@ -126,7 +126,7 @@
                   onclick="abrirEditar({{ c.id }}, '{{ c.nome|e }}', '{{ c.icone }}', '{{ c.cor }}', 'receita')"
                   title="Editar">✏️</button>
           <form method="POST" action="{{ url_for('categorias.deletar', cat_id=c.id) }}"
-                onsubmit="return confirm('Excluir {{ c.nome|e }}?')">
+                data-confirm="Excluir categoria|A categoria '{{ c.nome|e }}' será removida permanentemente." data-confirm-ok="Excluir">
             <button type="submit" class="btn btn-sm btn-danger btn-icon" title="Excluir"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg></button>
           </form>
         </div>
@@ -180,7 +180,7 @@
           <input type="color" name="cor" id="input-cor" value="#7c3aed"
                  style="width:44px;height:36px;border:none;border-radius:8px;
                         cursor:pointer;background:none;padding:0" />
-          <span style="font-size:0.82rem;color:var(--text2)">Escolha a cor da categoria</span>
+          <span style="font-size:var(--text-sm);color:var(--text2)">Escolha a cor da categoria</span>
         </div>
       </div>
 

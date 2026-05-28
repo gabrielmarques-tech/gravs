@@ -36,11 +36,11 @@
 
     .resumo-card .resumo-body { flex: 1; }
 
-    .resumo-card .card-title { margin-bottom: 2px !important; font-size: 0.7rem !important; }
+    .resumo-card .card-title { margin-bottom: 2px !important; font-size: var(--text-xs) !important; }
 
     .resumo-card .card-value { font-size: 1.35rem !important; }
 
-    .resumo-card .resumo-sub { font-size: 0.72rem; color: var(--text3); margin-top: 1px; }
+    .resumo-card .resumo-sub { font-size: var(--text-xs); color: var(--text3); margin-top: 1px; }
 
     /* Card de economia compacto no mobile */
     .economia-card { padding: 16px !important; }
@@ -94,13 +94,13 @@
   .ob-bar.ativo { background:var(--purple2); }
   .ob-icone { font-size:2.8rem; margin-bottom:16px; text-align:center; display:flex; align-items:center; justify-content:center; }
   .ob-titulo { font-size:1.2rem; font-weight:600; color:var(--text); letter-spacing:-0.02em; margin-bottom:8px; text-align:center; }
-  .ob-desc { font-size:0.88rem; color:var(--text2); line-height:1.6; text-align:center; margin-bottom:28px; }
+  .ob-desc { font-size:var(--text-base); color:var(--text2); line-height:1.6; text-align:center; margin-bottom:28px; }
   .ob-acoes { display:flex; gap:10px; }
-  .ob-btn-pular { flex:1; padding:10px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:0.85rem; cursor:pointer; font-family:var(--font-body); transition:all 0.15s; }
+  .ob-btn-pular { flex:1; padding:10px; background:transparent; border:1px solid var(--border2); border-radius:8px; color:var(--text3); font-size:var(--text-sm); cursor:pointer; font-family:var(--font-body); transition:all 0.15s; }
   .ob-btn-pular:hover { color:var(--text2); }
-  .ob-btn-acao { flex:2; padding:10px 16px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:8px; color:white; font-size:0.9rem; font-weight:600; cursor:pointer; font-family:var(--font-body); transition:opacity 0.15s; }
+  .ob-btn-acao { flex:2; padding:10px 16px; background:linear-gradient(135deg,var(--purple),var(--purple2)); border:none; border-radius:8px; color:white; font-size:var(--text-base); font-weight:600; cursor:pointer; font-family:var(--font-body); transition:opacity 0.15s; }
   .ob-btn-acao:hover { opacity:0.88; }
-  .ob-contador { text-align:center; font-size:0.75rem; color:var(--text3); margin-top:16px; }
+  .ob-contador { text-align:center; font-size:var(--text-sm); color:var(--text3); margin-top:16px; }
 
   /* ── Metas / Limites ── */
   .meta-barra-wrap { height:6px; background:var(--bg3); border-radius:99px; overflow:hidden; margin-top:5px; }
@@ -110,19 +110,22 @@
   .meta-barra-over { background:var(--red2); }
 
   /* ── Novo layout do dashboard ── */
-  .dash-hero { padding:28px 26px;background:var(--surface2);position:relative;overflow:hidden;margin-bottom:0 }
+  .dash-hero { padding:24px;background:var(--surface);border:1px solid var(--border);position:relative;overflow:hidden;margin-bottom:0;box-shadow:var(--shadow-sm) }
   .dash-hero-glow { position:absolute;top:-60px;right:-60px;width:200px;height:200px;background:radial-gradient(circle,rgba(124,58,237,0.12) 0%,transparent 70%);pointer-events:none }
   .dash-label { font-size:0.68rem;color:var(--text3);margin:0 0 6px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500 }
-  .dash-saldo { font-size:2.4rem;font-weight:700;color:var(--text);margin:6px 0 0;letter-spacing:-0.04em;font-variant-numeric:tabular-nums;line-height:1 }
+  .dash-saldo { font-size:2.8rem;font-weight:700;color:var(--text);margin:8px 0 0;letter-spacing:-0.05em;font-variant-numeric:tabular-nums;line-height:1 }
 
   /* ── Trio de cards (Receitas / Despesas / Poupança) ── */
   .resumo-trio { display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:20px }
   .trio-card {
-    border-radius:12px;padding:18px 16px 16px;
+    border-radius:var(--radius);padding:16px;
     display:flex;flex-direction:column;gap:4px;
-    border:1px solid var(--border);background:var(--bg3);
+    border:1px solid var(--border);background:var(--surface);
+    box-shadow:var(--shadow-sm);
     position:relative;overflow:hidden;
+    transition:border-color 0.15s,box-shadow 0.15s;
   }
+  .trio-card:hover { border-color:var(--border2);box-shadow:var(--shadow); }
   .trio-card::before {
     content:'';position:absolute;top:0;left:0;right:0;height:2px;border-radius:2px 2px 0 0;
   }
@@ -135,11 +138,11 @@
   .trio-icon-vermelho{ background:rgba(248,113,113,0.12);color:var(--red2) }
   .trio-icon-roxo    { background:rgba(159,95,255,0.12);color:var(--purple2) }
 
-  .trio-label { font-size:0.65rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text3) }
-  .trio-valor { font-size:1.1rem;font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;margin-top:5px }
+  .trio-label { font-size:var(--text-xs);font-weight:500;text-transform:uppercase;letter-spacing:0.06em;color:var(--text3) }
+  .trio-valor { font-size:var(--text-xl);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:-0.03em;line-height:1.1 }
   .trio-sub   { font-size:0.68rem;color:var(--text3);margin-top:1px }
 
-  .trio-badge { font-size:0.65rem;font-weight:600;padding:2px 7px;border-radius:99px;width:fit-content }
+  .trio-badge { font-size:var(--text-xs);font-weight:600;padding:2px 7px;border-radius:99px;width:fit-content }
   .trio-badge-ok      { background:rgba(52,211,153,0.12);color:var(--green2) }
   .trio-badge-warn    { background:rgba(248,113,113,0.12);color:var(--red2) }
   .trio-badge-neutral { background:rgba(107,95,130,0.15);color:var(--text3) }
@@ -153,7 +156,7 @@
   }
   @media (min-width:481px) and (max-width:768px) {
     .resumo-trio { grid-template-columns:repeat(3,1fr);gap:8px }
-    .trio-valor { font-size:0.88rem }
+    .trio-valor { font-size:var(--text-base) }
     .trio-sub { display:none }
   }
 
@@ -169,16 +172,16 @@
   .trans-item:last-child { border-bottom:none;padding-bottom:0 }
   .trans-icon { width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0 }
   .trans-desc { flex:1;min-width:0 }
-  .trans-nome { font-size:0.84rem;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
-  .trans-meta { font-size:0.7rem;color:var(--text3);margin-top:1px }
-  .trans-valor { font-size:0.88rem;font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0 }
+  .trans-nome { font-size:var(--text-sm);font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis }
+  .trans-meta { font-size:var(--text-xs);color:var(--text3);margin-top:1px }
+  .trans-valor { font-size:var(--text-base);font-weight:700;font-variant-numeric:tabular-nums;flex-shrink:0 }
 
   /* Vencimentos */
   .venc-item { display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--border) }
   .venc-item:last-child { border-bottom:none;padding-bottom:0 }
 
   /* Dicas */
-  .dica-linha { font-size:0.82rem;color:var(--text2);display:flex;gap:6px;line-height:1.5 }
+  .dica-linha { font-size:var(--text-sm);color:var(--text2);display:flex;gap:6px;line-height:1.5 }
   .dica-linha::before { content:'→';color:var(--purple2);flex-shrink:0 }
 
   /* Mobile — empilha tudo */
@@ -255,17 +258,17 @@
   <div class="dash-hero-glow"></div>
   <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
     <div>
-      <p class="dash-label">Saldo deste mês</p>
+      <p class="dash-label" style="font-size:var(--text-xs);letter-spacing:0.06em">Saldo do mês</p>
       <p class="dash-saldo">{{ resumo.saldo | real }}</p>
       {% if resumo.diferenca_despesas != 0 and resumo.despesas_anterior > 0 %}
         {% set pct_dif = ((resumo.diferenca_despesas / resumo.despesas_anterior) * 100) | round(1) %}
         <div style="display:flex;align-items:center;gap:6px;margin-top:8px">
           {% if resumo.diferenca_despesas < 0 %}
-            <span style="color:var(--green2);font-size:0.78rem">↓ {{ pct_dif|abs }}% menos despesas</span>
+            <span style="color:var(--green2);font-size:var(--text-sm)">↓ {{ pct_dif|abs }}%</span>
           {% else %}
-            <span style="color:var(--red2);font-size:0.78rem">↑ {{ pct_dif }}% mais despesas</span>
+            <span style="color:var(--red2);font-size:var(--text-sm)">↑ {{ pct_dif }}%</span>
           {% endif %}
-          <span style="color:var(--text3);font-size:0.78rem">que o mês passado</span>
+          <span style="color:var(--text3);font-size:var(--text-sm)">vs mês anterior</span>
         </div>
       {% endif %}
     </div>
@@ -354,7 +357,7 @@
 
   {% if resumo.receitas > 0 %}
   <div class="mt-12">
-    <div style="display:flex;justify-content:space-between;font-size:0.7rem;color:var(--text3);margin-bottom:4px">
+    <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--text3);margin-bottom:4px">
       <span>Despesas: {{ [(resumo.despesas / resumo.receitas * 100)|round(1), 100]|min }}% da receita</span>
       {% if resumo.saldo > 0 %}<span style="color:var(--green2)">✓ Economizando</span>{% endif %}
     </div>
@@ -376,7 +379,7 @@
     <div class="flex items-center justify-between mb-14">
       <div class="card-title mb-0" style="margin-bottom:0">Gastos por categoria</div>
       <button onclick="abrirModalLimites()"
-              style="font-size:0.72rem;color:var(--purple3);background:none;border:1px solid var(--border2);
+              style="font-size:var(--text-xs);color:var(--purple3);background:none;border:1px solid var(--border2);
                      cursor:pointer;font-family:var(--font-body);padding:3px 8px;border-radius:6px">
         + Limites
       </button>
@@ -389,7 +392,7 @@
         {% set pct_limite = [(item.total / limite * 100)|round(1), 100]|min if limite > 0 else 0 %}
         <div class="cat-item" style="display:flex;flex-direction:column;gap:4px">
           <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
-            <span style="font-size:0.84rem;color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
+            <span style="font-size:var(--text-sm);color:var(--text2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">
               <span style="margin-right:4px">{{ item.icone or '' }}</span>{{ item.nome }}
             </span>
             <div style="display:flex;align-items:center;gap:6px;flex-shrink:0">
@@ -402,11 +405,11 @@
                   <span class="meta-badge meta-badge-ok">{{ (item.total / limite * 100)|round(0)|int }}%</span>
                 {% endif %}
               {% else %}
-                <span style="font-size:0.7rem;color:var(--text3)">{{ pct_total }}%</span>
+                <span class="t-xs text-muted">{{ pct_total }}%</span>
               {% endif %}
-              <span style="font-size:0.85rem;font-weight:600;color:var(--text);font-variant-numeric:tabular-nums">{{ item.total | real }}</span>
+              <span style="font-size:var(--text-sm);font-weight:600;color:var(--text);font-variant-numeric:tabular-nums">{{ item.total | real }}</span>
               {% if limite > 0 %}
-                <span style="font-size:0.7rem;color:var(--text3)">/ {{ limite | real }}</span>
+                <span class="t-xs text-muted">/ {{ limite | real }}</span>
               {% endif %}
             </div>
           </div>
@@ -443,11 +446,11 @@
 
     <!-- Metas financeiras -->
     <div class="card" id="card-metas-dash" style="display:none">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="flex items-center justify-between mb-12">
         <div class="card-title" style="margin-bottom:0">Metas</div>
         <a href="/metas/" class="link-muted">Ver todas</a>
       </div>
-      <div id="lista-metas-dash" style="display:flex;flex-direction:column;gap:10px"></div>
+      <div id="lista-metas-dash" class="flex flex-col gap-10"></div>
     </div>
 
   </div>
@@ -457,7 +460,7 @@
 <div class="modal-backdrop" id="modal-limites">
   <div class="modal" style="max-width:500px">
     <div class="modal-title">Limites por categoria</div>
-    <p style="font-size:0.85rem;color:var(--text2);margin-bottom:20px">
+    <p style="font-size:var(--text-sm);color:var(--text2);margin-bottom:20px">
       Defina um limite de gastos mensais para cada categoria. A barra muda de cor quando você se aproxima do limite.
     </p>
     <div id="lista-limites" style="display:flex;flex-direction:column;gap:10px;max-height:400px;overflow-y:auto"></div>
@@ -507,8 +510,8 @@
 {% if resumo.receitas_anterior > 0 or resumo.despesas_anterior > 0 %}
 <div class="card fade-up" style="margin-top:20px;padding:12px 16px">
   <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:center">
-    <div style="font-size:0.65rem;color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap">Mês anterior</div>
-    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:0.8rem;color:var(--text2)">
+    <div style="font-size:var(--text-xs);color:var(--text3);font-weight:700;text-transform:uppercase;letter-spacing:0.08em;white-space:nowrap">Mês anterior</div>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:var(--text-sm);color:var(--text2)">
       <span>Receitas: <strong style="color:var(--green2)">{{ resumo.receitas_anterior | real }}</strong></span>
       <span>Despesas: <strong style="color:var(--red2)">{{ resumo.despesas_anterior | real }}</strong></span>
       {% if resumo.diferenca_despesas > 50 %}
@@ -542,8 +545,8 @@ async function carregarLembretes() {
                   border:1px solid ${l.atrasada ? 'rgba(239,68,68,0.3)' : 'rgba(245,158,11,0.3)'};
                   border-radius:10px;padding:12px 14px;
                   display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <div style="flex:1;min-width:0">
-          <div style="font-weight:600;color:var(--text);font-size:0.9rem">
+        <div class="flex-1 min-w-0">
+          <div style="font-weight:600;color:var(--text);font-size:var(--text-base)">
             ${l.atrasada ? '' : ''} ${l.descricao}
           </div>
           <div style="font-size:0.76rem;color:var(--text3);margin-top:2px">
@@ -554,21 +557,21 @@ async function carregarLembretes() {
           </div>
         </div>
         <div style="font-family:var(--font-display);font-weight:700;color:var(--red2);
-                    font-size:0.95rem;flex-shrink:0">
+                    font-size:var(--text-base);flex-shrink:0">
           R$ ${l.valor.toFixed(2).replace('.',',')}
         </div>
         <div style="display:flex;gap:6px;flex-shrink:0;flex-wrap:wrap">
           <button onclick="confirmarPagamento('${l.uuid}', '${l.descricao.replace(/'/g,"\\'")}', this)"
                   style="padding:8px 16px;border:none;border-radius:8px;cursor:pointer;
                          background:linear-gradient(135deg,#10b981,#34d399);color:white;
-                         font-weight:700;font-size:0.82rem;font-family:var(--font-body);
+                         font-weight:700;font-size:var(--text-sm);font-family:var(--font-body);
                          box-shadow:0 3px 10px rgba(16,185,129,0.3)">
             ✓ Já paguei
           </button>
           <button onclick="dispensarLembrete('${l.uuid}')"
                   style="padding:8px 12px;border:1px solid var(--border2);border-radius:8px;
                          cursor:pointer;background:var(--surface2);color:var(--text2);
-                         font-size:0.82rem;font-family:var(--font-body)">
+                         font-size:var(--text-sm);font-family:var(--font-body)">
             Depois
           </button>
         </div>
@@ -583,11 +586,11 @@ async function carregarLembretes() {
           <div style="font-size:1.5rem">🔔</div>
           <div>
             <div style="font-family:var(--font-display);font-weight:700;
-                        font-size:0.95rem;color:#fbbf24">
+                        font-size:var(--text-base);color:#fbbf24">
               ${data.lembretes.length} conta${data.lembretes.length > 1 ? 's' : ''}
               ${data.lembretes.length > 1 ? 'precisam' : 'precisa'} de atenção
             </div>
-            <div style="font-size:0.78rem;color:var(--text3);margin-top:2px">
+            <div style="font-size:var(--text-sm);color:var(--text3);margin-top:2px">
               Marque as que já pagou para manter o controle em dia
             </div>
           </div>
@@ -724,7 +727,7 @@ let _limites = {};
 async function abrirModalLimites() {
   document.getElementById('modal-limites').classList.add('open');
   const lista = document.getElementById('lista-limites');
-  lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Carregando...</div>';
+  lista.innerHTML = '<div style="color:var(--text3);font-size:var(--text-sm)">Carregando...</div>';
 
   try {
     const [rCats, rLims] = await Promise.all([
@@ -740,7 +743,7 @@ async function abrirModalLimites() {
     const cats = {{ categorias | selectattr('tipo', 'equalto', 'despesa') | list | tojson }};
 
     if (!cats || cats.length === 0) {
-      lista.innerHTML = '<div style="color:var(--text3);font-size:0.85rem">Nenhuma categoria de despesa cadastrada.</div>';
+      lista.innerHTML = '<div style="color:var(--text3);font-size:var(--text-sm)">Nenhuma categoria de despesa cadastrada.</div>';
       return;
     }
 
@@ -749,28 +752,28 @@ async function abrirModalLimites() {
       const limFmt = lim ? String(lim).replace('.', ',') : '';
       return `
         <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-          <div style="flex:1;font-size:0.88rem;color:var(--text)">
+          <div style="flex:1;font-size:var(--text-base);color:var(--text)">
             <span style="margin-right:6px">${c.icone || ''}</span>${c.nome}
           </div>
-          <div style="display:flex;align-items:center;gap:6px">
-            <span style="font-size:0.75rem;color:var(--text3)">R$</span>
+          <div class="flex items-center gap-6">
+            <span class="t-sm text-muted">R$</span>
             <input type="text" value="${limFmt}"
                    placeholder="Sem limite"
                    data-cat="${c.id}"
                    oninput="salvarLimite(this)"
                    style="width:100px;padding:6px 10px;background:var(--bg3);
                           border:1px solid var(--border2);border-radius:6px;
-                          color:var(--text);font-size:0.85rem;text-align:right;
+                          color:var(--text);font-size:var(--text-sm);text-align:right;
                           font-family:var(--font-body)"/>
             ${lim ? `<button onclick="removerLimite(${c.id}, this)" title="Remover limite"
                              style="background:none;border:none;cursor:pointer;
-                                    color:var(--text3);font-size:0.9rem;padding:4px">✕</button>` : ''}
+                                    color:var(--text3);font-size:var(--text-base);padding:4px" aria-label="Fechar">✕</button>` : ''}
           </div>
         </div>`;
     }).join('');
 
   } catch(e) {
-    lista.innerHTML = '<div style="color:var(--red2);font-size:0.85rem">Erro ao carregar.</div>';
+    lista.innerHTML = '<div style="color:var(--red2);font-size:var(--text-sm)">Erro ao carregar.</div>';
   }
 }
 
@@ -826,7 +829,7 @@ function mostrarTooltipGrafico(e, rec, des, ano, label) {
     tt.id = 'grafico-tooltip';
     tt.style.cssText = 'position:fixed;pointer-events:none;' +
       'background:var(--bg2);border:1px solid var(--border2);' +
-      'border-radius:8px;padding:12px 16px;font-size:0.82rem;' +
+      'border-radius:8px;padding:12px 16px;font-size:var(--text-sm);' +
       'box-shadow:0 4px 24px rgba(0,0,0,0.6);z-index:99999;' +
       'transition:opacity 0.12s;min-width:180px;opacity:0;';
     document.body.appendChild(tt);
@@ -839,16 +842,16 @@ function mostrarTooltipGrafico(e, rec, des, ano, label) {
   var mes = label.charAt(0).toUpperCase() + label.slice(1) + ' ' + ano;
 
   tt.innerHTML =
-    '<div style="font-weight:600;color:var(--text);font-size:0.85rem;' +
+    '<div style="font-weight:600;color:var(--text);font-size:var(--text-sm);' +
     'border-bottom:1px solid var(--border2);padding-bottom:6px;margin-bottom:8px">' + mes + '</div>' +
     '<div style="display:flex;justify-content:space-between;gap:20px;' +
-    'color:var(--green2);margin-bottom:5px;font-size:0.8rem">' +
+    'color:var(--green2);margin-bottom:5px;font-size:var(--text-sm)">' +
     '<span>Receitas</span><span style="font-weight:600">' + fmt(rec) + '</span></div>' +
     '<div style="display:flex;justify-content:space-between;gap:20px;' +
-    'color:var(--red2);margin-bottom:5px;font-size:0.8rem">' +
+    'color:var(--red2);margin-bottom:5px;font-size:var(--text-sm)">' +
     '<span>Despesas</span><span style="font-weight:600">' + fmt(des) + '</span></div>' +
     '<div style="display:flex;justify-content:space-between;gap:20px;' +
-    'border-top:1px solid var(--border2);padding-top:6px;margin-top:2px;font-size:0.8rem;' +
+    'border-top:1px solid var(--border2);padding-top:6px;margin-top:2px;font-size:var(--text-sm);' +
     'color:' + (saldo >= 0 ? 'var(--green2)' : 'var(--red2)') + '">' +
     '<span>Saldo</span><span style="font-weight:600">' + fmt(saldo) + '</span></div>';
 
@@ -906,7 +909,7 @@ async function carregarSaldoContas() {
         <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;
                     background:var(--bg3);border-radius:9px;border:1px solid var(--border)">
           <div style="font-size:1.3rem">${c.icone}</div>
-          <div style="flex:1;font-size:0.88rem;font-weight:600;color:var(--text)">${c.nome}</div>
+          <div style="flex:1;font-size:var(--text-base);font-weight:600;color:var(--text)">${c.nome}</div>
           <div style="font-family:'Syne',sans-serif;font-weight:700;color:${cor};font-size:0.92rem">
             ${sinal}R$ ${Math.abs(c.saldo).toFixed(2).replace('.',',')}
           </div>
@@ -992,7 +995,7 @@ async function carregarGraficoMeses() {
 
     // Legenda
     const legenda = document.createElement('div');
-    legenda.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:0.72rem;color:var(--text3)';
+    legenda.style.cssText = 'display:flex;gap:14px;justify-content:center;margin-top:8px;font-size:var(--text-xs);color:var(--text3)';
     legenda.innerHTML = `
       <span><span style="display:inline-block;width:10px;height:10px;background:rgba(52,211,153,0.7);border-radius:2px;margin-right:4px"></span>Receitas</span>
       <span><span style="display:inline-block;width:10px;height:10px;background:rgba(248,113,113,0.7);border-radius:2px;margin-right:4px"></span>Despesas</span>`;
@@ -1022,10 +1025,10 @@ async function carregarMetasDash() {
       return `
         <div>
           <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px">
-            <span style="font-size:0.82rem;font-weight:500;color:var(--text);
+            <span style="font-size:var(--text-sm);font-weight:500;color:var(--text);
                          white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
                          max-width:60%">${m.titulo}</span>
-            <span style="font-size:0.72rem;color:${cor};font-weight:600;flex-shrink:0">
+            <span style="font-size:var(--text-xs);color:${cor};font-weight:600;flex-shrink:0">
               ${done ? '✓ Concluída' : pct + '%'}
             </span>
           </div>
@@ -1135,12 +1138,12 @@ async function carregarVencimentos() {
       }
 
       return `<div class="venc-item">
-        <div style="flex:1;min-width:0">
-          <div style="font-size:0.84rem;font-weight:500;color:var(--text);
+        <div class="flex-1 min-w-0">
+          <div style="font-size:var(--text-sm);font-weight:500;color:var(--text);
                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${f.descricao}</div>
-          <div style="font-size:0.7rem;color:${cor};margin-top:2px">${label}</div>
+          <div style="font-size:var(--text-xs);color:${cor};margin-top:2px">${label}</div>
         </div>
-        <div style="font-size:0.84rem;font-weight:700;color:var(--text2);
+        <div style="font-size:var(--text-sm);font-weight:700;color:var(--text2);
                     flex-shrink:0;font-variant-numeric:tabular-nums">${fmtVal(f.valor)}</div>
       </div>`;
     }).join('');

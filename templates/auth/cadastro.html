@@ -34,7 +34,7 @@
     }
     .auth-card {
       background: var(--surface);
-      border: 0.5px solid var(--border2);
+      border: 1px solid var(--border2);
       border-radius: 14px;
       padding: 40px 36px;
       width: 100%;
@@ -49,7 +49,7 @@
     input[type="text"], input[type="email"], input[type="password"] {
       width: 100%; padding: 9px 12px;
       background: rgba(255,255,255,0.04);
-      border: 0.5px solid var(--border2);
+      border: 1px solid var(--border2);
       border-radius: 8px; color: var(--text);
       font-family: 'Inter', system-ui, sans-serif;
       font-size: 14px; transition: border-color 0.15s, box-shadow 0.15s;
@@ -71,7 +71,7 @@
     }
     .btn-submit:hover { opacity: 0.88; }
     .btn-submit:active { transform: scale(0.99); }
-    .contabil-box { border: 0.5px solid var(--border2); border-radius: 8px; padding: 12px 14px; background: rgba(255,255,255,0.03); }
+    .contabil-box { border: 1px solid var(--border2); border-radius: 8px; padding: 12px 14px; background: rgba(255,255,255,0.03); }
     .contabil-label { display: flex; align-items: flex-start; gap: 10px; cursor: pointer; margin: 0; }
     .contabil-label input[type="checkbox"] { width: 16px; height: 16px; margin-top: 2px; cursor: pointer; accent-color: var(--text); flex-shrink: 0; }
     .contabil-titulo { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
@@ -81,9 +81,9 @@
     .auth-footer a:hover { border-color: var(--text); }
     .flash-list { margin-bottom: 20px; display: flex; flex-direction: column; gap: 8px; }
     .flash { padding: 9px 13px; border-radius: 7px; font-size: 13px; display: flex; align-items: center; gap: 7px; }
-    .flash-erro    { background: rgba(220,38,38,0.12); border: 0.5px solid rgba(220,38,38,0.25); color: #fca5a5; }
-    .flash-sucesso { background: rgba(22,163,74,0.12);  border: 0.5px solid rgba(22,163,74,0.25);  color: #86efac; }
-    .flash-info    { background: rgba(37,99,235,0.12);  border: 0.5px solid rgba(37,99,235,0.25);  color: #93c5fd; }
+    .flash-erro    { background: rgba(220,38,38,0.12); border: 1px solid rgba(220,38,38,0.25); color: #fca5a5; }
+    .flash-sucesso { background: rgba(22,163,74,0.12);  border: 1px solid rgba(22,163,74,0.25);  color: #86efac; }
+    .flash-info    { background: rgba(37,99,235,0.12);  border: 1px solid rgba(37,99,235,0.25);  color: #93c5fd; }
   </style>
 </head>
 <body>
@@ -121,21 +121,21 @@
 
     <div class="form-group">
       <label for="nome">Seu nome</label>
-      <input type="text" id="nome" name="nome"
+      <input type="text" id="nome" name="nome" autocomplete="name"
              value="{{ nome|default('') }}"
              placeholder="Como quer ser chamado?" required autofocus />
     </div>
 
     <div class="form-group">
       <label for="email">Email</label>
-      <input type="email" id="email" name="email"
+      <input type="email" id="email" name="email" autocomplete="email"
              value="{{ email|default('') }}"
              placeholder="seu@email.com" required />
     </div>
 
     <div class="form-group">
       <label for="senha">Senha</label>
-      <input type="password" id="senha" name="senha"
+      <input type="password" id="senha" name="senha" autocomplete="new-password"
              placeholder="Mínimo 6 caracteres" required />
       <p class="hint">Use pelo menos 6 caracteres</p>
     </div>

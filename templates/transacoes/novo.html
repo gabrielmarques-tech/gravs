@@ -11,7 +11,7 @@
     border-radius: var(--radius-sm);
     background: var(--surface);
     color: var(--text2);
-    font-size: 0.88rem;
+    font-size: var(--text-base);
     font-family: var(--font-body);
     cursor: pointer;
     transition: all 0.18s;
@@ -28,7 +28,7 @@
   }
   .ocr-status {
     display: none;
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     padding: 10px 14px;
     border-radius: var(--radius-sm);
     margin-bottom: 16px;
@@ -406,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <select name="conta_id" id="select-conta" class="form-control">
           <option value="">— Selecione (opcional) —</option>
         </select>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+        <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
           <a href="{{ url_for('contas.lista') }}" style="color:var(--purple3)">+ Cadastrar nova conta</a>
         </div>
       </div>

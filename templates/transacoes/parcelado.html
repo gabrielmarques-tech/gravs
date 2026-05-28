@@ -14,7 +14,7 @@
       <button type="button" id="btn-compra"
               onclick="setModo('compra')"
               style="flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;
-                     font-family:var(--font-display);font-size:0.9rem;font-weight:700;
+                     font-family:var(--font-display);font-size:var(--text-base);font-weight:700;
                      transition:all 0.18s;background:linear-gradient(135deg,var(--purple),var(--purple2));
                      color:white;box-shadow:0 3px 10px rgba(124,58,237,0.4)">
         💳 Compra parcelada
@@ -22,7 +22,7 @@
       <button type="button" id="btn-financiamento"
               onclick="setModo('financiamento')"
               style="flex:1;padding:10px;border:none;border-radius:6px;cursor:pointer;
-                     font-family:var(--font-display);font-size:0.9rem;font-weight:700;
+                     font-family:var(--font-display);font-size:var(--text-base);font-weight:700;
                      transition:all 0.18s;background:transparent;color:var(--text2)">
         🏦 Financiamento
       </button>
@@ -67,7 +67,7 @@
           <label class="form-label" id="label-valor">Valor total (R$)</label>
           <input type="text" name="valor" id="valor-input" class="form-control"
                  placeholder="0,00" required />
-          <div id="hint-valor" style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+          <div id="hint-valor" style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
             Valor total da compra
           </div>
         </div>
@@ -93,7 +93,7 @@
         <select name="conta_id" id="select-conta-parc" class="form-control">
           <option value="">— Selecione (opcional) —</option>
         </select>
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+        <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
           <a href="/contas/" style="color:var(--purple3)">+ Cadastrar nova conta</a>
         </div>
       </div>
@@ -102,14 +102,14 @@
         <label class="form-label">Número de parcelas</label>
         <input type="number" name="parcelas" id="num-parcelas"
                class="form-control" min="2" max="420" value="12" required />
-        <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">Máximo: 420x (35 anos)</div>
+        <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">Máximo: 420x (35 anos)</div>
       </div>
 
       <!-- Taxas — só aparece no modo financiamento -->
       <div id="bloco-taxa" style="display:none">
         <div style="background:var(--bg3);border:1px solid var(--border);
                     border-radius:var(--radius);padding:18px;margin-bottom:18px">
-          <div style="font-size:0.8rem;font-weight:700;color:var(--text2);
+          <div style="font-size:var(--text-sm);font-weight:700;color:var(--text2);
                       margin-bottom:14px;text-transform:uppercase;letter-spacing:0.06em">
             📐 Taxa de juros
           </div>
@@ -119,7 +119,7 @@
               <label class="form-label">Taxa anual (%)</label>
               <input type="text" id="taxa-anual" class="form-control"
                      placeholder="Ex: 7.66" />
-              <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+              <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
                 Converte para mensal automaticamente
               </div>
             </div>
@@ -127,14 +127,14 @@
               <label class="form-label">Taxa mensal (%)</label>
               <input type="text" name="taxa_juros" id="taxa-mensal"
                      class="form-control" placeholder="Ex: 0.6170" />
-              <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+              <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
                 Ou informe direto a mensal
               </div>
             </div>
           </div>
 
           <div id="info-taxa"
-               style="display:none;font-size:0.8rem;color:var(--cyan2);
+               style="display:none;font-size:var(--text-sm);color:var(--cyan2);
                       background:rgba(6,182,212,0.08);border:1px solid rgba(6,182,212,0.2);
                       border-radius:6px;padding:8px 12px"></div>
         </div>
@@ -144,7 +144,7 @@
       <div id="preview-box"
            style="display:none;background:var(--bg3);border:1px solid var(--border);
                   border-radius:var(--radius);padding:18px;margin-bottom:20px">
-        <div style="font-size:0.8rem;font-weight:700;color:var(--text2);
+        <div style="font-size:var(--text-sm);font-weight:700;color:var(--text2);
                     margin-bottom:14px;text-transform:uppercase;letter-spacing:0.06em">
           📋 Projeção
         </div>
@@ -153,14 +153,14 @@
         <div style="display:flex;gap:12px;margin-bottom:14px;flex-wrap:wrap">
           <div style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
                       padding:12px;border:1px solid var(--border);text-align:center">
-            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">PARCELA</div>
+            <div style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px">PARCELA</div>
             <div id="preview-parcela"
                  style="font-family:var(--font-display);font-size:1.3rem;
                         font-weight:800;color:var(--purple2)">-</div>
           </div>
           <div style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
                       padding:12px;border:1px solid var(--border);text-align:center">
-            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">TOTAL PAGO</div>
+            <div style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px">TOTAL PAGO</div>
             <div id="preview-total"
                  style="font-family:var(--font-display);font-size:1.3rem;
                         font-weight:800;color:var(--text)">-</div>
@@ -168,7 +168,7 @@
           <div id="bloco-juros-preview"
                style="flex:1;min-width:120px;background:var(--surface2);border-radius:8px;
                       padding:12px;border:1px solid var(--border);text-align:center;display:none">
-            <div style="font-size:0.72rem;color:var(--text3);margin-bottom:4px">TOTAL JUROS</div>
+            <div style="font-size:var(--text-xs);color:var(--text3);margin-bottom:4px">TOTAL JUROS</div>
             <div id="preview-juros"
                  style="font-family:var(--font-display);font-size:1.3rem;
                         font-weight:800;color:var(--red2)">-</div>
@@ -176,7 +176,7 @@
         </div>
 
         <!-- Primeiras parcelas -->
-        <div style="font-size:0.75rem;color:var(--text3);margin-bottom:8px">
+        <div style="font-size:var(--text-sm);color:var(--text3);margin-bottom:8px">
           Primeiras parcelas:
         </div>
         <div id="lista-parcelas"
@@ -185,7 +185,7 @@
 
       <div class="d-flex gap-12" style="justify-content:space-between;align-items:center">
         <a href="{{ url_for('transacoes.novo') }}"
-           style="font-size:0.85rem;color:var(--text3);text-decoration:none">
+           style="font-size:var(--text-sm);color:var(--text3);text-decoration:none">
           ← Transação simples
         </a>
         <button type="submit" class="btn btn-primary" style="padding:12px 32px">

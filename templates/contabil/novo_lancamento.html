@@ -70,7 +70,7 @@ verificarManual('select-credito');
 {% block content %}
 <div style="max-width:580px;margin:0 auto">
   <div class="card fade-up">
-    <div class="modal-title" style="margin-bottom:24px">📒 Lançamento em Partida Dobrada</div>
+    <div class="modal-title" style="margin-bottom:24px">Lançamento em Partida Dobrada</div>
 
     <form method="POST" action="{{ url_for('contabil.novo_lancamento_contabil') }}">
 
@@ -113,9 +113,9 @@ verificarManual('select-credito');
       <!-- Partida dobrada -->
       <div style="background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);
                   padding:18px;margin-bottom:18px">
-        <div style="font-size:0.8rem;font-weight:700;color:var(--text2);margin-bottom:14px;
+        <div style="font-size:var(--text-sm);font-weight:700;color:var(--text2);margin-bottom:14px;
                     text-transform:uppercase;letter-spacing:0.06em">
-          📒 Partida Dobrada
+          Partida Dobrada
         </div>
 
         <div class="grid grid-2">
@@ -125,7 +125,7 @@ verificarManual('select-credito');
             <select name="conta_debito" id="select-debito" class="form-control">
               <option value="">— Selecione —</option>
             </select>
-            <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+            <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
               De onde saiu o dinheiro
             </div>
           </div>
@@ -135,13 +135,13 @@ verificarManual('select-credito');
             <select name="conta_credito" id="select-credito" class="form-control">
               <option value="">— Selecione —</option>
             </select>
-            <div style="font-size:0.72rem;color:var(--text3);margin-top:4px">
+            <div style="font-size:var(--text-xs);color:var(--text3);margin-top:4px">
               Para onde foi registrado
             </div>
           </div>
         </div>
 
-        <div style="font-size:0.78rem;color:var(--text3);padding:10px 12px;
+        <div style="font-size:var(--text-sm);color:var(--text3);padding:10px 12px;
                     background:rgba(124,58,237,0.08);border-radius:6px;
                     border:1px solid rgba(124,58,237,0.15)">
           💡 Exemplo: Pagar energia → Débito: <em>Despesa Energia</em> / Crédito: <em>Conta Bancária</em>
@@ -150,7 +150,7 @@ verificarManual('select-credito');
 
       <div class="d-flex gap-12" style="justify-content:space-between;align-items:center">
         <a href="{{ url_for('contabil.partida_dobrada') }}"
-           style="font-size:0.85rem;color:var(--text3);text-decoration:none">← Voltar</a>
+           style="font-size:var(--text-sm);color:var(--text3);text-decoration:none">← Voltar</a>
         <button type="submit" class="btn btn-primary" style="padding:12px 28px">
           Registrar lançamento
         </button>

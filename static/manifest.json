@@ -4,8 +4,8 @@
   "description": "Controle suas finanças pessoais de forma simples e inteligente",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0d0618",
-  "theme_color": "#7c3aed",
+  "background_color": "#09060f",
+  "theme_color": "#8b5cf6",
   "orientation": "portrait-primary",
   "lang": "pt-BR",
   "icons": [
@@ -28,16 +28,40 @@
       "short_name": "Nova",
       "description": "Registrar nova receita ou despesa",
       "url": "/novo",
-      "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/static/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     },
     {
       "name": "Dashboard",
       "short_name": "Início",
       "description": "Ver resumo financeiro",
       "url": "/",
-      "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
+      "icons": [
+        {
+          "src": "/static/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Metas",
+      "short_name": "Metas",
+      "description": "Acompanhar metas financeiras",
+      "url": "/metas/",
+      "icons": [
+        {
+          "src": "/static/icon-192.png",
+          "sizes": "192x192"
+        }
+      ]
     }
   ],
-  "categories": ["finance", "productivity"],
-  "screenshots": []
+  "categories": [
+    "finance",
+    "productivity"
+  ]
 }

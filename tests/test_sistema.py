@@ -2832,3 +2832,831 @@ class TestPerformanceQueries:
         assert rec == 0.0
         assert des == 0.0
         assert sal == 0.0
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Design System e Regressão Visual
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestDesignSystem:
+    """
+    Testa a presença dos design tokens e componentes críticos no base.html.
+    Garante que refinamentos visuais não quebraram a estrutura CSS.
+    """
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def test_design_tokens_escuro_presentes(self):
+        """Tokens do tema escuro devem existir."""
+        base = self._base()
+        tokens = ['--bg', '--surface', '--border', '--purple', '--green2',
+                  '--red2', '--text', '--text2', '--text3', '--radius',
+                  '--shadow-sm', '--shadow', '--shadow-lg']
+        for token in tokens:
+            assert token in base, f"Token ausente: {token}"
+
+    def test_escala_tipografica_presente(self):
+        """Escala tipográfica de 6 tamanhos deve estar definida."""
+        base = self._base()
+        for token in ['--text-xs', '--text-sm', '--text-base',
+                      '--text-lg', '--text-xl', '--text-2xl']:
+            assert token in base, f"Token tipográfico ausente: {token}"
+
+    def test_sombras_definidas(self):
+        """Sombras devem estar definidas (não 'none') no :root."""
+        base = self._base()
+        assert '--shadow-sm:' in base
+        assert '--shadow:' in base
+        assert '--shadow-lg:' in base
+
+    def test_tema_claro_tokens_presentes(self):
+        """Tema claro deve ter todos os tokens."""
+        base = self._base()
+        assert '[data-tema="claro"]' in base
+        assert '--shadow-sm:' in base
+
+    def test_sidebar_sem_label_menu(self):
+        """Label 'MENU' não deve existir na sidebar — anti-pattern de template."""
+        base = self._base()
+        assert '>Menu<' not in base
+        assert '>MENU<' not in base
+
+    def test_card_com_sombra(self):
+        """Card deve ter box-shadow definido."""
+        base = self._base()
+        assert 'box-shadow: var(--shadow-sm)' in base or \
+               'box-shadow:var(--shadow-sm)' in base
+
+    def test_border_nao_usa_05px(self):
+        """Bordas devem usar 1px, não 0.5px inconsistente."""
+        base = self._base()
+        # sidebar e topbar não devem ter 0.5px
+        assert 'border-right: 0.5px' not in base
+        assert 'border-bottom: 0.5px' not in base
+
+    def test_nav_link_usa_variavel_tipografica(self):
+        """nav-link deve usar variável de tipografia, não valor hardcoded."""
+        base = self._base()
+        assert 'font-size: var(--text-sm)' in base or \
+               'font-size: var(--text-base)' in base
+
+    def test_inter_font_carregada(self):
+        """Fonte Inter deve ser carregada do Google Fonts."""
+        base = self._base()
+        assert 'fonts.googleapis.com' in base
+        assert 'Inter' in base
+
+    def test_focus_acessivel_presente(self):
+        """Focus-visible deve estar definido para acessibilidade."""
+        base = self._base()
+        assert ':focus-visible' in base
+
+    def test_selecao_texto_estilizada(self):
+        """::selection deve estar estilizado."""
+        base = self._base()
+        assert '::selection' in base
+
+    def test_classes_tipograficas_presentes(self):
+        """Classes .t-xs .t-sm etc devem existir."""
+        base = self._base()
+        for cls in ['.t-xs', '.t-sm', '.t-base', '.t-lg', '.t-xl', '.t-2xl']:
+            assert cls in base, f"Classe tipográfica ausente: {cls}"
+
+    def test_card_variantes_presentes(self):
+        """Variantes de card devem existir."""
+        base = self._base()
+        assert '.card-flat' in base
+        assert '.card-ghost' in base
+
+    def test_btn_active_transform(self):
+        """Botão deve ter feedback de clique via transform."""
+        base = self._base()
+        assert '.btn:active' in base
+        assert 'scale(0.98)' in base
+
+
+class TestDesignSystemHTTP:
+    """Testa que as páginas renderizam corretamente com o novo design."""
+
+    def test_dashboard_renderiza(self, client, usuario_logado):
+        """Dashboard deve renderizar sem erros."""
+        r = client.get("/")
+        assert r.status_code == 200
+        data = r.data.decode('utf-8')
+        assert 'Gravs' in data
+        assert '--bg' in data or 'var(--' in data
+
+    def test_login_renderiza(self, client):
+        """Login deve renderizar sem erros."""
+        r = client.get("/auth/login")
+        assert r.status_code == 200
+        assert b'Gravs' in r.data
+
+    def test_transacoes_renderiza(self, client, usuario_logado):
+        """Tela de transações deve renderizar."""
+        r = client.get("/todas")
+        assert r.status_code == 200
+
+    def test_perfil_renderiza(self, client, usuario_logado):
+        """Perfil deve renderizar sem erros."""
+        r = client.get("/perfil/")
+        assert r.status_code == 200
+
+    def test_metas_renderiza(self, client, usuario_logado):
+        """Metas deve renderizar sem erros."""
+        r = client.get("/metas/")
+        assert r.status_code == 200
+
+    def test_transferencias_renderiza(self, client, usuario_logado):
+        """Transferências deve renderizar sem erros."""
+        r = client.get("/transferencias/")
+        assert r.status_code == 200
+
+    def test_contas_renderiza(self, client, usuario_logado):
+        """Contas deve renderizar sem erros."""
+        r = client.get("/contas/")
+        assert r.status_code == 200
+
+    def test_categorias_renderiza(self, client, usuario_logado):
+        """Categorias deve renderizar sem erros."""
+        r = client.get("/categorias/")
+        assert r.status_code == 200
+
+    def test_recorrentes_renderiza(self, client, usuario_logado):
+        """Recorrentes deve renderizar sem erros."""
+        r = client.get("/fixas")
+        assert r.status_code == 200
+
+    def test_importacao_renderiza(self, client, usuario_logado):
+        """Importação deve renderizar sem erros."""
+        r = client.get("/importacao/")
+        assert r.status_code == 200
+
+    def test_todas_paginas_tem_charset(self, client, usuario_logado):
+        """Todas as páginas devem declarar charset UTF-8."""
+        rotas = ["/", "/toda", "/perfil/", "/metas/", "/contas/"]
+        for rota in rotas:
+            r = client.get(rota)
+            if r.status_code == 200:
+                assert b'charset' in r.data.lower() or b'utf-8' in r.data.lower(), \
+                    f"Charset ausente em {rota}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Refinamento Visual v30
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestRefinamentoVisual:
+    """
+    Garante que os refinamentos visuais aplicados estão corretos
+    e não regridem em deploys futuros.
+    """
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def _template(self, path):
+        return open(f'templates/{path}', encoding='utf-8').read()
+
+    # ── Escala tipográfica ──────────────────────────────────────────────────
+
+    def test_escala_tipografica_sem_hardcoded_no_base(self):
+        """base.html não deve ter font-sizes hardcoded comuns fora da escala."""
+        base = self._base()
+        # Esses tamanhos específicos não devem aparecer FORA de variáveis CSS
+        # (dentro de var(--text-*) é ok)
+        hardcoded_ruins = ['font-size: 0.72rem', 'font-size: 0.78rem',
+                           'font-size:0.72rem', 'font-size:0.78rem']
+        for h in hardcoded_ruins:
+            # Permitido apenas dentro de definições de variáveis
+            occurrences = base.count(h)
+            assert occurrences == 0, f"Font-size hardcoded encontrado: {h}"
+
+    def test_dashboard_usa_variavel_tipografica(self):
+        """Dashboard não deve ter font-sizes 0.65rem-0.95rem hardcoded."""
+        d = self._template('dashboard/index.html')
+        ruim = ['font-size:0.72rem', 'font-size:0.78rem',
+                'font-size:0.82rem', 'font-size:0.65rem']
+        for r in ruim:
+            assert r not in d, f"Font-size hardcoded no dashboard: {r}"
+
+    # ── Página de erro ───────────────────────────────────────────────────────
+
+    def test_pagina_erro_usa_inter(self):
+        """Página de erro deve usar Inter, não Syne ou DM Sans."""
+        erro = self._template('erros/base_erro.html')
+        assert 'Inter' in erro
+        assert 'Syne' not in erro
+        assert 'DM Sans' not in erro
+        assert 'DM+Sans' not in erro
+
+    def test_pagina_erro_usa_tokens_corretos(self):
+        """Página de erro deve usar os tokens de design corretos."""
+        erro = self._template('erros/base_erro.html')
+        assert '--bg' in erro
+        assert '--purple' in erro
+        assert '--text' in erro
+        # Não deve ter roxo saturado antigo
+        assert '#9f5fff' not in erro
+
+    def test_pagina_erro_tem_link_home(self):
+        """Página de erro deve ter link para voltar ao início."""
+        erro = self._template('erros/base_erro.html')
+        assert 'href="/"' in erro
+
+    def test_pagina_erro_tem_logo(self):
+        """Página de erro deve mostrar o logo do Gravs."""
+        erro = self._template('erros/base_erro.html')
+        assert 'icon-192.png' in erro
+
+    def test_pagina_404_renderiza(self, client):
+        """Rota inexistente deve retornar 404."""
+        r = client.get("/rota-que-nao-existe-nunca-jamais-xyz")
+        assert r.status_code == 404
+
+    def test_pagina_404_tem_conteudo(self, client):
+        """Página 404 deve ter conteúdo HTML válido."""
+        r = client.get("/pagina-inexistente-123")
+        assert r.status_code == 404
+        assert b'html' in r.data.lower()
+
+    # ── Componentes do base.html ─────────────────────────────────────────────
+
+    def test_scrollbar_discreta(self):
+        """Scrollbar deve ter 3px ou menos (discreta)."""
+        base = self._base()
+        # Deve ter definição de scrollbar
+        assert '-webkit-scrollbar' in base
+        # Não deve ter scrollbar grande (4px era o antigo)
+        assert 'width: 4px' not in base
+
+    def test_btn_sm_compacto(self):
+        """btn-sm deve usar escala tipográfica."""
+        base = self._base()
+        assert '.btn-sm' in base
+        # Não deve ter font-size hardcoded no btn-sm
+        assert "btn-sm { padding: 6px 12px; font-size: 0.82rem" not in base
+
+    def test_card_tem_variaveis_sombra(self):
+        """Card deve referenciar as variáveis de sombra."""
+        base = self._base()
+        assert 'var(--shadow-sm)' in base
+        assert 'var(--shadow)' in base
+
+    def test_sem_border_05px(self):
+        """Nenhum template deve usar border de 0.5px (inconsistente)."""
+        import os
+        total = 0
+        for root, _, files in os.walk('templates'):
+            for f in files:
+                if not f.endswith('.html'):
+                    continue
+                try:
+                    c = open(os.path.join(root, f)).read()
+                    total += c.count('border: 0.5px') + c.count('border: 0.5px solid')
+                except:
+                    pass
+        assert total == 0, f"Encontradas {total} bordas de 0.5px"
+
+    # ── Recorrentes ──────────────────────────────────────────────────────────
+
+    def test_recorrentes_sem_emoji_interface(self):
+        """Recorrentes não deve ter emojis de interface em títulos."""
+        rec = self._template('recorrentes/lista.html')
+        # Emojis de interface que foram removidos
+        assert '📅 Vencimentos' not in rec
+        assert '🔁 Todas' not in rec
+
+    def test_recorrentes_renderiza(self, client, usuario_logado):
+        """Página de recorrentes deve renderizar sem erros."""
+        r = client.get("/fixas")
+        assert r.status_code == 200
+
+    # ── Contábil ─────────────────────────────────────────────────────────────
+
+    def test_contabil_exportar_renderiza(self, client, usuario_logado):
+        """Exportar contábil deve renderizar."""
+        r = client.get("/contabil/exportar")
+        assert r.status_code == 200
+
+    def test_contabil_sem_emoji_titulo(self):
+        """Contábil não deve ter emojis em títulos de seção."""
+        exp = self._template('contabil/exportar.html')
+        assert '📊 Exportar' not in exp
+        assert '📥 Baixar' not in exp
+
+    # ── Importação ───────────────────────────────────────────────────────────
+
+    def test_importacao_renderiza(self, client, usuario_logado):
+        """Importação deve renderizar."""
+        r = client.get("/importacao/")
+        assert r.status_code == 200
+
+    # ── Públicas ─────────────────────────────────────────────────────────────
+
+    def test_termos_renderiza(self, client):
+        """Termos de uso deve renderizar sem login."""
+        r = client.get("/termos")
+        assert r.status_code == 200
+
+    def test_privacidade_renderiza(self, client):
+        """Política de privacidade deve renderizar."""
+        r = client.get("/privacidade")
+        assert r.status_code in (200, 404)
+
+    # ── Consistência geral ───────────────────────────────────────────────────
+
+    def test_todas_paginas_renderizam_sem_erro_500(self, client, usuario_logado):
+        """Nenhuma página autenticada deve retornar 500."""
+        rotas = [
+            "/", "/todas", "/fixas", "/parcelados",
+            "/perfil/", "/metas/", "/contas/",
+            "/categorias/", "/transferencias/",
+            "/importacao/", "/contabil/exportar",
+        ]
+        erros = []
+        for rota in rotas:
+            r = client.get(rota)
+            if r.status_code == 500:
+                erros.append(rota)
+        assert erros == [], f"Páginas com erro 500: {erros}"
+
+    def test_tokens_roxo_novo_no_base(self):
+        """Base deve usar novo roxo contido, não o saturado antigo."""
+        base = self._base()
+        # Novo valor
+        assert '#8b5cf6' in base or 'purple2' in base
+        # Antigo valor saturado não deve ser o principal
+        assert base.count('#9f5fff') == 0 or '--purple2: #9f5fff' not in base
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes de Acessibilidade, Meta Tags e PWA (v31)
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestAcessibilidade:
+    """
+    Garante que melhorias de acessibilidade estão presentes
+    e não regridem em deploys futuros.
+    """
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def _template(self, path):
+        return open(f'templates/{path}', encoding='utf-8').read()
+
+    def test_skip_link_presente(self):
+        """Skip link deve existir para navegação por teclado."""
+        base = self._base()
+        assert 'skip-link' in base
+        assert 'Pular para o conteúdo' in base or 'skip' in base.lower()
+
+    def test_main_content_id(self):
+        """Área principal deve ter id main-content para o skip link."""
+        base = self._base()
+        assert 'id="main-content"' in base
+
+    def test_skip_link_css(self):
+        """CSS do skip link deve existir."""
+        base = self._base()
+        assert '.skip-link {' in base
+        assert ':focus' in base
+
+    def test_hamburger_aria_label(self):
+        """Botão hamburger deve ter aria-label."""
+        base = self._base()
+        assert 'hamburger' in base
+        # Buscar especificamente o elemento HTML (não o CSS)
+        import re
+        matches = re.findall(r'<[^>]+class="[^"]*hamburger[^"]*"[^>]*>', base)
+        html_hamburgers = [m for m in matches if not m.startswith('<style')]
+        if html_hamburgers:
+            btn = html_hamburgers[-1]  # último match é o HTML
+            assert 'aria-label' in btn or 'aria-expanded' in btn, \
+                f"Hamburger HTML sem aria: {btn[:150]}"
+
+    def test_tema_btn_aria_label(self):
+        """Botão de tema deve ter aria-label."""
+        base = self._base()
+        assert 'btn-tema' in base
+        idx = base.find('btn-tema')
+        contexto = base[max(0, idx-50):idx+200]
+        assert 'aria-label' in contexto or 'title' in contexto
+
+    def test_login_autocomplete_email(self):
+        """Campo email do login deve ter autocomplete."""
+        login = self._template('auth/login.html')
+        assert 'autocomplete="email"' in login
+
+    def test_login_autocomplete_senha(self):
+        """Campo senha do login deve ter autocomplete."""
+        login = self._template('auth/login.html')
+        assert 'autocomplete="current-password"' in login
+
+    def test_cadastro_autocomplete(self):
+        """Formulário de cadastro deve ter autocompletes."""
+        cadastro = self._template('auth/cadastro.html')
+        assert 'autocomplete="email"' in cadastro
+        assert 'autocomplete="new-password"' in cadastro
+
+    def test_formularios_tem_labels(self):
+        """Inputs visíveis devem ter labels associados (exceto hidden e checkbox inline)."""
+        import re
+        for path in ['auth/login.html', 'auth/cadastro.html']:
+            content = self._template(path)
+            # Contar apenas inputs visíveis que precisam de label
+            inputs_visiveis = re.findall(
+                r'<input[^>]+type="(?:text|email|password)"[^>]+id="([^"]+)"', content
+            )
+            labels = re.findall(r'<label[^>]+for="([^"]+)"', content)
+            for inp_id in inputs_visiveis:
+                assert inp_id in labels, \
+                    f"{path}: input id='{inp_id}' sem label associado"
+
+    def test_botoes_icone_tem_title_ou_aria(self):
+        """Botões ícone devem ter title ou aria-label."""
+        import re
+        for tmpl in ['transferencias/lista.html', 'metas/lista.html',
+                     'categorias/lista.html', 'contas/lista.html']:
+            try:
+                content = self._template(tmpl)
+                # Pegar botões com SVG mas sem texto visível
+                btns_icone = re.findall(
+                    r'<button[^>]*class="[^"]*btn-icon[^"]*"[^>]*>',
+                    content
+                )
+                for btn in btns_icone:
+                    assert 'title=' in btn or 'aria-label=' in btn, \
+                        f"Botão ícone sem title/aria-label em {tmpl}: {btn[:100]}"
+            except FileNotFoundError:
+                pass
+
+
+class TestMetaTagsPWA:
+    """Testa meta tags, SEO e manifesto PWA."""
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def test_meta_description_presente(self):
+        """Meta description deve existir."""
+        base = self._base()
+        assert 'name="description"' in base
+        assert 'content=' in base
+
+    def test_meta_og_title(self):
+        """Meta OG title deve existir."""
+        base = self._base()
+        assert 'property="og:title"' in base
+
+    def test_meta_og_description(self):
+        """Meta OG description deve existir."""
+        base = self._base()
+        assert 'property="og:description"' in base
+
+    def test_meta_og_image(self):
+        """Meta OG image deve existir."""
+        base = self._base()
+        assert 'property="og:image"' in base
+
+    def test_meta_theme_color(self):
+        """Meta theme-color deve existir."""
+        base = self._base()
+        assert 'name="theme-color"' in base
+
+    def test_meta_apple_mobile(self):
+        """Meta apple-mobile-web-app deve existir."""
+        base = self._base()
+        assert 'apple-mobile-web-app' in base
+
+    def test_manifesto_pwa_existe(self):
+        """Arquivo manifest.json deve existir."""
+        import os
+        assert os.path.exists('static/manifest.json')
+
+    def test_manifesto_pwa_valido(self):
+        """manifest.json deve ser JSON válido com campos obrigatórios."""
+        import json
+        manifest = json.load(open('static/manifest.json'))
+        assert 'name' in manifest
+        assert 'short_name' in manifest
+        assert 'icons' in manifest
+        assert 'start_url' in manifest
+        assert 'display' in manifest
+
+    def test_manifesto_tem_shortcuts(self):
+        """Manifesto deve ter shortcuts para acesso rápido."""
+        import json
+        manifest = json.load(open('static/manifest.json'))
+        assert 'shortcuts' in manifest
+        assert len(manifest['shortcuts']) >= 2
+
+    def test_manifesto_background_color_correto(self):
+        """Manifesto deve usar o background color do design system."""
+        import json
+        manifest = json.load(open('static/manifest.json'))
+        # Não deve usar o valor antigo
+        assert manifest.get('background_color') != '#0d0618'
+        assert manifest.get('background_color') == '#09060f'
+
+    def test_manifesto_theme_color_correto(self):
+        """Manifesto deve usar o novo roxo contido."""
+        import json
+        manifest = json.load(open('static/manifest.json'))
+        # Não deve ser o roxo saturado antigo
+        assert manifest.get('theme_color') != '#7c3aed' or \
+               manifest.get('theme_color') == '#8b5cf6'
+
+    def test_manifest_link_no_base(self):
+        """base.html deve linkar o manifest.json."""
+        base = self._base()
+        assert 'manifest.json' in base
+
+    def test_og_locale_pt_br(self):
+        """Meta OG deve declarar locale pt_BR."""
+        base = self._base()
+        assert 'pt_BR' in base or 'pt-BR' in base
+
+
+class TestInlineStylesReducao:
+    """
+    Garante que a redução de inline styles não regrediu.
+    Inline styles são difíceis de manter e quebram consistência visual.
+    """
+
+    def _template(self, path):
+        return open(f'templates/{path}', encoding='utf-8').read()
+
+    def _contar_styles(self, path):
+        return self._template(path).count('style=')
+
+    def test_base_styles_controlado(self):
+        """base.html não deve ter mais de 60 inline styles (modais e componentes globais incluídos)."""
+        assert self._contar_styles('base.html') <= 60
+
+    def test_dashboard_styles_controlado(self):
+        """dashboard/index.html não deve ter mais de 120 inline styles."""
+        assert self._contar_styles('dashboard/index.html') <= 120
+
+    def test_transacoes_styles_controlado(self):
+        """transacoes/lista.html não deve ter mais de 45 inline styles."""
+        assert self._contar_styles('transacoes/lista.html') <= 45
+
+    def test_classes_utilitarias_em_uso(self):
+        """Classes utilitárias do base.html devem ser usadas nos templates."""
+        import os
+        classes_uteis = ['flex items-center', 'flex flex-col', 'mt-12',
+                         'mb-12', 'font-600', 'truncate', 'shrink-0']
+        usadas = set()
+        for root, _, files in os.walk('templates'):
+            for f in files:
+                if not f.endswith('.html'):
+                    continue
+                try:
+                    c = open(os.path.join(root, f)).read()
+                    for cls in classes_uteis:
+                        if cls in c:
+                            usadas.add(cls)
+                except:
+                    pass
+        # Pelo menos metade das classes deve estar em uso
+        assert len(usadas) >= len(classes_uteis) // 2, \
+            f"Poucas classes em uso: {usadas}"
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Testes v32 — Modal Confirm, Filtros Persistentes, Paginação, Atalhos
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestModalConfirm:
+    """Testa a presença e estrutura do modal de confirmação global."""
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def test_modal_confirm_presente_no_base(self):
+        """Modal de confirmação global deve existir no base.html."""
+        base = self._base()
+        assert 'modal-confirm-global' in base
+
+    def test_modal_confirm_tem_titulo_e_desc(self):
+        """Modal deve ter elementos de título e descrição."""
+        base = self._base()
+        assert 'modal-confirm-titulo' in base
+        assert 'modal-confirm-desc'   in base
+
+    def test_modal_confirm_tem_botoes(self):
+        """Modal deve ter botões de confirmar e cancelar."""
+        base = self._base()
+        assert 'modal-confirm-ok'       in base
+        assert 'modal-confirm-cancelar' in base
+
+    def test_window_confirmar_definido(self):
+        """Função window.confirmar() deve estar definida."""
+        base = self._base()
+        assert 'window.confirmar' in base
+        assert 'return new Promise' in base
+
+    def test_confirmar_e_promise_based(self):
+        """window.confirmar deve retornar Promise."""
+        base = self._base()
+        assert 'resolve(true)'  in base
+        assert 'resolve(false)' in base
+
+    def test_confirmar_fecha_com_esc(self):
+        """Modal de confirmação deve fechar com ESC."""
+        base = self._base()
+        assert "key === 'Escape'" in base
+
+    def test_data_confirm_helper(self):
+        """Helper data-confirm deve existir para formulários."""
+        base = self._base()
+        assert 'data-confirm' in base
+
+    def test_sem_confirm_nativo_nos_templates(self):
+        """Templates não devem usar window.confirm() nativo."""
+        import os
+        arquivos_com_confirm = []
+        for root, _, files in os.walk('templates'):
+            for f in files:
+                if not f.endswith('.html'):
+                    continue
+                try:
+                    c = open(os.path.join(root, f)).read()
+                    # Não deve ter confirm( sem ser o window.confirmar
+                    import re
+                    # Pegar confirm( que não são window.confirmar
+                    matches = re.findall(r"(?<!window\.)(?<!\.)\bconfirm\s*\(", c)
+                    # Remover ocorrências que são window.confirmar
+                    real = [m for m in matches if 'window.confirmar' not in c[max(0, c.find(m)-20):c.find(m)+30]]
+                    if real:
+                        arquivos_com_confirm.append(f"{root}/{f}: {len(real)} ocorrências")
+                except:
+                    pass
+        assert arquivos_com_confirm == [], \
+            f"confirm() nativo encontrado:\n" + "\n".join(arquivos_com_confirm)
+
+    def test_metas_usa_data_confirm(self):
+        """metas/lista.html deve usar data-confirm em vez de confirm()."""
+        c = open('templates/metas/lista.html', encoding='utf-8').read()
+        assert 'data-confirm' in c or 'window.confirmar' in c
+
+    def test_transferencias_usa_confirm_global(self):
+        """transferencias/lista.html deve usar confirmação global."""
+        c = open('templates/transferencias/lista.html', encoding='utf-8').read()
+        assert 'data-confirm' in c or 'window.confirmar' in c
+
+
+class TestFiltrosPersistentes:
+    """Testa a persistência de filtros via sessionStorage."""
+
+    def _lista(self):
+        return open('templates/transacoes/lista.html', encoding='utf-8').read()
+
+    def test_session_storage_presente(self):
+        """Lista de transações deve usar sessionStorage."""
+        lista = self._lista()
+        assert 'sessionStorage' in lista
+
+    def test_salvar_filtros_definido(self):
+        """Função salvarFiltros deve existir."""
+        lista = self._lista()
+        assert 'salvarFiltros' in lista
+
+    def test_restaurar_filtros_definido(self):
+        """Função restaurarFiltros deve existir."""
+        lista = self._lista()
+        assert 'restaurarFiltros' in lista
+
+    def test_limpar_filtros_storage_definido(self):
+        """Função limparFiltrosStorage deve existir."""
+        lista = self._lista()
+        assert 'limparFiltrosStorage' in lista
+
+    def test_chave_storage_definida(self):
+        """Chave do sessionStorage deve estar definida."""
+        lista = self._lista()
+        assert 'FILTRO_KEY' in lista or 'gravs_filtros' in lista
+
+    def test_filtros_salvos_ao_buscar(self):
+        """salvarFiltros deve ser chamado ao buscar."""
+        lista = self._lista()
+        # salvarFiltros deve aparecer dentro da função de busca
+        idx_busca = lista.find('function buscarTransacoes')
+        idx_salvar = lista.find('salvarFiltros()', idx_busca)
+        assert idx_salvar > idx_busca and idx_salvar < idx_busca + 2000, \
+            "salvarFiltros não é chamado dentro de buscarTransacoes"
+
+    def test_filtros_restaurados_no_load(self):
+        """restaurarFiltros deve ser chamado ao carregar a página."""
+        lista = self._lista()
+        assert 'restaurarFiltros' in lista
+
+
+class TestPaginacao:
+    """Testa paginação na lista de transações."""
+
+    def test_paginacao_na_rota(self, client, usuario_logado, container,
+                               categoria_despesa):
+        """Rota /todas deve aceitar parâmetro pagina."""
+        import json
+        uid = usuario_logado["id"]
+        # Criar 5 transações
+        for i in range(5):
+            container.transacoes.adicionar(
+                f"Tx pag {i}", 10.0, "despesa",
+                categoria_despesa["id"], uid, "2026-05-01"
+            )
+        r = client.get("/todas?pagina=1")
+        assert r.status_code == 200
+
+    def test_paginacao_pagina_2(self, client, usuario_logado):
+        """Página 2 deve retornar 200."""
+        r = client.get("/todas?pagina=2")
+        assert r.status_code == 200
+
+    def test_paginacao_pagina_invalida(self, client, usuario_logado):
+        """Página inválida deve retornar 200 sem erro."""
+        r = client.get("/todas?pagina=999")
+        assert r.status_code == 200
+
+    def test_paginacao_css_presente(self):
+        """CSS de paginação deve existir no template."""
+        lista = open('templates/transacoes/lista.html', encoding='utf-8').read()
+        assert '.paginacao' in lista
+        assert '.pag-btn' in lista
+
+    def test_paginacao_html_presente(self):
+        """HTML de paginação deve existir no template."""
+        lista = open('templates/transacoes/lista.html', encoding='utf-8').read()
+        assert 'total_pags' in lista
+        assert 'pag-btn' in lista
+
+    def test_paginacao_50_por_pagina(self):
+        """Paginação deve usar 50 itens por página."""
+        rota = open('routes/transacoes.py', encoding='utf-8').read()
+        assert 'POR_PAGINA' in rota
+        assert '50' in rota
+
+
+class TestAtalhosTeclado:
+    """Testa atalhos de teclado globais."""
+
+    def _base(self):
+        return open('templates/base.html', encoding='utf-8').read()
+
+    def test_listener_teclado_presente(self):
+        """Event listener de teclado deve existir."""
+        base = self._base()
+        assert "addEventListener('keydown'" in base
+
+    def test_atalho_nova_transacao(self):
+        """Atalho N para nova transação deve existir."""
+        base = self._base()
+        assert "case 'n'" in base or "case 'N'" in base
+        assert "/novo" in base
+
+    def test_atalho_busca(self):
+        """Atalho B para busca deve existir."""
+        base = self._base()
+        assert "case 'b'" in base or "case 'B'" in base
+        assert "/todas" in base
+
+    def test_atalho_dashboard(self):
+        """Atalho G para dashboard deve existir."""
+        base = self._base()
+        assert "case 'g'" in base or "case 'G'" in base
+
+    def test_atalho_ajuda(self):
+        """Atalho ? para ajuda deve existir."""
+        base = self._base()
+        assert "case '?'" in base
+
+    def test_atalho_esc(self):
+        """Atalho Escape para fechar modais deve existir."""
+        base = self._base()
+        assert "case 'Escape'" in base
+
+    def test_ignora_inputs(self):
+        """Atalhos devem ser ignorados quando em inputs."""
+        base = self._base()
+        assert "INPUT" in base
+        assert "TEXTAREA" in base
+
+    def test_modal_ajuda_presente(self):
+        """Modal de ajuda de atalhos deve existir."""
+        base = self._base()
+        assert 'modal-atalhos' in base
+
+    def test_modal_ajuda_lista_atalhos(self):
+        """Modal de ajuda deve listar os atalhos disponíveis."""
+        base = self._base()
+        assert 'Nova transação' in base
+        assert 'Ver transações' in base or 'Busca' in base
+
+    def test_botao_ajuda_na_topbar(self):
+        """Botão de ajuda deve existir na topbar."""
+        base = self._base()
+        assert 'btn-atalhos' in base

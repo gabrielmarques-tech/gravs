@@ -15,9 +15,9 @@
 <div class="card mb-16 fade-up">
   <form method="GET" class="d-flex align-center gap-12" style="flex-wrap:wrap">
     <div class="d-flex align-center gap-8" style="flex:1;min-width:260px">
-      <label style="font-size:0.82rem;color:var(--text2);white-space:nowrap">De</label>
+      <label style="font-size:var(--text-sm);color:var(--text2);white-space:nowrap">De</label>
       <input type="date" name="inicio" value="{{ filtro_inicio }}" class="form-control" style="max-width:160px" />
-      <label style="font-size:0.82rem;color:var(--text2);white-space:nowrap">até</label>
+      <label style="font-size:var(--text-sm);color:var(--text2);white-space:nowrap">até</label>
       <input type="date" name="fim" value="{{ filtro_fim }}" class="form-control" style="max-width:160px" />
     </div>
     <div class="d-flex gap-8">
@@ -38,8 +38,8 @@
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div>
-              <div style="font-weight:600;color:var(--text);font-size:0.9rem">{{ t.descricao }}</div>
-              <div style="font-size:0.75rem;color:var(--text3);margin-top:2px">{{ t.data }} · {{ t.categoria_nome }}</div>
+              <div style="font-weight:600;color:var(--text);font-size:var(--text-base)">{{ t.descricao }}</div>
+              <div style="font-size:var(--text-sm);color:var(--text3);margin-top:2px">{{ t.data }} · {{ t.categoria_nome }}</div>
             </div>
             <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;
                         color:{% if t.tipo == 'receita' %}#34d399{% else %}#f87171{% endif %}">
@@ -53,7 +53,7 @@
                         border-radius:8px;padding:8px 12px">
               <div style="font-size:0.68rem;color:var(--red2);font-weight:700;text-transform:uppercase;
                           letter-spacing:0.08em;margin-bottom:3px">Débito</div>
-              <div style="font-size:0.85rem;color:var(--text);font-weight:500">
+              <div style="font-size:var(--text-sm);color:var(--text);font-weight:500">
                 {{ t.conta_debito or '—' }}
               </div>
             </div>
@@ -61,7 +61,7 @@
                         border-radius:8px;padding:8px 12px">
               <div style="font-size:0.68rem;color:var(--green2);font-weight:700;text-transform:uppercase;
                           letter-spacing:0.08em;margin-bottom:3px">Crédito</div>
-              <div style="font-size:0.85rem;color:var(--text);font-weight:500">
+              <div style="font-size:var(--text-sm);color:var(--text);font-weight:500">
                 {{ t.conta_credito or '—' }}
               </div>
             </div>

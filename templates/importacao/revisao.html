@@ -12,11 +12,11 @@
         <div style="font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--text)">
           📋 {{ total }} lançamento(s) detectado(s)
         </div>
-        <div style="font-size:0.82rem;color:var(--text2);margin-top:4px">
+        <div style="font-size:var(--text-sm);color:var(--text2);margin-top:4px">
           Revise, ajuste as categorias e desmarque o que não quiser importar.
         </div>
       </div>
-      <div style="display:flex;gap:16px;font-size:0.85rem;flex-wrap:wrap">
+      <div style="display:flex;gap:16px;font-size:var(--text-sm);flex-wrap:wrap">
         <span style="color:var(--green2);font-weight:600">↑ R$ {{ "%.2f"|format(total_receitas) }}</span>
         <span style="color:var(--red2);font-weight:600">↓ R$ {{ "%.2f"|format(total_despesas) }}</span>
       </div>
@@ -25,7 +25,7 @@
 
   <!-- Controles rápidos -->
   <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(true)">✓ Marcar todos</button>
+    <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(true)">Marcar todos</button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarTodos(false)">✗ Desmarcar todos</button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('receita')">Só receitas</button>
     <button type="button" class="btn btn-secondary btn-sm" onclick="marcarPorTipo('despesa')">Só despesas</button>
@@ -49,7 +49,7 @@
 
           <select name="tipo" class="tipo-select"
                   style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
-                         color:var(--text);padding:5px 8px;font-size:0.82rem">
+                         color:var(--text);padding:5px 8px;font-size:var(--text-sm)">
             <option value="receita" {% if t.tipo == 'receita' %}selected{% endif %}>↑ Receita</option>
             <option value="despesa" {% if t.tipo == 'despesa' %}selected{% endif %}>↓ Despesa</option>
           </select>
@@ -57,26 +57,26 @@
           <input type="text" name="valor" value="{{ "%.2f"|format(t.valor) }}"
                  style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
                         color:{% if t.tipo == 'receita' %}var(--green2){% else %}var(--red2){% endif %};
-                        padding:5px 8px;font-size:0.9rem;font-weight:700;
+                        padding:5px 8px;font-size:var(--text-base);font-weight:700;
                         text-align:right;width:100px;margin-left:auto">
         </div>
 
         <!-- Linha 2: descrição (largura total) -->
         <input type="text" name="descricao" value="{{ t.descricao }}"
                style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
-                      color:var(--text);padding:6px 10px;font-size:0.85rem;
+                      color:var(--text);padding:6px 10px;font-size:var(--text-sm);
                       width:100%;box-sizing:border-box;margin-bottom:8px">
 
         <!-- Linha 3: data + categoria -->
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <input type="date" name="data" value="{{ t.data }}"
                  style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
-                        color:var(--text);padding:5px 8px;font-size:0.82rem;
+                        color:var(--text);padding:5px 8px;font-size:var(--text-sm);
                         flex:0 0 auto">
 
           <select name="categoria_id"
                   style="background:var(--bg3);border:1px solid var(--border2);border-radius:6px;
-                         color:var(--text);padding:5px 8px;font-size:0.82rem;flex:1;min-width:0">
+                         color:var(--text);padding:5px 8px;font-size:var(--text-sm);flex:1;min-width:0">
             {% for cat in categorias %}
             <option value="{{ cat.id }}" {% if cat.id == t.categoria_id %}selected{% endif %}>
               {{ cat.icone }} {{ cat.nome }}
@@ -93,10 +93,10 @@
     <div style="display:flex;gap:12px;margin-top:16px;justify-content:flex-end;flex-wrap:wrap">
       <a href="{{ url_for('importacao.index') }}" class="btn btn-secondary">← Cancelar</a>
       <button type="submit" class="btn btn-primary" id="btn-confirmar">
-        ✓ Confirmar importação
+        Confirmar importação
       </button>
     </div>
-    <div style="text-align:right;margin-top:8px;font-size:0.8rem;color:var(--text3)" id="contador">
+    <div style="text-align:right;margin-top:8px;font-size:var(--text-sm);color:var(--text3)" id="contador">
       {{ total }} selecionado(s)
     </div>
 

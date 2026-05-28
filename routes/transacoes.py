@@ -175,14 +175,23 @@ def todas():
         data_inicio = inicio_padrao
         data_fim    = fim_padrao
 
-    transacoes     = svc.transacoes.listar_por_periodo(data_inicio, data_fim, uid)
-    categorias     = svc.categorias_repo.listar_por_usuario(uid)
-    total_receitas = sum(t["valor"] for t in transacoes if t["tipo"] == "receita")
-    total_despesas = sum(t["valor"] for t in transacoes if t["tipo"] == "despesa")
+    todas_transacoes = svc.transacoes.listar_por_periodo(data_inicio, data_fim, uid)
+    categorias       = svc.categorias_repo.listar_por_usuario(uid)
+    total_receitas   = sum(t["valor"] for t in todas_transacoes if t["tipo"] == "receita")
+    total_despesas   = sum(t["valor"] for t in todas_transacoes if t["tipo"] == "despesa")
+
+    # Paginação
+    POR_PAGINA  = 50
+    pagina      = max(1, int(request.args.get("pagina", 1)))
+    total       = len(todas_transacoes)
+    total_pags  = max(1, (total + POR_PAGINA - 1) // POR_PAGINA)
+    pagina      = min(pagina, total_pags)
+    inicio_idx  = (pagina - 1) * POR_PAGINA
+    transacoes  = todas_transacoes[inicio_idx: inicio_idx + POR_PAGINA]
 
     # Agrupa parcelamentos para mostrar botão de excluir grupo
     grupos = {}
-    for t in transacoes:
+    for t in todas_transacoes:
         g = t.get("grupo_parcela")
         if g:
             if g not in grupos:
@@ -198,6 +207,9 @@ def todas():
         total_receitas=total_receitas,
         total_despesas=total_despesas,
         saldo=total_receitas - total_despesas,
+        pagina=pagina,
+        total_pags=total_pags,
+        total_transacoes=total,
         grupos=grupos,
         usuario=current_user,
     )

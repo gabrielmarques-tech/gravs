@@ -16,16 +16,16 @@
   }
   .meta-card:hover { border-color: var(--border2); }
 
-  .meta-titulo { font-size: 0.95rem; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
-  .meta-desc   { font-size: 0.78rem; color: var(--text3); margin-top: 3px; }
-  .meta-prazo  { font-size: 0.72rem; color: var(--text3); }
+  .meta-titulo { font-size: var(--text-base); font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .meta-desc   { font-size: var(--text-sm); color: var(--text3); margin-top: 3px; }
+  .meta-prazo  { font-size: var(--text-xs); color: var(--text3); }
   .meta-prazo.vencida { color: var(--red2); }
 
   .meta-valores {
     display: flex; align-items: baseline; gap: 6px; margin: 12px 0 8px;
   }
   .meta-atual { font-size: 1.3rem; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; letter-spacing: -0.03em; }
-  .meta-alvo  { font-size: 0.82rem; color: var(--text3); }
+  .meta-alvo  { font-size: var(--text-sm); color: var(--text3); }
 
   .meta-barra-bg { height: 6px; background: var(--bg3); border-radius: 99px; overflow: hidden; }
   .meta-barra-fill {
@@ -35,7 +35,7 @@
   .fill-ok   { background: linear-gradient(90deg, var(--purple), var(--purple2)); }
   .fill-done { background: linear-gradient(90deg, var(--green2), #6ee7b7); }
 
-  .meta-pct { font-size: 0.72rem; color: var(--text3); margin-top: 5px; }
+  .meta-pct { font-size: var(--text-xs); color: var(--text3); margin-top: 5px; }
   .meta-pct.done { color: var(--green2); font-weight: 600; }
 
   .meta-form-inline {
@@ -102,10 +102,10 @@
               <span class="badge badge-green">Concluída</span>
             {% endif %}
             <form method="POST" action="{{ url_for('metas.deletar', uuid=meta.uuid) }}"
-                  onsubmit="return confirm('Remover esta meta?')">
+                  data-confirm="Remover meta|Esta meta será removida permanentemente." data-confirm-ok="Remover">
               <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
               <button type="submit" class="btn btn-icon btn-secondary" style="padding:5px 7px"
-                      title="Remover">
+                      title="Remover" aria-label="Remover item">
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
               </button>
             </form>
@@ -150,7 +150,7 @@
           <input type="number" name="valor_atual" class="form-control"
                  value="{{ meta.valor_atual }}"
                  step="0.01" min="0" max="{{ meta.valor_alvo }}"
-                 style="width:130px;padding:6px 10px;font-size:0.85rem" />
+                 style="width:130px;padding:6px 10px;font-size:var(--text-sm)" />
           <button type="submit" class="btn btn-primary btn-sm shrink-0">Salvar</button>
         </form>
         {% endif %}

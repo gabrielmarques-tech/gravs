@@ -24,7 +24,7 @@
   }
 
   .filtro-datas label {
-    font-size: 0.8rem;
+    font-size: var(--text-sm);
     color: var(--text2);
     white-space: nowrap;
   }
@@ -32,7 +32,7 @@
   .filtro-datas input[type="date"] {
     flex: 1;
     min-width: 130px;
-    font-size: 0.82rem;
+    font-size: var(--text-sm);
     padding: 8px 10px;
   }
 
@@ -46,7 +46,7 @@
     flex: 1;
     min-width: 70px;
     justify-content: center;
-    font-size: 0.78rem;
+    font-size: var(--text-sm);
     padding: 8px 10px;
   }
 
@@ -78,7 +78,7 @@
     .total-card .total-info { flex: 1; }
 
     .total-card .total-label {
-      font-size: 0.7rem !important;
+      font-size: var(--text-xs) !important;
       margin-bottom: 2px !important;
     }
 
@@ -117,14 +117,14 @@
   .transacao-desc {
     font-weight: 600;
     color: var(--text);
-    font-size: 0.88rem;
+    font-size: var(--text-base);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .transacao-meta {
-    font-size: 0.72rem;
+    font-size: var(--text-xs);
     color: var(--text3);
     margin-top: 2px;
     display: flex;
@@ -143,7 +143,7 @@
 
   .transacao-valor {
     font-family: var(--font-display);
-    font-size: 0.95rem;
+    font-size: var(--text-base);
     font-weight: 700;
     white-space: nowrap;
   }
@@ -154,6 +154,24 @@
   }
 
   /* Desktop: tabela normal */
+  /* Paginação */
+  .paginacao {
+    display: flex; align-items: center; justify-content: center;
+    gap: 6px; padding: 16px 0 4px; flex-wrap: wrap;
+  }
+  .pag-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 34px; height: 34px; padding: 0 10px;
+    border-radius: var(--radius-sm); font-size: var(--text-sm);
+    font-weight: 500; text-decoration: none; transition: all 0.12s;
+    border: 1px solid var(--border); color: var(--text2);
+    background: var(--surface);
+  }
+  .pag-btn:hover { background: var(--surface2); color: var(--text); border-color: var(--border2); }
+  .pag-btn.ativo { background: rgba(139,92,246,0.12); border-color: rgba(139,92,246,0.3); color: var(--purple2); font-weight: 600; }
+  .pag-btn:disabled, .pag-btn.disabled { opacity: 0.4; pointer-events: none; }
+  .pag-info { font-size: var(--text-xs); color: var(--text3); text-align: center; margin-top: 4px; }
+
   @media (min-width: 769px) {
     .lista-mobile { display: none; }
     .lista-desktop { display: block; }
@@ -187,7 +205,7 @@
       <option value="">Todas as contas</option>
     </select>
     <button onclick="limparBusca()" class="btn btn-secondary btn-sm"
-            id="btn-limpar" style="display:none">Limpar</button>
+            id="btn-limpar" class="hidden">Limpar</button>
   </div>
   <!-- Resultado da busca -->
   <div id="resultado-busca" class="mt-14 hidden">
@@ -257,7 +275,7 @@
 {% if grupos %}
 <div class="card mb-16 fade-up">
   <div class="card-title mb-12">Parcelamentos</div>
-  <div style="display:flex;flex-direction:column;gap:8px">
+  <div class="flex flex-col gap-8">
     {% for grupo_uuid, info in grupos.items() %}
       <div class="d-flex justify-between align-center"
            style="padding:10px 12px;background:var(--bg3);border-radius:8px;border:1px solid var(--border)">
@@ -309,12 +327,12 @@
             </div>
             <div class="transacao-acoes">
               <button class="btn btn-secondary btn-icon"
-                      style="padding:5px 8px;font-size:0.8rem"
+                      style="padding:5px 8px;font-size:var(--text-sm)"
                       onclick="abrirEditar({{ t.id }}, '{{ t.descricao|e }}', {{ t.valor }}, '{{ t.tipo }}', {{ t.categoria_id }}, '{{ t.data }}')">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                     </button>
               <button class="btn btn-danger btn-icon"
-                      style="padding:5px 8px;font-size:0.8rem"
+                      style="padding:5px 8px;font-size:var(--text-sm)"
                       onclick="deletar('{{ t.uuid }}')">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>
                     </button>
@@ -441,6 +459,36 @@
 
 {% endblock %}
 
+{% block content_extra %}
+<!-- Paginação -->
+{% if total_pags is defined and total_pags > 1 %}
+<div class="paginacao" style="margin-top:8px">
+  {% if pagina > 1 %}
+  <a class="pag-btn" href="{{ url_for('transacoes.todas', inicio=filtro_inicio, fim=filtro_fim, pagina=pagina-1) }}">←</a>
+  {% else %}
+  <span class="pag-btn disabled">←</span>
+  {% endif %}
+
+  {% for p in range([1, pagina-2]|max, [total_pags+1, pagina+3]|min) %}
+    {% if p == pagina %}
+      <span class="pag-btn ativo">{{ p }}</span>
+    {% else %}
+      <a class="pag-btn" href="{{ url_for('transacoes.todas', inicio=filtro_inicio, fim=filtro_fim, pagina=p) }}">{{ p }}</a>
+    {% endif %}
+  {% endfor %}
+
+  {% if pagina < total_pags %}
+  <a class="pag-btn" href="{{ url_for('transacoes.todas', inicio=filtro_inicio, fim=filtro_fim, pagina=pagina+1) }}">→</a>
+  {% else %}
+  <span class="pag-btn disabled">→</span>
+  {% endif %}
+</div>
+<div class="pag-info">
+  Página {{ pagina }} de {{ total_pags }}{% if total_transacoes is defined %} · {{ total_transacoes }} transações{% endif %}
+</div>
+{% endif %}
+{% endblock %}
+
 {% block scripts %}
 <script>
   // Carrega contas no modal de edição
@@ -493,7 +541,8 @@
   document.addEventListener('keydown', e => { if (e.key === 'Escape') fecharModal(); });
 
   async function deletar(uuid) {
-    if (!confirm('Deletar esta transação?')) return;
+    const ok = await window.confirmar({titulo:'Deletar transação',desc:'Esta ação não pode ser desfeita.',btnOk:'Deletar'});
+    if (!ok) return;
     const r = await fetch('/api/transacao/' + uuid, { method: 'DELETE' });
     if (r.ok) location.reload();
   }
@@ -516,7 +565,46 @@
       });
     } catch(e) {}
   }
-  carregarContasBusca();
+  // Restaurar filtros após carregar contas (para o select de conta ter opções)
+  carregarContasBusca().then(() => {
+    setTimeout(restaurarFiltros, 50);
+  });
+
+  // ── Persistência de filtros via sessionStorage ─────────────────────────────
+  const FILTRO_KEY = 'gravs_filtros_transacoes';
+
+  function salvarFiltros() {
+    const filtros = {
+      termo:   document.getElementById('input-busca')?.value    || '',
+      tipo:    document.getElementById('filtro-tipo-busca')?.value  || '',
+      conta:   document.getElementById('filtro-conta-busca')?.value || '',
+    };
+    sessionStorage.setItem(FILTRO_KEY, JSON.stringify(filtros));
+  }
+
+  function restaurarFiltros() {
+    try {
+      const salvo = sessionStorage.getItem(FILTRO_KEY);
+      if (!salvo) return;
+      const filtros = JSON.parse(salvo);
+      const busca   = document.getElementById('input-busca');
+      const tipo    = document.getElementById('filtro-tipo-busca');
+      const conta   = document.getElementById('filtro-conta-busca');
+      if (busca  && filtros.termo) busca.value  = filtros.termo;
+      if (tipo   && filtros.tipo)  tipo.value   = filtros.tipo;
+      // conta é restaurada após carregarContasBusca() popular o select
+      if (conta  && filtros.conta) {
+        conta._valorPendente = filtros.conta;
+      }
+      if (filtros.termo || filtros.tipo || filtros.conta) {
+        buscarTransacoes();
+      }
+    } catch(e) {}
+  }
+
+  function limparFiltrosStorage() {
+    sessionStorage.removeItem(FILTRO_KEY);
+  }
 
   let buscaTimeout = null;
 
@@ -536,6 +624,7 @@
       return;
     }
 
+    salvarFiltros();
     clearTimeout(buscaTimeout);
     buscaTimeout = setTimeout(async () => {
       try {
@@ -566,7 +655,7 @@
         const lista = document.getElementById('lista-busca');
         if (lista) {
           if (data.transacoes.length === 0) {
-            lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px 0;font-size:0.85rem">Nenhuma transação encontrada</div>';
+            lista.innerHTML = '<div style="text-align:center;color:var(--text3);padding:20px 0;font-size:var(--text-sm)">Nenhuma transação encontrada</div>';
           } else {
             lista.innerHTML = data.transacoes.map(t => `
               <div style="display:flex;align-items:center;gap:12px;padding:10px 0;
@@ -574,8 +663,8 @@
                 <div style="width:36px;height:36px;border-radius:9px;background:var(--surface2);
                             display:flex;align-items:center;justify-content:center;
                             font-size:1rem;flex-shrink:0">${t.categoria_icone}</div>
-                <div style="flex:1;min-width:0">
-                  <div style="font-weight:600;color:var(--text);font-size:0.88rem;
+                <div class="flex-1 min-w-0">
+                  <div style="font-weight:600;color:var(--text);font-size:var(--text-base);
                               white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${t.descricao}</div>
                   <div class="text-xs text-muted mt-4">
                     ${t.categoria_nome} · ${t.data}
@@ -615,7 +704,8 @@
   // ── Fim busca ──────────────────────────────────────────────────────────────
 
   async function deletarGrupo(grupoUuid, descricao, count) {
-    if (!confirm(`Excluir TODAS as parcelas de "${descricao}"?\n\n${count} parcelas serão removidas.`)) return;
+    const ok = await window.confirmar({titulo:'Excluir parcelamento',desc:`Todas as ${count} parcelas de "${descricao}" serão removidas. Esta ação não pode ser desfeita.`,btnOk:'Excluir tudo'});
+    if (!ok) return;
     const r = await fetch('/api/grupo/' + grupoUuid, { method: 'DELETE' });
     if (r.ok) {
       const data = await r.json();
