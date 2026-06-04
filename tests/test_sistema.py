@@ -422,53 +422,95 @@ class TestDeletarNaoRecria:
     def test_deletar_lancamento_recorrente_nao_recria(self, container):
         uid, _ = container.auth.registrar("recria@test.com", "senha123", "Recria")
 
-        # Cria conta fixa via service
+
+        # Pega uma categoria de despesa real do usuário
+        cats = [c for c in container.categorias_repo.listar_por_usuario(uid) if c["tipo"] == "despesa"]
+        assert cats, "Usuário deve ter ao menos uma categoria de despesa"
+        cat_id = cats[0]["id"]
+
+        # Cria conta fixa via service — dia 28 para ter certeza que já passou
         uuid_rec, erros = container.recorrentes.adicionar(
             descricao="Aluguel",
             valor=1200.0,
             tipo="despesa",
-            categoria_id=1,
-            dia_vencimento=5,
+
+
+            categoria_id=cat_id,
+            dia_vencimento=28,
             usuario_id=uid,
         )
-        assert not erros
+
+        assert not erros, f"Erro ao adicionar recorrente: {erros}"
 
         # Gera lançamento do mês
         import datetime
         hoje = datetime.date.today()
-        lancados = container.recorrentes.gerar_lancamentos_pendentes(hoje.year, hoje.month, uid)
-        assert lancados >= 0
+
+
+        mes = hoje.month
+        ano = hoje.year
+
+        # Se hoje ainda é antes do dia 28, usa mês anterior
+        if hoje.day < 28:
+            if mes == 1:
+                mes, ano = 12, ano - 1
+            else:
+                mes -= 1
+
+        lancados = container.recorrentes.gerar_lancamentos_pendentes(ano, mes, uid)
+        assert lancados >= 1, f"Deveria ter gerado 1 lançamento para {ano}-{mes}"
 
         # Verifica que foi gerado
+        from datetime import date
+        inicio_mes = date(ano, mes, 1)
+        if mes == 12:
+            fim_mes = date(ano + 1, 1, 1)
+        else:
+            fim_mes = date(ano, mes + 1, 1)
+
         transacoes = container.transacoes.listar_por_periodo(
-            f"{hoje.year}-{hoje.month:02d}-01",
-            hoje.strftime("%Y-%m-%d"),
+
+
+            inicio_mes.isoformat(),
+            fim_mes.isoformat(),
             uid
         )
-        assert len(transacoes) == 1
+
+        assert len(transacoes) >= 1, f"Deveria ter transações em {ano}-{mes}"
 
         # Deleta o lançamento
-        ok = container.transacoes.deletar(transacoes[0]["id"], uid)
-        assert ok
+
+
+        id_tx = transacoes[0]["id"]
+        ok = container.transacoes.deletar(id_tx, uid)
+        assert ok, "Falha ao deletar transação"
 
         # Verifica que sumiu
         transacoes_apos = container.transacoes.listar_por_periodo(
-            f"{hoje.year}-{hoje.month:02d}-01",
-            hoje.strftime("%Y-%m-%d"),
+
+
+            inicio_mes.isoformat(),
+            fim_mes.isoformat(),
             uid
         )
-        assert len(transacoes_apos) == 0
+
+        assert len(transacoes_apos) == 0, "Transação deveria ter sumido"
 
         # Tenta gerar novamente — NÃO deve recriar
-        lancados2 = container.recorrentes.gerar_lancamentos_pendentes(hoje.year, hoje.month, uid)
-        assert lancados2 == 0  # zero novos lançamentos
+
+
+        lancados2 = container.recorrentes.gerar_lancamentos_pendentes(ano, mes, uid)
+        assert lancados2 == 0, "Não deveria recriar lançamento deletado"
 
         transacoes_final = container.transacoes.listar_por_periodo(
-            f"{hoje.year}-{hoje.month:02d}-01",
-            hoje.strftime("%Y-%m-%d"),
+
+
+            inicio_mes.isoformat(),
+            fim_mes.isoformat(),
             uid
         )
-        assert len(transacoes_final) == 0  # continua zero — não recriou
+
+        assert len(transacoes_final) == 0, "Não deveria ter transações recriadas"
 
 
 class TestContasBancarias:

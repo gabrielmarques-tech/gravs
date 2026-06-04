@@ -121,6 +121,49 @@ class UsuarioRepository:
                 (usuario_id,)
             )
 
+    def get_modo_contabil(self, usuario_id: int) -> bool:
+        """Retorna se o modo contábil está ativo para o usuário."""
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT modo_contabil FROM usuarios WHERE id=?",
+                (usuario_id,),
+            ).fetchone()
+        return bool(row and row["modo_contabil"])
+
+    def set_modo_contabil(self, usuario_id: int, ativo: bool) -> None:
+        """Define o modo contábil do usuário."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET modo_contabil = ? WHERE id = ?",
+                (1 if ativo else 0, usuario_id),
+            )
+
+    def atualizar_nome(self, usuario_id: int, novo_nome: str) -> None:
+        """Atualiza o nome do usuário."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET nome = ? WHERE id = ?",
+                (novo_nome, usuario_id),
+            )
+
+    def atualizar_senha_hash(self, usuario_id: int, novo_hash: str) -> None:
+        """Atualiza o hash da senha do usuário."""
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET senha_hash = ? WHERE id = ?",
+                (novo_hash, usuario_id),
+            )
+
+    def marcar_excluido(self, usuario_id: int) -> None:
+        """Marca o momento da exclusão da conta."""
+        from datetime import datetime
+        agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with self._db.get_write_conn() as conn:
+            conn.execute(
+                "UPDATE usuarios SET excluido_em=? WHERE id=?",
+                (agora, usuario_id),
+            )
+
 
 # ── Repositório de Categorias ──────────────────────────────────────────────────
 
@@ -165,14 +208,54 @@ class CategoriaRepository:
                 except sqlite3.IntegrityError:
                     pass  # Categoria já existe — ignora silenciosamente
 
+    def criar_categoria(self, nome: str, tipo: str, usuario_id: int, icone: str = "💸", cor: str = "#7c3aed") -> bool:
+        """Cria uma categoria personalizada. Retorna True se criou, False se duplicada."""
+        try:
+            with self._db.get_write_conn() as conn:
+                conn.execute(
+                    "INSERT INTO categorias (nome, tipo, usuario_id, icone, cor) VALUES (?, ?, ?, ?, ?)",
+                    (nome, tipo, usuario_id, icone, cor)
+                )
+            return True
+        except sqlite3.IntegrityError:
+            return False
+
+    def atualizar(self, cat_id: int, usuario_id: int, nome: str, icone: str, cor: str) -> bool:
+        """Atualiza nome, ícone e cor de uma categoria."""
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                """UPDATE categorias SET nome=?, icone=?, cor=?
+                   WHERE id=? AND usuario_id=?""",
+                (nome, icone, cor, cat_id, usuario_id),
+            )
+        return cur.rowcount > 0
+
+    def deletar(self, cat_id: int, usuario_id: int) -> bool:
+        """Remove uma categoria fisicamente."""
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "DELETE FROM categorias WHERE id=? AND usuario_id=?",
+                (cat_id, usuario_id),
+            )
+            return cur.rowcount > 0
+
+    def contar_transacoes_vinculadas(self, cat_id: int, usuario_id: int) -> int:
+        """Retorna quantas transações ativas estão vinculadas a esta categoria."""
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM transacoes WHERE categoria_id=? AND usuario_id=? AND deletado=0",
+                (cat_id, usuario_id),
+            ).fetchone()
+        return row[0] if row else 0
+
     def listar_por_usuario(self, usuario_id: int) -> list[dict]:
         """Retorna todas as categorias do usuário, ordenadas por tipo e nome."""
         with self._db.get_conn() as conn:
             rows = conn.execute(
                 "SELECT id, nome, tipo, icone, cor FROM categorias "
                 "WHERE usuario_id = ? ORDER BY tipo, nome",
-                (usuario_id,),
-            ).fetchall()
+                    (usuario_id,),
+                ).fetchall()
         return _rows_to_list(rows)
 
     def buscar_padrao_por_tipo(self, usuario_id: int, tipo: str) -> dict | None:
@@ -199,7 +282,6 @@ class TransacaoRepository:
     mesmo que descubra o UUID ou ID de uma transação alheia.
     Esse isolamento deve ser testado explicitamente.
     """
-
     def __init__(self, db: DatabaseManager) -> None:
         self._db = db
 
@@ -215,8 +297,26 @@ class TransacaoRepository:
         recorrente_uuid: str | None = None,
         grupo_parcela: str | None = None,
         conta_id: int | None = None,
+        conn: sqlite3.Connection | None = None,
     ) -> int:
-        """Insere transação e retorna ID gerado."""
+        """
+        Insere transação e retorna ID gerado.
+
+        Opcionalmente aceita uma conexão externa (conn) para participar
+        de transações gerenciadas por outra camada (ex: ContabilService).
+        Quando conn é fornecido, NÃO fecha a conexão nem faz commit —
+        quem chamou é responsável pelo gerenciamento da transação.
+        """
+        if conn is not None:
+            cur = conn.execute(
+                """INSERT INTO transacoes
+                   (uuid, descricao, valor, tipo, categoria_id, data,
+                    usuario_id, recorrente_uuid, grupo_parcela, conta_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (uuid, descricao, round(valor, 2), tipo, categoria_id,
+                 data, usuario_id, recorrente_uuid, grupo_parcela, conta_id),
+            )
+            return cur.lastrowid
         with self._db.get_write_conn() as conn:
             cur = conn.execute(
                 """INSERT INTO transacoes
@@ -241,7 +341,6 @@ class TransacaoRepository:
                 (uuid, usuario_id),
             ).fetchone()
         return _row_to_dict(row)
-
     def listar_por_periodo(
         self, data_inicio: str, data_fim: str, usuario_id: int
     ) -> list[dict]:
@@ -371,7 +470,6 @@ class TransacaoRepository:
             if campo in campos and campos[campo] is not None:
                 sets.append(f"{campo} = ?")
                 params.append(transformar(campos[campo]))
-
         if not sets:
             return False
 
@@ -844,7 +942,12 @@ class TransferenciaRepository:
     - PIX entre contas próprias
 
     O saldo calculado por SaldoContaRepository já considera transferências
-    ao somar créditos e debitar débitos por conta.
+    ao somar créditos e debita        # Delega cálculo para o repositório (uma única query SQL com SUM + CASE WHEN)
+        totais = self._lancamentos.calcular_saldo(
+            conta_id=conta_id,
+            usuario_id=usuario_id,
+            data_ate=data_ate,
+        )r débitos por conta.
     """
 
     def __init__(self, db: DatabaseManager) -> None:
@@ -986,3 +1089,696 @@ class MetaRepository:
                 (uuid, usuario_id)
             )
         return cur.rowcount > 0
+
+
+# ── Plano de Contas Contábil ───────────────────────────────────────────────────
+
+from dataclasses import dataclass
+from typing import Optional
+
+
+@dataclass
+class PlanoConta:
+    """
+    Entidade do Plano de Contas Contábil.
+
+    Representa uma conta na estrutura hierárquica de partidas dobradas.
+    Mutável — suporta edição de nome, ativo, aceita_lancamentos e conta_pai_id.
+    Código contábil é imutável por regra de negócio (não existe update de código).
+
+    Mapeamento 1:1 com a tabela `plano_contas`.
+    """
+    id: int
+    usuario_id: int
+    codigo: str
+    nome: str
+    tipo: str           # ativo | passivo | patrimonio_liquido | receita | despesa | redutora
+    natureza: str       # devedora | credora
+    nivel: int          # 1 a 5
+    aceita_lancamentos: bool
+    ativo: bool
+    conta_pai_id: Optional[int] = None
+    criado_em: Optional[str] = None
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> 'PlanoConta':
+        """Constrói PlanoConta a partir de um sqlite3.Row."""
+        return cls(
+            id=row['id'],
+            usuario_id=row['usuario_id'],
+            codigo=row['codigo'],
+            nome=row['nome'],
+            tipo=row['tipo'],
+            natureza=row['natureza'],
+            nivel=row['nivel'],
+            aceita_lancamentos=bool(row['aceita_lancamentos']),
+            ativo=bool(row['ativo']),
+            conta_pai_id=row['conta_pai_id'],
+            criado_em=row['criado_em'],
+        )
+
+
+class PlanoContasRepository:
+    """
+    Acesso a dados da tabela `plano_contas`.
+
+    Responsabilidades:
+    - CRUD básico de contas contábeis
+    - Validação de unicidade do código por usuário (via UNIQUE do banco)
+    - Isolamento por usuário em todas as queries
+    - Retorno tipado como PlanoConta (nunca dict)
+
+    Hierarquia:
+    - Nível 1: Grupos (Ativo, Passivo, PL, Receitas, Despesas)
+    - Nível 2: Subgrupos
+    - Nível 3-5: Contas Analíticas
+
+    Regras aplicadas no banco (triggers/constraints):
+    - UNIQUE(usuario_id, codigo): código único por usuário
+    - CHECK(nivel BETWEEN 1 AND 5): profundidade limitada
+    - Trigger trg_plano_contas_no_self_ref: impede auto-referência no conta_pai_id
+    """
+
+    _CAMPOS_PERMITIDOS: dict[str, callable] = {
+        "nome": lambda v: str(v).strip(),
+        "aceita_lancamentos": bool,
+        "ativo": bool,
+        "conta_pai_id": lambda v: int(v) if v is not None else None,
+    }
+
+    def __init__(self, db: DatabaseManager) -> None:
+        self._db = db
+
+    def criar(
+        self,
+        usuario_id: int,
+        codigo: str,
+        nome: str,
+        tipo: str,
+        natureza: str,
+        nivel: int,
+        aceita_lancamentos: bool = True,
+        conta_pai_id: int | None = None,
+    ) -> PlanoConta:
+        """
+        Cria uma nova conta no plano de contas.
+
+        Args:
+            usuario_id: ID do usuário proprietário
+            codigo: Código contábil (ex: '1.01.001'). Único por usuário.
+            nome: Nome da conta (ex: 'Caixa')
+            tipo: ativo | passivo | patrimonio_liquido | receita | despesa | redutora
+            natureza: devedora | credora
+            nivel: Profundidade hierárquica (1 a 5)
+            aceita_lancamentos: Se recebe lançamentos contábeis diretamente
+            conta_pai_id: ID da conta pai (None se for raiz)
+
+        Returns:
+            PlanoConta recém-criada
+
+        Raises:
+            sqlite3.IntegrityError: Se código já existe para o usuário ou
+                                    conta_pai_id não existe
+        """
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                """INSERT INTO plano_contas
+                   (usuario_id, codigo, nome, tipo, natureza, nivel,
+                    aceita_lancamentos, conta_pai_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (usuario_id, codigo.strip(), nome.strip(), tipo,
+                 natureza, nivel, int(aceita_lancamentos), conta_pai_id),
+            )
+            # Re-lê para obter criado_em e id gerado
+            row = conn.execute(
+                "SELECT * FROM plano_contas WHERE id = ?",
+                (cur.lastrowid,),
+            ).fetchone()
+
+        return PlanoConta.from_row(row)
+
+    def buscar_por_id(self, conta_id: int, usuario_id: int) -> PlanoConta | None:
+        """
+        Busca conta pelo ID, garantindo isolamento de usuário.
+
+        Args:
+            conta_id: ID da conta
+            usuario_id: ID do usuário (filtro de segurança)
+
+        Returns:
+            PlanoConta ou None se não encontrada
+        """
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM plano_contas "
+                "WHERE id = ? AND usuario_id = ?",
+                (conta_id, usuario_id),
+            ).fetchone()
+        return PlanoConta.from_row(row) if row else None
+
+    def buscar_por_codigo(self, codigo: str, usuario_id: int) -> PlanoConta | None:
+        """
+        Busca conta pelo código contábil.
+
+        Args:
+            codigo: Código contábil (ex: '1.01.001')
+            usuario_id: ID do usuário
+
+        Returns:
+            PlanoConta ou None se não encontrada
+        """
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM plano_contas "
+                "WHERE codigo = ? AND usuario_id = ?",
+                (codigo.strip(), usuario_id),
+            ).fetchone()
+        return PlanoConta.from_row(row) if row else None
+
+    def listar_por_usuario(
+        self,
+        usuario_id: int,
+        apenas_ativas: bool = True,
+    ) -> list[PlanoConta]:
+        """
+        Lista contas do usuário, ordenadas por nível e código.
+
+        Args:
+            usuario_id: ID do usuário
+            apenas_ativas: Se True, filtra apenas contas com ativo=1
+
+        Returns:
+            Lista de PlanoConta
+        """
+        with self._db.get_conn() as conn:
+            if apenas_ativas:
+                rows = conn.execute(
+                    "SELECT * FROM plano_contas "
+                    "WHERE usuario_id = ? AND ativo = 1 "
+                    "ORDER BY nivel, codigo",
+                    (usuario_id,),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    "SELECT * FROM plano_contas "
+                    "WHERE usuario_id = ? "
+                    "ORDER BY nivel, codigo",
+                    (usuario_id,),
+                ).fetchall()
+        return [PlanoConta.from_row(r) for r in rows]
+
+
+class ArvorePlanoContas:
+    """
+    Helper de navegação hierárquica para o Plano de Contas.
+
+    Responsabilidades:
+    - Montar caminhos completos (ex: "1 - Ativo > 1.1 - Disponível > 1.1.1 - Caixa")
+    - Construir estrutura de árvore a partir de lista plana
+
+    Princípios:
+    - NÃO acessa banco de dados
+    - Recebe list[PlanoConta] já carregada
+    - Constrói dict[int, PlanoConta] em memória para lookups O(1)
+    - Zero queries durante iteração
+
+    Uso típico:
+        contas = repo.listar_por_usuario(usuario_id)
+        arvore = ArvorePlanoContas.arvore_completa(contas)
+    """
+
+    @staticmethod
+    def caminho_completo(
+        conta: PlanoConta,
+        mapa_contas: dict[int, PlanoConta],
+    ) -> str:
+        """
+        Monta o caminho hierárquico completo de uma conta.
+
+        Sobe na árvore via conta_pai_id até a raiz, usando
+        o hash map para lookup O(1) em cada nível.
+
+        Args:
+            conta: Conta alvo
+            mapa_contas: Dict {id: PlanoConta} com TODAS as contas
+                         do mesmo usuário (deve estar completo)
+
+        Returns:
+            String no formato "1 - Ativo > 1.1 - Disponível > 1.1.1 - Caixa"
+        """
+        segmentos: list[str] = []
+        atual: PlanoConta | None = conta
+        while atual is not None:
+            segmentos.append(f"{atual.codigo} - {atual.nome}")
+            if atual.conta_pai_id is None:
+                break
+            atual = mapa_contas.get(atual.conta_pai_id)
+        return " > ".join(reversed(segmentos))
+
+    @staticmethod
+    def arvore_completa(
+        contas: list[PlanoConta],
+    ) -> list[dict]:
+        """
+        Constrói lista de dicionários com caminho completo
+        para cada conta, pronta para consumo pelo frontend.
+
+        Args:
+            contas: Lista plana de PlanoConta (retorno de listar_por_usuario)
+
+        Returns:
+            Lista de dicts no formato:
+            [
+                {
+                    "id": 1,
+                    "codigo": "1",
+                    "nome": "Ativo",
+                    "caminho": "1 - Ativo",
+                    "nivel": 1,
+                    "aceita_lancamentos": True,
+                    "tipo": "ativo",
+                    "natureza": "devedora",
+                },
+                ...
+            ]
+        """
+        if not contas:
+            return []
+
+        mapa = {c.id: c for c in contas}
+        return [
+            {
+                "id": c.id,
+                "codigo": c.codigo,
+                "nome": c.nome,
+                "caminho": ArvorePlanoContas.caminho_completo(c, mapa),
+                "nivel": c.nivel,
+                "aceita_lancamentos": c.aceita_lancamentos,
+                "tipo": c.tipo,
+                "natureza": c.natureza,
+            }
+            for c in contas
+        ]
+
+
+# ── Lançamentos Contábeis (Partida Dobrada) ────────────────────────────────────
+
+
+@dataclass
+class LancamentoContabil:
+    """
+    Lançamento em Partida Dobrada.
+
+    Representa um lançamento contábil que debita uma conta e credita
+    outra pelo mesmo valor. Mapeamento 1:1 com a tabela `lancamentos_contabeis`.
+
+    O repository NÃO valida regras de negócio como:
+    - Partida dobrada (débito = crédito)
+    - Natureza das contas (devedora/credora)
+    - Se a conta aceita lançamentos
+
+    Essas validações são responsabilidade do service.
+    O banco já aplica CHECK(debito_id != credito_id) e as FKs.
+    """
+    id: int
+    uuid: str
+    usuario_id: int
+    data: str
+    historico: str
+    valor: float
+    debito_id: int
+    credito_id: int
+    transacao_id: Optional[int] = None
+    criado_em: Optional[str] = None
+
+    @classmethod
+    def from_row(cls, row: sqlite3.Row) -> 'LancamentoContabil':
+        """Constrói LancamentoContabil a partir de um sqlite3.Row."""
+        return cls(
+            id=row['id'],
+            uuid=row['uuid'],
+            usuario_id=row['usuario_id'],
+            data=row['data'],
+            historico=row['historico'],
+            valor=row['valor'],
+            debito_id=row['debito_id'],
+            credito_id=row['credito_id'],
+            transacao_id=row['transacao_id'],
+            criado_em=row['criado_em'],
+        )
+
+
+class LancamentoContabilRepository:
+    """
+    Acesso a dados da tabela `lancamentos_contabeis`.
+
+    Responsabilidades:
+    - CRUD de lançamentos contábeis
+    - Isolamento por usuário em todas as queries
+    - Retorno tipado como LancamentoContabil (nunca dict)
+
+    NÃO faz validações contábeis (service faz).
+    O banco já possui:
+    - CHECK(valor > 0)
+    - CHECK(debito_id != credito_id)
+    - FKs para plano_contas e transacoes
+    - UNIQUE(uuid)
+    """
+
+    def __init__(self, db: DatabaseManager) -> None:
+        self._db = db
+
+    def criar(
+        self,
+        uuid: str,
+        usuario_id: int,
+        data: str,
+        historico: str,
+        valor: float,
+        debito_id: int,
+        credito_id: int,
+        transacao_id: int | None = None,
+        conn: sqlite3.Connection | None = None,
+    ) -> LancamentoContabil:
+        """
+        Insere um lançamento contábil.
+
+        Args:
+            uuid: Identificador único do lançamento
+            usuario_id: ID do usuário
+            data: Data do lançamento (formato YYYY-MM-DD)
+            historico: Descrição do lançamento
+            valor: Valor positivo (CHECK do banco garante > 0)
+            debito_id: ID da conta debitada (FK para plano_contas)
+            credito_id: ID da conta creditada (FK para plano_contas)
+            transacao_id: ID da transação associada (opcional)
+            conn: Conexão externa para participar de transações gerenciadas
+                  por outra camada. Quando fornecido, NÃO abre/fecha conexão
+                  própria nem faz commit.
+
+        Returns:
+            LancamentoContabil recém-criado
+
+        Raises:
+            sqlite3.IntegrityError: Se uuid duplicado, FK inválida,
+                                    ou CHECK(valor > 0) violado
+        """
+        if conn is not None:
+            cur = conn.execute(
+                """INSERT INTO lancamentos_contabeis
+                   (uuid, usuario_id, data, historico, valor,
+                    debito_id, credito_id, transacao_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (uuid, usuario_id, data, historico.strip(),
+                 round(valor, 2), debito_id, credito_id, transacao_id),
+            )
+            row = conn.execute(
+                "SELECT * FROM lancamentos_contabeis WHERE id = ?",
+                (cur.lastrowid,),
+            ).fetchone()
+            return LancamentoContabil.from_row(row)
+
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                """INSERT INTO lancamentos_contabeis
+                   (uuid, usuario_id, data, historico, valor,
+                    debito_id, credito_id, transacao_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                (uuid, usuario_id, data, historico.strip(),
+                 round(valor, 2), debito_id, credito_id, transacao_id),
+            )
+            row = conn.execute(
+                "SELECT * FROM lancamentos_contabeis WHERE id = ?",
+                (cur.lastrowid,),
+            ).fetchone()
+        return LancamentoContabil.from_row(row)
+
+    def buscar_por_id(self, lancamento_id: int, usuario_id: int) -> LancamentoContabil | None:
+        """
+        Busca lançamento pelo ID com isolamento de usuário.
+
+        Args:
+            lancamento_id: ID do lançamento
+            usuario_id: ID do usuário (filtro de segurança)
+
+        Returns:
+            LancamentoContabil ou None se não encontrado
+        """
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM lancamentos_contabeis "
+                "WHERE id = ? AND usuario_id = ?",
+                (lancamento_id, usuario_id),
+            ).fetchone()
+        return LancamentoContabil.from_row(row) if row else None
+
+    def buscar_por_uuid(self, uuid: str, usuario_id: int) -> LancamentoContabil | None:
+        """
+        Busca lançamento pelo UUID com isolamento de usuário.
+
+        Args:
+            uuid: UUID do lançamento
+            usuario_id: ID do usuário (filtro de segurança)
+
+        Returns:
+            LancamentoContabil ou None se não encontrado
+        """
+        with self._db.get_conn() as conn:
+            row = conn.execute(
+                "SELECT * FROM lancamentos_contabeis "
+                "WHERE uuid = ? AND usuario_id = ?",
+                (uuid, usuario_id),
+            ).fetchone()
+        return LancamentoContabil.from_row(row) if row else None
+
+    def listar_por_usuario(
+        self,
+        usuario_id: int,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[LancamentoContabil]:
+        """
+        Lista lançamentos do usuário, do mais recente para o mais antigo.
+
+        Args:
+            usuario_id: ID do usuário
+            limit: Número máximo de registros
+            offset: Deslocamento para paginação
+
+        Returns:
+            Lista de LancamentoContabil
+        """
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                "SELECT * FROM lancamentos_contabeis "
+                "WHERE usuario_id = ? "
+                "ORDER BY data DESC, id DESC "
+                "LIMIT ? OFFSET ?",
+                (usuario_id, limit, offset),
+            ).fetchall()
+        return [LancamentoContabil.from_row(r) for r in rows]
+
+    def listar_por_conta(
+        self,
+        conta_id: int,
+        usuario_id: int,
+        limit: int = 100,
+        offset: int = 0,
+    ) -> list[LancamentoContabil]:
+        """
+        Lista lançamentos que envolvem uma conta específica
+        (como débito OU crédito).
+
+        Args:
+            conta_id: ID da conta contábil
+            usuario_id: ID do usuário (filtro de segurança)
+            limit: Número máximo de registros
+            offset: Deslocamento para paginação
+
+        Returns:
+            Lista de LancamentoContabil
+        """
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT * FROM lancamentos_contabeis
+                   WHERE usuario_id = ?
+                     AND (debito_id = ? OR credito_id = ?)
+                   ORDER BY data DESC, id DESC
+                   LIMIT ? OFFSET ?""",
+                (usuario_id, conta_id, conta_id, limit, offset),
+            ).fetchall()
+        return [LancamentoContabil.from_row(r) for r in rows]
+
+    def listar_por_periodo(
+        self,
+        usuario_id: int,
+        data_inicio: str,
+        data_fim: str,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> list[LancamentoContabil]:
+        """
+        Lista lançamentos em um intervalo de datas.
+
+        Args:
+            usuario_id: ID do usuário
+            data_inicio: Data inicial (inclusiva, formato YYYY-MM-DD)
+            data_fim: Data final (inclusiva, formato YYYY-MM-DD)
+            limit: Número máximo de registros
+            offset: Deslocamento para paginação
+
+        Returns:
+            Lista de LancamentoContabil
+        """
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT * FROM lancamentos_contabeis
+                   WHERE usuario_id = ?
+                     AND data BETWEEN ? AND ?
+                   ORDER BY data DESC, id DESC
+                   LIMIT ? OFFSET ?""",
+                (usuario_id, data_inicio, data_fim, limit, offset),
+            ).fetchall()
+        return [LancamentoContabil.from_row(r) for r in rows]
+
+    def listar_por_periodo_com_nomes(
+        self,
+        usuario_id: int,
+        data_inicio: str,
+        data_fim: str,
+        limit: int = 1000,
+        offset: int = 0,
+    ) -> list[dict]:
+        """
+        Lista lançamentos em um intervalo de datas com nomes das contas resolvidos via JOIN.
+
+        UMA ÚNICA QUERY com JOINs — elimina N+1 lookups do PlanoContasRepository
+        que ocorriam no service ao resolver nomes de conta para cada lançamento.
+        Args:
+            usuario_id: ID do usuário
+            data_inicio: Data inicial (inclusiva, formato YYYY-MM-DD)
+            data_fim: Data final (inclusiva, formato YYYY-MM-DD)
+            limit: Número máximo de registros
+            offset: Deslocamento para paginação
+        Returns:
+            Lista de dicts com campos: id, uuid, data, historico, valor,
+            debito_id, credito_id, transacao_id,
+            conta_debito_nome, conta_credito_nome (já formatados)
+        """
+        with self._db.get_conn() as conn:
+            rows = conn.execute(
+                """SELECT l.id, l.uuid, l.data, l.historico, l.valor,
+                          l.debito_id, l.credito_id, l.transacao_id,
+                          COALESCE(d.codigo || ' - ' || d.nome, '[Conta ' || l.debito_id || ']') AS conta_debito_nome,
+                          COALESCE(c.codigo || ' - ' || c.nome, '[Conta ' || l.credito_id || ']') AS conta_credito_nome
+                    FROM lancamentos_contabeis l
+                   LEFT JOIN plano_contas d ON l.debito_id = d.id AND d.usuario_id = ?
+                   LEFT JOIN plano_contas c ON l.credito_id = c.id AND c.usuario_id = ?
+                    WHERE l.usuario_id = ?
+                     AND l.data BETWEEN ? AND ?
+                   ORDER BY l.data DESC, l.id DESC
+                   LIMIT ? OFFSET ?""",
+                (usuario_id, usuario_id, usuario_id, data_inicio, data_fim, limit, offset),
+            ).fetchall()
+        return _rows_to_list(rows)
+
+    def deletar(self, lancamento_id: int, usuario_id: int) -> bool:
+        """
+        Remove fisicamente um lançamento contábil.
+
+        Diferente de transações (que usam soft-delete), lançamentos
+        contábeis podem ser deletados permanentemente porque:
+        1. São registros atômicos (não têm filhos)
+        2. O UUID garante rastreabilidade externa
+        3. O service pode optar por estornar em vez de deletar
+
+        Args:
+            lancamento_id: ID do lançamento
+            usuario_id: ID do usuário (filtro de segurança)
+
+        Returns:
+            True se deletou, False se não encontrou
+        """
+        with self._db.get_write_conn() as conn:
+            cur = conn.execute(
+                "DELETE FROM lancamentos_contabeis "
+                "WHERE id = ? AND usuario_id = ?",
+                (lancamento_id, usuario_id),
+            )
+        return cur.rowcount > 0
+
+    def calcular_saldo(
+        self,
+        conta_id: int,
+        usuario_id: int,
+        data_ate: str | None = None,
+    ) -> dict | None:
+        """
+        Calcula totais de débito e crédito de uma conta com UMA ÚNICA QUERY.
+
+        Usa SUM + CASE WHEN diretamente no SQLite, eliminando:
+        - Duas idas ao banco (antes: duas queries separadas)
+        - Carga de linhas em memória (antes: carregava todos os lançamentos)
+        - Processamento Python para somar (agora é feito no banco)
+
+        A query única permite que o SQLite otimize o plano de execução
+        com um único scan na tabela, aplicando os dois CASE WHEN
+        em cada linha lida.
+
+        Impacto:
+        - Menos RAM: não carrega linhas
+        - Menos CPU: agregação no banco
+        - Menos tempo de resposta: uma query vs duas
+
+        Args:
+            conta_id: ID da conta contábil
+            usuario_id: ID do usuário (filtro de segurança)
+            data_ate: Data limite (inclusiva, YYYY-MM-DD).
+                      Se None, considera todos os lançamentos.
+
+        Returns:
+            Dict com 'total_debito_sum' e 'total_credito_sum'
+            ou None se não houver lançamentos.
+        """
+        with self._db.get_conn() as conn:
+            if data_ate:
+                row = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(CASE WHEN l.debito_id = ? THEN l.valor ELSE 0 END), 0) AS total_debito_sum,
+                        COALESCE(SUM(CASE WHEN l.credito_id = ? THEN l.valor ELSE 0 END), 0) AS total_credito_sum
+                    FROM lancamentos_contabeis l
+                    WHERE l.usuario_id = ?
+                      AND (l.debito_id = ? OR l.credito_id = ?)
+                      AND l.data <= ?
+                    """,
+                    (conta_id, conta_id, usuario_id, conta_id, conta_id, data_ate),
+                ).fetchone()
+            else:
+                row = conn.execute(
+                    """
+                    SELECT
+                        COALESCE(SUM(CASE WHEN l.debito_id = ? THEN l.valor ELSE 0 END), 0) AS total_debito_sum,
+                        COALESCE(SUM(CASE WHEN l.credito_id = ? THEN l.valor ELSE 0 END), 0) AS total_credito_sum
+                    FROM lancamentos_contabeis l
+                    WHERE l.usuario_id = ?
+                      AND (l.debito_id = ? OR l.credito_id = ?)
+                    """,
+                    (conta_id, conta_id, usuario_id, conta_id, conta_id),
+                ).fetchone()
+
+        if row is None:
+            return None
+
+        total_debito = row['total_debito_sum']
+        total_credito = row['total_credito_sum']
+
+        # Se ambos forem zero, retorna None para indicar que não há lançamentos
+        if total_debito == 0 and total_credito == 0:
+            return None
+
+        return {
+            'total_debito_sum': total_debito,
+            'total_credito_sum': total_credito,
+        }
+

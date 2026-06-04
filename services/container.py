@@ -34,11 +34,14 @@ from database.repositories import (
     TransacaoRepository,
     TransferenciaRepository,
     UsuarioRepository,
+    PlanoContasRepository,
+    LancamentoContabilRepository,
 )
 from services.auth_service import AuthService
 from services.dashboard_service import DashboardService
 from services.recorrente_service import RecorrenteService
 from services.transacao_service import TransacaoService
+from services.contabil_service import ContabilService
 from utils.calendario import CalendarioUtil
 
 
@@ -83,6 +86,14 @@ class ServiceContainer:
         )
 
         self.dashboard = DashboardService(self.transacoes_repo)
+
+        # ── ContabilService (partidas dobradas) ────────────────────────────────
+        self.contabil = ContabilService(
+            db=self.db,
+            plano_contas_repo=PlanoContasRepository(self.db),
+            lancamento_repo=LancamentoContabilRepository(self.db),
+            transacao_repo=self.transacoes_repo,
+        )
 
     @classmethod
     def create_for_testing(cls, db_path: str = ":memory:") -> "ServiceContainer":

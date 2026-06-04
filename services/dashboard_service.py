@@ -14,6 +14,7 @@ viola o SRP. Um DashboardService:
 import logging
 from dataclasses import dataclass, field
 
+from utils.metrics import metricas, medir, tempo_consulta
 from database.repositories import TransacaoRepository
 
 logger = logging.getLogger(__name__)
@@ -74,6 +75,7 @@ class DashboardService:
     def __init__(self, transacao_repo: TransacaoRepository) -> None:
         self._transacoes = transacao_repo
 
+    @medir('dashboard_obter_resumo')
     def obter_resumo(self, ano: int, mes: int, usuario_id: int) -> ResumoMes:
         """
         Calcula todos os dados necessários para o dashboard.

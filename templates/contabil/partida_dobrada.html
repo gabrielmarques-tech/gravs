@@ -38,23 +38,22 @@
         <div style="background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;flex-wrap:wrap;gap:8px">
             <div>
-              <div style="font-weight:600;color:var(--text);font-size:var(--text-base)">{{ t.descricao }}</div>
-              <div style="font-size:var(--text-sm);color:var(--text3);margin-top:2px">{{ t.data }} · {{ t.categoria_nome }}</div>
+              <div style="font-weight:600;color:var(--text);font-size:var(--text-base)">{{ t.historico }}</div>
+              <div style="font-size:var(--text-sm);color:var(--text3);margin-top:2px">{{ t.data }}</div>
             </div>
-            <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;
-                        color:{% if t.tipo == 'receita' %}#34d399{% else %}#f87171{% endif %}">
-              {% if t.tipo == 'despesa' %}-{% endif %}{{ t.valor | real }}
+            <div style="font-family:var(--font-display);font-size:1rem;font-weight:800;color:var(--text)">
+              {{ t.valor | real }}
             </div>
           </div>
 
-          <!-- Partida dobrada -->
+          <!-- Partida dobrada (via DTO — nomes resolvidos do plano_contas) -->
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
             <div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.2);
                         border-radius:8px;padding:8px 12px">
               <div style="font-size:0.68rem;color:var(--red2);font-weight:700;text-transform:uppercase;
                           letter-spacing:0.08em;margin-bottom:3px">Débito</div>
               <div style="font-size:var(--text-sm);color:var(--text);font-weight:500">
-                {{ t.conta_debito or '—' }}
+                {{ t.conta_debito_nome or '—' }}
               </div>
             </div>
             <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);
@@ -62,7 +61,7 @@
               <div style="font-size:0.68rem;color:var(--green2);font-weight:700;text-transform:uppercase;
                           letter-spacing:0.08em;margin-bottom:3px">Crédito</div>
               <div style="font-size:var(--text-sm);color:var(--text);font-weight:500">
-                {{ t.conta_credito or '—' }}
+                {{ t.conta_credito_nome or '—' }}
               </div>
             </div>
           </div>

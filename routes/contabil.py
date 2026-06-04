@@ -34,12 +34,7 @@ def requer_modo_contabil(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         svc = get_services()
-        with svc.db.get_conn() as conn:
-            row = conn.execute(
-                "SELECT modo_contabil FROM usuarios WHERE id=?",
-                (current_user.id,)
-            ).fetchone()
-        if not row or not row["modo_contabil"]:
+        if not svc.usuarios_repo.get_modo_contabil(current_user.id):
             abort(403)
         return f(*args, **kwargs)
     return decorated
@@ -56,13 +51,7 @@ def exportar():
     fim_padrao    = hoje.strftime("%Y-%m-%d")
 
     svc = get_services()
-    with svc.db.get_conn() as conn:
-        row = conn.execute(
-            "SELECT modo_contabil FROM usuarios WHERE id=?",
-            (current_user.id,)
-        ).fetchone()
-    tem_contabil = bool(row and row["modo_contabil"])
-
+    tem_contabil = svc.usuarios_repo.get_modo_contabil(current_user.id)
     return render_template(
         "contabil/exportar.html",
         filtro_inicio=request.args.get("inicio", inicio_padrao),
@@ -223,7 +212,7 @@ def exportar_download():
 @login_required
 @requer_modo_contabil
 def partida_dobrada():
-    """Lista lançamentos em partida dobrada."""
+    """Lista lançamentos em partida dobrada (fonte oficial: lancamentos_contabeis)."""
     svc = get_services()
     uid = current_user.id
     hoje = date.today()
@@ -231,15 +220,35 @@ def partida_dobrada():
     inicio = request.args.get("inicio", date(hoje.year, hoje.month, 1).strftime("%Y-%m-%d"))
     fim    = request.args.get("fim",    hoje.strftime("%Y-%m-%d"))
 
-    transacoes = svc.transacoes.listar_por_periodo(inicio, fim, uid)
-    # Filtra só as que têm partida dobrada
-    com_partida = [t for t in transacoes if t.get("conta_debito") or t.get("conta_credito")]
+    # Paginação
+    pagina = max(1, int(request.args.get("pagina", 1)))
+    POR_PAGINA = 50
+    offset = (pagina - 1) * POR_PAGINA
+    # Fonte oficial: LancamentoContabilRepository via ContabilService (agora com JOIN único)
+    lancamentos = svc.contabil.listar_partidas_dobradas_por_periodo(
+        usuario_id=uid,
+        data_inicio=inicio,
+        data_fim=fim,
+        limit=POR_PAGINA,
+        offset=offset,
+    )
+
+    # Contagem total para calcular número de páginas
+    lancamentos_total = svc.contabil._lancamentos.listar_por_periodo(
+        uid, inicio, fim, limit=1000000, offset=0,
+    )
+    total = len(lancamentos_total)
+    total_pags = max(1, (total + POR_PAGINA - 1) // POR_PAGINA)
+    pagina = min(pagina, total_pags)
 
     return render_template(
         "contabil/partida_dobrada.html",
-        transacoes=com_partida,
+        transacoes=lancamentos,
         filtro_inicio=inicio,
         filtro_fim=fim,
+        pagina=pagina,
+        total_pags=total_pags,
+        total=total,
     )
 
 
@@ -247,38 +256,49 @@ def partida_dobrada():
 @login_required
 @requer_modo_contabil
 def novo_lancamento_contabil():
-    """Cria lançamento com partida dobrada."""
+    """Cria lançamento com partida dobrada (transação + partida dupla atômica)."""
     svc = get_services()
 
     if request.method == "POST":
         try:
             valor = parse_valor_monetario(request.form.get("valor", "0"))
+            data_lanc = request.form.get("data")
+            descricao = request.form.get("descricao", "")
+            tipo = request.form.get("tipo", "despesa")
+            categoria_id = int(request.form.get("categoria_id", 0))
 
-            # Cria a transação normal
-            id_t, erros = svc.transacoes.adicionar(
-                descricao=request.form.get("descricao", ""),
-                valor=valor,
-                tipo=request.form.get("tipo", "despesa"),
-                categoria_id=int(request.form.get("categoria_id", 0)),
+            # Obtém os IDs das contas contábeis (não mais TEXT direto)
+            debito_id_str = request.form.get("conta_debito", "").strip()
+            credito_id_str = request.form.get("conta_credito", "").strip()
+
+            if not debito_id_str or not credito_id_str:
+                flash("Selecione as contas de débito e crédito.", "erro")
+                return redirect(url_for("contabil.partida_dobrada"))
+
+            debito_id = int(debito_id_str)
+            credito_id = int(credito_id_str)
+
+            # Chama o método de orquestração que faz tudo em uma transação atômica
+            sucesso, resultado = svc.contabil.criar_lancamento_completo(
                 usuario_id=current_user.id,
-                data=request.form.get("data"),
+                data=data_lanc,
+                historico=f"{descricao} ({'Receita' if tipo == 'receita' else 'Despesa'})",
+                valor=valor,
+                debito_id=debito_id,
+                credito_id=credito_id,
+                descricao_transacao=descricao,
+                tipo_transacao=tipo,
+                categoria_id=categoria_id,
             )
 
-            if not erros and id_t:
-                # Adiciona as contas de débito e crédito
-                conta_debito  = request.form.get("conta_debito", "").strip()
-                conta_credito = request.form.get("conta_credito", "").strip()
-
-                if conta_debito or conta_credito:
-                    with svc.transacoes._repo._db.get_write_conn() as conn:
-                        conn.execute(
-                            "UPDATE transacoes SET conta_debito=?, conta_credito=? WHERE id=?",
-                            (conta_debito, conta_credito, id_t)
-                        )
-
-                flash("✓ Lançamento contábil registrado!", "sucesso")
+            if sucesso:
+                flash("✓ Lançamento contábil registrado com partida dobrada!", "sucesso")
+                logger.info(
+                    "Partida dobrada criada: transacao_id=%d lancamento_id=%d usuario_id=%d",
+                    resultado["transacao_id"], resultado["lancamento"].id, current_user.id,
+                )
             else:
-                flash("Erro ao registrar lançamento.", "erro")
+                flash(f"Erro: {resultado}", "erro")
 
         except (ValueError, TypeError) as exc:
             logger.error("Erro em lançamento contábil: %s", exc)
@@ -314,8 +334,25 @@ def exportar_partida_dobrada():
     inicio = request.args.get("inicio", date(hoje.year, 1, 1).strftime("%Y-%m-%d"))
     fim    = request.args.get("fim",    hoje.strftime("%Y-%m-%d"))
 
-    transacoes = svc.transacoes.listar_por_periodo(inicio, fim, uid)
-    com_partida = [t for t in transacoes if t.get("conta_debito") or t.get("conta_credito")]
+    # Fonte oficial: lancamentos_contabeis (mesma da listagem)
+    lancamentos = svc.contabil.listar_partidas_dobradas_por_periodo(
+        usuario_id=uid,
+        data_inicio=inicio,
+        data_fim=fim,
+    )
+    # Converte DTOs para formato esperado pela exportação
+    com_partida = [
+        {
+            "data": l.data,
+            "descricao": l.historico,
+            "tipo": "receita" if valor > 0 else "despesa",  # fallback
+            "valor": l.valor,
+            "conta_debito": l.conta_debito_nome,
+            "conta_credito": l.conta_credito_nome,
+            "categoria_nome": "Partida Dobrada",
+        }
+        for l in lancamentos
+    ]
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -358,3 +395,4 @@ def exportar_partida_dobrada():
         mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename=gravs_partida_dobrada_{inicio}_{fim}.xlsx"}
     )
+

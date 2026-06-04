@@ -1,5 +1,7 @@
 """
 routes/perfil.py — Perfil do usuário: troca de nome e senha.
+
+NENHUM SQL cru — tudo via UsuarioRepository.
 """
 
 import logging
@@ -36,12 +38,7 @@ def atualizar_nome():
         return redirect(url_for("perfil.index"))
 
     svc = get_services()
-    with svc.db.get_write_conn() as conn:
-        conn.execute(
-            "UPDATE usuarios SET nome = ? WHERE id = ?",
-            (novo_nome, current_user.id)
-        )
-
+    svc.usuarios_repo.atualizar_nome(current_user.id, novo_nome)
     current_user.nome = novo_nome
     flash("✓ Nome atualizado com sucesso!", "sucesso")
     return redirect(url_for("perfil.index"))
@@ -73,12 +70,7 @@ def atualizar_senha():
         return redirect(url_for("perfil.index"))
 
     novo_hash = generate_password_hash(nova_senha)
-    with svc.db.get_write_conn() as conn:
-        conn.execute(
-            "UPDATE usuarios SET senha_hash = ? WHERE id = ?",
-            (novo_hash, current_user.id)
-        )
-
+    svc.usuarios_repo.atualizar_senha_hash(current_user.id, novo_hash)
     flash("✓ Senha alterada com sucesso!", "sucesso")
     return redirect(url_for("perfil.index"))
 
@@ -88,21 +80,10 @@ def atualizar_senha():
 def toggle_contabil():
     svc = get_services()
 
-    with svc.db.get_conn() as conn:
-        row = conn.execute(
-            "SELECT modo_contabil FROM usuarios WHERE id = ?",
-            (current_user.id,)
-        ).fetchone()
+    modo_atual = svc.usuarios_repo.get_modo_contabil(current_user.id)
+    novo_modo  = not modo_atual
 
-    modo_atual = row["modo_contabil"] if row else 0
-    novo_modo  = 0 if modo_atual else 1
-
-    with svc.db.get_write_conn() as conn:
-        conn.execute(
-            "UPDATE usuarios SET modo_contabil = ? WHERE id = ?",
-            (novo_modo, current_user.id)
-        )
-
+    svc.usuarios_repo.set_modo_contabil(current_user.id, novo_modo)
     if novo_modo:
         flash("✓ Modo contábil ativado! Acesse Exportar → Partida Dobrada.", "sucesso")
     else:
@@ -133,20 +114,11 @@ def excluir_conta():
         logger.warning("Tentativa de exclusão com senha errada: user_id=%d", current_user.id)
         return redirect(url_for("perfil.index"))
 
-    agora = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    uid = current_user.id
+    svc.usuarios_repo.marcar_excluido(current_user.id)
+    svc.usuarios_repo.anonimizar_email(current_user.id)
 
-    with svc.db.get_write_conn() as conn:
-        conn.execute(
-            "UPDATE usuarios SET excluido_em=? WHERE id=?",
-            (agora, uid)
-        )
-
-    svc.usuarios_repo.anonimizar_email(uid)
-
-    logger.warning("AUDITORIA: conta_excluida user_id=%d ip=%s em=%s",
-                   uid, request.remote_addr, agora)
-
+    logger.warning("AUDITORIA: conta_excluida user_id=%d ip=%s",
+                   current_user.id, request.remote_addr)
     logout_user()
     flash("Sua conta foi excluída. Sentiremos sua falta!", "sucesso")
     return redirect(url_for("auth.login"))

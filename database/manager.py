@@ -21,8 +21,11 @@ acontece. Fundamental para apps web com múltiplas requisições simultâneas.
 import logging
 import sqlite3
 import threading
+import time
 from contextlib import contextmanager
 from typing import Generator
+
+from utils.metrics import metricas
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +50,7 @@ class DatabaseManager:
         self._initialized = False
 
     @contextmanager
-    def get_conn(self) -> Generator[sqlite3.Connection, None, None]:
+    def get_conn(self, operacao: str = "db_query") -> Generator[sqlite3.Connection, None, None]:
         """
         Context manager que entrega uma conexão configurada.
 
@@ -57,6 +60,10 @@ class DatabaseManager:
         - synchronous=NORMAL: equilíbrio entre durabilidade e performance
         - busy_timeout=5000: aguarda 5s antes de lançar "database is locked"
         - row_factory=sqlite3.Row: permite acesso por nome (row['campo'])
+
+        Args:
+            operacao: Nome opcional da operação para métricas.
+                      Default: "db_query"
         """
         conn = sqlite3.connect(
             self.db_path,
@@ -75,6 +82,7 @@ class DatabaseManager:
         conn.execute("PRAGMA mmap_size = 268435456") # 256MB memory-mapped I/O
         conn.row_factory = sqlite3.Row
 
+        inicio = time.perf_counter()
         try:
             yield conn
             conn.commit()
@@ -82,10 +90,12 @@ class DatabaseManager:
             conn.rollback()
             raise
         finally:
+            duracao = time.perf_counter() - inicio
+            metricas.registrar_consulta(operacao, duracao)
             conn.close()
 
     @contextmanager
-    def get_write_conn(self) -> Generator[sqlite3.Connection, None, None]:
+    def get_write_conn(self, operacao: str = "db_write") -> Generator[sqlite3.Connection, None, None]:
         """
         Context manager para operações de escrita com lock thread-safe.
 
@@ -95,10 +105,18 @@ class DatabaseManager:
         threads, duas escritas simultâneas causam "database is locked". O lock
         do Python garante serialização no nível da aplicação, antes de chegar
         ao banco.
+
+        Args:
+            operacao: Nome opcional da operação para métricas.
+                      Default: "db_write"
         """
-        with _write_lock:
-            with self.get_conn() as conn:
-                yield conn
+        inicio = time.perf_counter()
+        try:
+            with _write_lock:
+                with self.get_conn(operacao=operacao) as conn:
+                    yield conn
+        finally:
+            duracao = time.perf_counter() - inicio
 
     def init_schema(self) -> None:
         """
@@ -123,6 +141,9 @@ class DatabaseManager:
                 self._criar_tabela_recorrentes(conn)
                 self._criar_tabela_metas(conn)
                 self._criar_tabela_notificacoes(conn)
+                self._criar_tabela_transferencias(conn)
+                self._criar_tabela_plano_contas(conn)
+                self._criar_tabela_lancamentos_contabeis(conn)
                 self._aplicar_migrations(conn)
         self._initialized = True
         logger.info("Schema inicializado com sucesso: %s", self.db_path)
@@ -301,8 +322,9 @@ class DatabaseManager:
         self._add_column_if_missing(conn, "usuarios", "aceite_termos_em", "TEXT")
         self._add_column_if_missing(conn, "usuarios", "excluido_em", "TEXT")
         self._anonimizar_emails_excluidos(conn)
-        self._criar_tabela_transferencias(conn)
+        # self._criar_tabela_transferencias(conn) # Movido para init_schema
         self._migrar_categorias_pix(conn)
+        self._migrar_fk_on_delete_restrict(conn)
 
 
     def limpar_tokens_expirados(self) -> int:
@@ -336,6 +358,10 @@ class DatabaseManager:
         """)
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_limites_user ON limites_categoria(usuario_id)"
+        )
+        # Índice adicionado para buscas de limites por categoria
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_limites_cat ON limites_categoria(usuario_id, categoria_id)"
         )
 
     def _criar_tabela_tokens_recuperacao(self, conn) -> None:
@@ -480,8 +506,119 @@ class DatabaseManager:
         conn.execute(
             "CREATE INDEX IF NOT EXISTS idx_recorrentes_dia ON recorrentes(usuario_id, dia_vencimento) WHERE ativo=1"
         )
+        # REMOVIDO: idx_limites_cat movido para _criar_tabela_limites_categoria
+
+    def _criar_tabela_plano_contas(self, conn: sqlite3.Connection) -> None:
+        """
+        Plano de Contas Contábil — estrutura hierárquica para partidas dobradas.
+
+        Hierarquia:
+        - Nível 1: Grupos (Ativo, Passivo, PL, Receitas, Despesas)
+        - Nível 2: Subgrupos (Circulante, Não Circulante, etc.)
+        - Nível 3 a 5: Contas Analíticas e subdivisões
+
+        Regras de integridade:
+        - UNIQUE(usuario_id, codigo): código contábil é identificador único
+        - nivel BETWEEN 1 AND 5: limita profundidade da árvore
+        - FK com ON DELETE CASCADE: deletar usuário remove plano
+        - não há UNIQUE no nome: permite contas com mesmo nome em naturezas diferentes
+
+        Proteção contra ciclos:
+        - Auto-referência detectada via TRIGGER (self-reference)
+        - Ciclos indiretos detectados via validação no service
+        """
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS plano_contas (
+                id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                usuario_id        INTEGER NOT NULL,
+                codigo            TEXT    NOT NULL,
+                nome              TEXT    NOT NULL,
+                tipo              TEXT    NOT NULL CHECK(tipo IN (
+                    'ativo', 'passivo', 'patrimonio_liquido',
+                    'receita', 'despesa', 'redutora'
+                )),
+                natureza          TEXT    NOT NULL CHECK(natureza IN ('devedora','credora')),
+                nivel             INTEGER NOT NULL DEFAULT 1
+                                  CHECK(nivel BETWEEN 1 AND 5),
+                conta_pai_id      INTEGER,
+                aceita_lancamentos INTEGER DEFAULT 1,
+                ativo             INTEGER DEFAULT 1,
+                criado_em         TEXT    DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id)   REFERENCES usuarios(id) ON DELETE CASCADE,
+                FOREIGN KEY (conta_pai_id) REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                UNIQUE(usuario_id, codigo)
+            )
+        """)
         conn.execute(
-            "CREATE INDEX IF NOT EXISTS idx_limites_cat ON limites_categoria(usuario_id, categoria_id)"
+            "CREATE INDEX IF NOT EXISTS idx_plano_contas_user ON plano_contas(usuario_id, ativo)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_plano_contas_pai ON plano_contas(conta_pai_id)"
+        )
+
+        # Trigger de proteção contra auto-referência no pai
+        conn.execute("""
+            CREATE TRIGGER IF NOT EXISTS trg_plano_contas_no_self_ref
+            BEFORE UPDATE OF conta_pai_id ON plano_contas
+            BEGIN
+                SELECT RAISE(ABORT, 'Auto-referência: conta não pode ser pai dela mesma')
+                WHERE NEW.conta_pai_id IS NOT NULL
+                  AND NEW.conta_pai_id = NEW.id;
+            END
+        """)
+
+    def _criar_tabela_lancamentos_contabeis(self, conn: sqlite3.Connection) -> None:
+        """
+        Lançamentos em Partida Dobrada.
+
+        TODO lançamento possui:
+        - Data, histórico, valor
+        - Conta de Débito (obrigatório, referência ao plano_contas)
+        - Conta de Crédito (obrigatório, referência ao plano_contas)
+
+        Proteção em duas camadas para débito != crédito:
+        1. CHECK(debito_id != credito_id) no banco — rede de segurança
+        2. Validação no service — feedback amigável ao usuário
+
+        Relação com transacoes:
+        - transacao_id é OPCIONAL — permite migração gradual
+        """
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS lancamentos_contabeis (
+                id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                uuid            TEXT    UNIQUE NOT NULL,
+                usuario_id      INTEGER NOT NULL,
+                data            TEXT    NOT NULL,
+                historico       TEXT    NOT NULL,
+                valor           REAL    NOT NULL CHECK(valor > 0),
+                debito_id       INTEGER NOT NULL REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                credito_id      INTEGER NOT NULL REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                transacao_id    INTEGER REFERENCES transacoes(id),
+                criado_em       TEXT    DEFAULT CURRENT_TIMESTAMP,
+                CHECK(debito_id != credito_id),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            )
+        """)
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_lanc_cont_user ON lancamentos_contabeis(usuario_id, data DESC)"
+        )
+        # Índices para cálculo de saldo por conta
+        # O índice composto (usuario_id, debito_id, data) é usado pelas queries
+        # de SUM em calcular_saldo_conta(), que filtram por usuario_id E debito_id
+        # E opcionalmente por data. A ordenação por data no índice permite range scan
+        # eficiente para o filtro "data <= ?".
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_lanc_saldo_debito ON lancamentos_contabeis(usuario_id, debito_id, data)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_lanc_saldo_credito ON lancamentos_contabeis(usuario_id, credito_id, data)"
+        )
+        # Índices legados mantidos para compatibilidade com outras queries
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_lanc_cont_debito ON lancamentos_contabeis(usuario_id, debito_id)"
+        )
+        conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_lanc_cont_credito ON lancamentos_contabeis(usuario_id, credito_id)"
         )
 
     def _anonimizar_emails_excluidos(self, conn: sqlite3.Connection) -> None:
@@ -540,6 +677,182 @@ class DatabaseManager:
         except Exception as exc:
             logger.warning("Migration falhou (%s.%s): %s", table, column, exc)
 
+    def _migrar_fk_on_delete_restrict(self, conn: sqlite3.Connection) -> None:
+        """
+        Migration: aplica ON DELETE RESTRICT nas FKs que não possuem política
+        explícita de exclusão.
+
+        Tabelas afetadas:
+        1. plano_contas.conta_pai_id → plano_contas(id)
+        2. lancamentos_contabeis.debito_id → plano_contas(id)
+        3. lancamentos_contabeis.credito_id → plano_contas(id)
+
+        SQLite NÃO permite ALTER TABLE para modificar FKs. A solução é:
+        - Criar tabela temporária com as novas constraints
+        - Copiar todos os dados
+        - Validar integridade
+        - Remover tabela original
+        - Renomear temporária para original
+        - Recriar índices e triggers
+
+        Idempotente: verifica se já foi aplicada antes de executar.
+        """
+        # Verifica se a migration já foi aplicada
+        # Estratégia: verificar se a constraint ON DELETE RESTRICT já existe
+        # no SQL da tabela plano_contas
+        schema = conn.execute(
+            "SELECT sql FROM sqlite_master WHERE type='table' AND name='plano_contas'"
+        ).fetchone()
+
+        if schema and 'ON DELETE RESTRICT' in schema[0]:
+            logger.info("Migration FK_ON_DELETE_RESTRICT já aplicada. Pulando.")
+            return
+
+        logger.info("Iniciando migration: aplicando ON DELETE RESTRICT nas FKs contábeis...")
+        conn.execute("PRAGMA foreign_keys = OFF")
+
+        try:
+            # ── 1. Migrar plano_contas ───────────────────────────────
+            conn.execute("""
+                CREATE TABLE plano_contas_temp (
+                    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+                    usuario_id        INTEGER NOT NULL,
+                    codigo            TEXT    NOT NULL,
+                    nome              TEXT    NOT NULL,
+                    tipo              TEXT    NOT NULL CHECK(tipo IN (
+                        'ativo', 'passivo', 'patrimonio_liquido',
+                        'receita', 'despesa', 'redutora'
+                    )),
+                    natureza          TEXT    NOT NULL CHECK(natureza IN ('devedora','credora')),
+                    nivel             INTEGER NOT NULL DEFAULT 1
+                                      CHECK(nivel BETWEEN 1 AND 5),
+                    conta_pai_id      INTEGER,
+                    aceita_lancamentos INTEGER DEFAULT 1,
+                    ativo             INTEGER DEFAULT 1,
+                    criado_em         TEXT    DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (usuario_id)   REFERENCES usuarios(id) ON DELETE CASCADE,
+                    FOREIGN KEY (conta_pai_id) REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                    UNIQUE(usuario_id, codigo)
+                )
+            """)
+
+            # Copia dados
+            conn.execute("""
+                INSERT INTO plano_contas_temp
+                SELECT id, usuario_id, codigo, nome, tipo, natureza, nivel,
+                       conta_pai_id, aceita_lancamentos, ativo, criado_em
+                FROM plano_contas
+            """)
+
+            # Valida integridade
+            registros_origem = conn.execute(
+                "SELECT COUNT(*) FROM plano_contas"
+            ).fetchone()[0]
+            registros_destino = conn.execute(
+                "SELECT COUNT(*) FROM plano_contas_temp"
+            ).fetchone()[0]
+
+            if registros_origem != registros_destino:
+                raise RuntimeError(
+                    f"Migração falhou: {registros_origem} registros origem != "
+                    f"{registros_destino} registros destino (plano_contas)"
+                )
+
+            # Remove tabela original
+            conn.execute("DROP TRIGGER IF EXISTS trg_plano_contas_no_self_ref")
+            conn.execute("DROP TABLE IF EXISTS plano_contas")
+
+            # Renomeia temporária para original
+            conn.execute("ALTER TABLE plano_contas_temp RENAME TO plano_contas")
+
+            # Recria índices e triggers
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_plano_contas_user ON plano_contas(usuario_id, ativo)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_plano_contas_pai ON plano_contas(conta_pai_id)"
+            )
+            conn.execute("""
+                CREATE TRIGGER IF NOT EXISTS trg_plano_contas_no_self_ref
+                BEFORE UPDATE OF conta_pai_id ON plano_contas
+                BEGIN
+                    SELECT RAISE(ABORT, 'Auto-referência: conta não pode ser pai dela mesma')
+                    WHERE NEW.conta_pai_id IS NOT NULL
+                      AND NEW.conta_pai_id = NEW.id;
+                END
+            """)
+
+            # ── 2. Migrar lancamentos_contabeis ───────────────────────
+            conn.execute("""
+                CREATE TABLE lancamentos_contabeis_temp (
+                    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+                    uuid            TEXT    UNIQUE NOT NULL,
+                    usuario_id      INTEGER NOT NULL,
+                    data            TEXT    NOT NULL,
+                    historico       TEXT    NOT NULL,
+                    valor           REAL    NOT NULL CHECK(valor > 0),
+                    debito_id       INTEGER NOT NULL REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                    credito_id      INTEGER NOT NULL REFERENCES plano_contas(id) ON DELETE RESTRICT,
+                    transacao_id    INTEGER REFERENCES transacoes(id),
+                    criado_em       TEXT    DEFAULT CURRENT_TIMESTAMP,
+                    CHECK(debito_id != credito_id),
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+                )
+            """)
+
+            # Copia dados
+            conn.execute("""
+                INSERT INTO lancamentos_contabeis_temp
+                SELECT id, uuid, usuario_id, data, historico, valor,
+                       debito_id, credito_id, transacao_id, criado_em
+                FROM lancamentos_contabeis
+            """)
+
+            # Valida integridade
+            registros_origem = conn.execute(
+                "SELECT COUNT(*) FROM lancamentos_contabeis"
+            ).fetchone()[0]
+            registros_destino = conn.execute(
+                "SELECT COUNT(*) FROM lancamentos_contabeis_temp"
+            ).fetchone()[0]
+
+            if registros_origem != registros_destino:
+                raise RuntimeError(
+                    f"Migração falhou: {registros_origem} registros origem != "
+                    f"{registros_destino} registros destino (lancamentos_contabeis)"
+                )
+
+            # Remove tabela original
+            conn.execute("DROP TABLE IF EXISTS lancamentos_contabeis")
+
+            # Renomeia temporária para original
+            conn.execute("ALTER TABLE lancamentos_contabeis_temp RENAME TO lancamentos_contabeis")
+
+            # Recria índices
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lanc_cont_user ON lancamentos_contabeis(usuario_id, data DESC)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lanc_saldo_debito ON lancamentos_contabeis(usuario_id, debito_id, data)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lanc_saldo_credito ON lancamentos_contabeis(usuario_id, credito_id, data)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lanc_cont_debito ON lancamentos_contabeis(usuario_id, debito_id)"
+            )
+            conn.execute(
+                "CREATE INDEX IF NOT EXISTS idx_lanc_cont_credito ON lancamentos_contabeis(usuario_id, credito_id)"
+            )
+
+            conn.execute("PRAGMA foreign_keys = ON")
+            logger.info("Migration FK_ON_DELETE_RESTRICT concluída com sucesso.")
+
+        except Exception as exc:
+            conn.execute("PRAGMA foreign_keys = ON")
+            logger.error("Migration FK_ON_DELETE_RESTRICT falhou: %s", exc)
+            raise
+
     def drop_all(self) -> None:
         """
         Destrói todas as tabelas. USE APENAS EM TESTES.
@@ -553,10 +866,13 @@ class DatabaseManager:
             with self.get_conn() as conn:
                 conn.execute("PRAGMA foreign_keys = OFF")
                 for table in [
+                    "lancamentos_contabeis", "plano_contas", "transferencias",
                     "notificacoes", "metas", "transacoes",
-                    "recorrentes", "categorias", "usuarios"
+                    "recorrentes", "categorias", "usuarios",
+                    "limites_categoria", "tokens_recuperacao",
+                    "verificacao_email", "contas_bancarias"
                 ]:
                     conn.execute(f"DROP TABLE IF EXISTS {table}")
                 conn.execute("PRAGMA foreign_keys = ON")
         self._initialized = False
-        logger.warning("Todas as tabelas foram removidas.")# Método adicionado para migração — adiciona colunas novas sem quebrar banco existente
+        logger.warning("Todas as tabelas foram removidas.")

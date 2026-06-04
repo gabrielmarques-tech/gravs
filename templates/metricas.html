@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Métricas{% endblock %}
+{% block page_title %}📊 Observabilidade — Métricas de Performance{% endblock %}
+
+{% block content %}
+<style>
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+  .metric-header {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .metric-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: var(--text-sm);
+  }
+  .metric-row:last-child { border-bottom: none; }
+  .metric-name { color: var(--text2); min-width: 220px; }
+  .metric-val  { color: var(--text); font-weight: 500; }
+  .metric-slow { color: var(--red2); font-weight: 600; }
+  .metric-fast { color: var(--green2); font-weight: 500; }
+  .metric-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+  .badge-ok  { background: rgba(16,185,129,0.12); color: var(--green2); }
+  .badge-warn { background: rgba(245,158,11,0.12); color: var(--gold2); }
+  .badge-bad { background: rgba(239,68,68,0.12); color: var(--red2); }
+  .totals-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .totals-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    text-align: center;
+  }
+  .totals-label { font-size: var(--text-xs); color: var(--text3); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 500; }
+  .totals-val   { font-size: var(--text-lg); font-weight: 700; color: var(--text); margin-top: 4px; }
+  @media (max-width: 768px) {
+    .totals-row { grid-template-columns: repeat(2, 1fr); }
+    .metric-name { min-width: 140px; }
+  }
+</style>
+
+<div class="totals-row">
+  <div class="totals-card">
+    <div class="totals-label">Chamadas</div>
+    <div class="totals-val">{{ totais.chamadas }}</div>
+  </div>
+  <div class="totals-card">
+    <div class="totals-label">Tempo Total</div>
+    <div class="totals-val">{{ '%.0f'|format(totais.tempo_total_ms) }}ms</div>
+  </div>
+  <div class="totals-card">
+    <div class="totals-label">Consultas BD</div>
+    <div class="totals-val">{{ totais.consultas_bd }}</div>
+  </div>
+  <div class="totals-card">
+    <div class="totals-label">Tempo em BD</div>
+    <div class="totals-val">{{ '%.0f'|format(totais.tempo_bd_ms) }}ms</div>
+  </div>
+</div>
+
+<div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+  <button onclick="location.href='/metricas'" class="btn btn-secondary btn-sm">↻ Atualizar</button>
+  <form method="post" action="/api/metricas/zerar" style="display:inline">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+    <button type="submit" class="btn btn-danger btn-sm" onclick="return confirm('Zerar todas as métricas?')">🗑️ Zerar</button>
+  </form>
+</div>
+
+{% if operacoes_metrics %}
+<div class="metric-card">
+  <div class="metric-header">
+    <span>⚙️ Operações do Sistema</span>
+    <span class="text-muted text-xs">Tempo médio em destaque</span>
+  </div>
+  {% for m in operacoes_metrics %}
+  {% set pct_bd = (m.tempo_bd_ms / m.tempo_total_ms * 100) if m.tempo_total_ms > 0 else 0 %}
+  <div class="metric-row">
+    <div class="metric-name">{{ m.nome }}</div>
+    <div class="flex gap-12 items-center" style="flex-wrap:wrap">
+      <span class="text-xs text-muted">{{ m.chamadas }}x</span>
+      {% if m.tempo_medio_ms > 100 %}
+        <span class="metric-slow metric-badge badge-bad">{{ '%.1f'|format(m.tempo_medio_ms) }}ms</span>
+      {% elif m.tempo_medio_ms > 30 %}
+        <span class="metric-badge badge-warn">{{ '%.1f'|format(m.tempo_medio_ms) }}ms</span>
+      {% else %}
+        <span class="metric-badge badge-ok">{{ '%.1f'|format(m.tempo_medio_ms) }}ms</span>
+      {% endif %}
+      {% if m.consultas_bd > 0 %}
+        <span class="text-xs text-muted">📊 {{ m.consultas_bd }}q</span>
+        {% if pct_bd > 50 %}
+          <span class="text-xs" style="color:var(--red2)">⚡{{ '%.0f'|format(pct_bd) }}%</span>
+        {% endif %}
+      {% endif %}
+      <span class="text-xs text-muted">últ. {{ '%.1f'|format(m.ultimo_ms) }}ms</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if requests_metrics %}
+<div class="metric-card">
+  <div class="metric-header">
+    <span>🌐 Requests HTTP</span>
+    <span class="text-muted text-xs">Tempo por requisição</span>
+  </div>
+  {% for m in requests_metrics %}
+  <div class="metric-row">
+    <div class="metric-name" style="font-family:monospace;font-size:0.75rem">{{ m.nome|replace('req: ','') }}</div>
+    <div class="flex gap-12 items-center" style="flex-wrap:wrap">
+      <span class="text-xs text-muted">{{ m.chamadas }}x</span>
+      {% if m.tempo_medio_ms > 200 %}
+        <span class="metric-slow metric-badge badge-bad">{{ '%.0f'|format(m.tempo_medio_ms) }}ms</span>
+      {% elif m.tempo_medio_ms > 100 %}
+        <span class="metric-badge badge-warn">{{ '%.0f'|format(m.tempo_medio_ms) }}ms</span>
+      {% else %}
+        <span class="metric-badge badge-ok">{{ '%.0f'|format(m.tempo_medio_ms) }}ms</span>
+      {% endif %}
+      <span class="text-xs text-muted">últ. {{ '%.0f'|format(m.ultimo_ms) }}ms</span>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+{% if not operacoes_metrics and not requests_metrics %}
+<div class="metric-card" style="text-align:center;padding:40px">
+  <div style="font-size:2rem;margin-bottom:8px">📊</div>
+  <p style="color:var(--text2)">Nenhuma métrica coletada ainda.</p>
+  <p style="color:var(--text3);font-size:var(--text-sm);margin-top:4px">
+    Navegue pelo sistema e volte aqui para ver os tempos de execução.
+  </p>
+</div>
+{% endif %}
+
+<div class="metric-card" style="margin-top:16px">
+  <div class="metric-header">
+    <span>📋 Relatório Técnico</span>
+    <button onclick="document.getElementById('relatorio-txt').classList.toggle('hidden')" class="btn btn-secondary btn-sm">
+      Alternar visibilidade
+    </button>
+  </div>
+  <pre id="relatorio-txt" class="hidden" style="font-size:0.7rem;color:var(--text3);overflow-x:auto;padding:8px;background:var(--bg3);border-radius:var(--radius-sm);margin-top:8px">{{ relatorio_txt }}</pre>
+</div>
+
+<script>
+  // Auto-refresh a cada 10 segundos
+  setTimeout(() => { location.reload(); }, 30000);
+</script>
+{% endblock %}

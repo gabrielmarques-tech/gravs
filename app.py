@@ -33,7 +33,7 @@ from flask_limiter.util import get_remote_address
 
 from flask import Flask, jsonify
 from flask_wtf.csrf import CSRFProtect
-from flask_login import LoginManager
+from flask_login import LoginManager, login_required
 
 from config import get_config
 from routes.auth import auth_bp
@@ -50,7 +50,9 @@ from routes.importacao import importacao_bp
 from routes.publico import publico_bp
 from routes.transferencias import transferencias_bp
 from routes.metas import metas_bp
+from routes.health import health_bp
 from services.container import ServiceContainer
+from utils.metrics import metricas
 from utils.formatters import formatar_real
 
 logging.basicConfig(
@@ -140,6 +142,10 @@ def create_app(config_class=None, db_path: str | None = None) -> Flask:
     app.register_blueprint(publico_bp)
     app.register_blueprint(transferencias_bp)
     app.register_blueprint(metas_bp)
+    app.register_blueprint(health_bp)
+
+    # ── Métricas — observabilidade ──────────────────────────────────────────
+    _configurar_metricas(app)
 
     # ── Headers de segurança HTTP ────────────────────────────────────────────
     _registrar_security_headers(app)
@@ -316,6 +322,149 @@ def _is_api_request() -> bool:
     """Detecta se a request é para a API (espera JSON)."""
     from flask import request
     return request.path.startswith("/api/") or "application/json" in request.headers.get("Accept", "")
+
+
+def _configurar_metricas(app: Flask) -> None:
+    """
+    Configura observabilidade: métricas de performance e relatório.
+
+    Adiciona:
+    - Log de tempo de cada request (antes/depois)
+    - Rota /api/metricas para relatório JSON
+    - Rota /metricas para relatório HTML
+    - Rota POST para zerar métricas
+    """
+    import time as time_module
+    from flask import request as flask_request, redirect, url_for, flash
+
+    @app.before_request
+    def iniciar_medicao():
+        """Armazena o tempo inicial no contexto do request."""
+        from flask import request as flask_request
+        flask_request._inicio_metricas = time_module.perf_counter()
+
+    @app.after_request
+    def finalizar_medicao(response):
+        """
+        Registra métrica de tempo total do request.
+
+        Loga no formato:
+            ⏱️ [MÉTRICA] req: GET /contabil/partida-dobrada levou 45.2ms
+        """
+        from flask import request as flask_request
+        inicio = getattr(flask_request, '_inicio_metricas', None)
+        if inicio:
+            duracao = time_module.perf_counter() - inicio
+            nome_req = f"req: {flask_request.method} {flask_request.path}"
+            metricas.registrar_chamada(nome_req, duracao)
+
+            # Log apenas para requests lentos (>200ms) ou sempre em debug
+            if duracao > 0.2:
+                logger.info(
+                    "⏱️ [MÉTRICA] %s levou %.1f ms",
+                    nome_req, duracao * 1000,
+                )
+            elif logger.isEnabledFor(logging.DEBUG):
+                logger.debug(
+                    "⏱️ [MÉTRICA] %s levou %.1f ms",
+                    nome_req, duracao * 1000,
+                )
+        return response
+
+    # ── Rota: relatório HTML de métricas ─────────────────────────────────────
+    @app.route("/metricas")
+    @login_required
+    def pagina_metricas():
+        """Página HTML com relatório completo de métricas."""
+        from flask import render_template as rt
+        from database.repositories import UsuarioRepository
+
+        dados_repo = metricas._contagens
+        tempos_repo = metricas._tempos
+        consultas_bd = metricas._consultas_bd
+        tempo_bd = metricas._tempo_consultas_bd
+
+        # Separa métricas de request das de operações
+        requests_metrics = []
+        operacoes_metrics = []
+
+        for nome in sorted(dados_repo.keys()):
+            chamadas = dados_repo[nome]
+            tempo_total = tempos_repo.get(nome, 0)
+            tempo_medio = (tempo_total / chamadas * 1000) if chamadas > 0 else 0
+            qtd_bd = consultas_bd.get(nome, 0)
+            tempo_total_bd = tempo_bd.get(nome, 0)
+            ultimo = metricas.ultimo_tempo(nome)
+
+            entry = {
+                'nome': nome,
+                'chamadas': chamadas,
+                'tempo_total_ms': round(tempo_total * 1000, 2),
+                'tempo_medio_ms': round(tempo_medio, 2),
+                'ultimo_ms': round((ultimo or 0) * 1000, 2),
+                'consultas_bd': qtd_bd,
+                'tempo_bd_ms': round(tempo_total_bd * 1000, 2),
+            }
+
+            if nome.startswith('req:'):
+                requests_metrics.append(entry)
+            else:
+                operacoes_metrics.append(entry)
+
+        # Totais
+        totais = {
+            'chamadas': sum(dados_repo.values()),
+            'tempo_total_ms': round(sum(tempos_repo.values()) * 1000, 2),
+            'consultas_bd': sum(consultas_bd.values()),
+            'tempo_bd_ms': round(sum(tempo_bd.values()) * 1000, 2),
+        }
+
+        return rt(
+            "metricas.html",
+            requests_metrics=requests_metrics,
+            operacoes_metrics=operacoes_metrics,
+            totais=totais,
+            relatorio_txt=metricas.relatorio(),
+        )
+
+        # ── Rota POST para zerar métricas ────────────────────────────────────
+        @app.route("/api/metricas/zerar", methods=["POST"])
+        @login_required
+        def zerar_metricas():
+            """Zera todas as métricas acumuladas."""
+            metricas.zerar()
+            flash("✓ Métricas zeradas", "sucesso")
+            return redirect(url_for("pagina_metricas"))
+
+    # ── Rota JSON para APIs externas ─────────────────────────────────────────
+    @app.route("/api/metricas")
+    @login_required
+    def api_metricas():
+        """Endpoint JSON com todas as métricas acumuladas."""
+        dados_repo = metricas._contagens
+        tempos_repo = metricas._tempos
+        return jsonify({
+            'metrics': [
+                {
+                    'operation': nome,
+                    'calls': dados_repo[nome],
+                    'total_time_ms': round(tempos_repo.get(nome, 0) * 1000, 2),
+                    'avg_time_ms': round(
+                        (tempos_repo.get(nome, 0) / dados_repo[nome]) * 1000
+                        if dados_repo[nome] > 0 else 0, 2
+                    ),
+                    'last_time_ms': round(
+                        (metricas.ultimo_tempo(nome) or 0) * 1000, 2
+                    ),
+                }
+                for nome in sorted(dados_repo.keys())
+            ],
+            'totals': {
+                'calls': sum(dados_repo.values()),
+                'total_time_ms': round(sum(tempos_repo.values()) * 1000, 2),
+            },
+            'report': metricas.relatorio(),
+        })
 
 
 # ── Entry point ────────────────────────────────────────────────────────────────
